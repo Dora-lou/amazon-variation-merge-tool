@@ -22,7 +22,11 @@ $('file').addEventListener('change',async(e)=>{
 });
 function initEditor(){
  setVal('parent_sku',meta.parent_sku);setVal('product_type',meta.product_type);
- for(const key of ['item_name','brand','item_type_keyword','description','origin','batteries','hazmat'])setVal(key,meta.basic[key]);
+ for(const key of ['item_name','brand','item_type_keyword','description','origin','batteries','hazmat']){
+  let value=meta.basic[key]||'';
+  if(key==='description'&&/this summer, boots by jette|breathable leather lining|adidas blue sneakers|^lorem ipsum|^example product description/i.test(value))value='';
+  setVal(key,value);
+ }
  $('theme').innerHTML='';for(const theme of meta.theme_options)$('theme').appendChild(optionEl(theme,theme));
  if(!meta.theme_options.includes(meta.default_theme))$('theme').appendChild(optionEl(meta.default_theme,meta.default_theme));
  $('theme').value=meta.default_theme;
@@ -64,9 +68,7 @@ function initEditor(){
   textarea.value=b.value||'';
   wrap.append(label,textarea);$('bulletFields').appendChild(wrap);
  }
- const catMode=String(meta.product_type||'').toUpperCase()==='ANIMAL_SHELTER';
- $('catCopy').classList.toggle('hidden',!catMode);
- $('copyWarning').classList.add('hidden');
+
  $('extraFields').innerHTML='';currentMapping={...meta.default_theme_cols};
  children=meta.sample_children.map(row=>({sku:row.sku,asin:row.asin,title:row.title||'',col_values:row.col_values}));
  if(!children.length)children=[{sku:'',asin:'',title:'',col_values:{}},{sku:'',asin:'',title:'',col_values:{}}];
@@ -124,24 +126,6 @@ function renderChildren(){
 }
 $('addChild').addEventListener('click',()=>{saveChildren();children.push({sku:'',asin:'',title:'',col_values:{}});renderChildren()});
 $('showTitles').addEventListener('change',()=>{$('childrenTable').classList.toggle('show-titles',$('showTitles').checked)});
-$('catCopy').addEventListener('click',()=>{
- if(!meta||String(meta.product_type||'').toUpperCase()!=='ANIMAL_SHELTER')return;
- const yes=window.confirm('这些英文文案适用于有保温层、防水顶篷、可洗垫的户外猫屋。请在使用前逐条核对实际功能。是否填入参考文案？');
- if(!yes)return;
- const brand=$('brand').value.trim();
- const prefix=brand?brand+' ':'';
- $('description').value=prefix+'outdoor cat house offers a sheltered resting space for feral, stray, and outdoor cats. The weather-resistant outer material and protective canopy help reduce direct exposure to rain and wind. An insulating layer helps create a more comfortable resting area in cooler weather. A removable mat makes routine cleaning more convenient. Review the selected size and variation details to choose the right shelter for your cats.';
- const bulletCopy=[
-  'Weather-Resistant Shelter: A protective canopy and weather-resistant materials help shield outdoor cats from rain and wind.',
-  'Insulated for Cooler Weather: The built-in insulation layer helps create a more comfortable resting place for feral and stray cats.',
-  'Removable Washable Mat: The included mat can be removed for regular cleaning and everyday pet comfort.',
-  'Convenient Assembly: Designed for easy setup and routine maintenance with secure fastening details.',
-  'Outdoor Cat Resting Space: Provides a dedicated shelter for community, stray, and feral cats in suitable outdoor locations.'
- ];
- [...document.querySelectorAll('textarea[data-bullet]')].forEach((el,i)=>{if(bulletCopy[i])el.value=bulletCopy[i]});
- $('copyWarning').classList.remove('hidden');
- $('description').focus();
-});
 $('theme').addEventListener('change',()=>{
  saveChildren();currentMapping=Object.fromEntries(tokens().map(t=>[t,colGuess(t)]));renderMapping();renderChildren();
 });
