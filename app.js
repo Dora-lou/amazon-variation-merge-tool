@@ -71,7 +71,8 @@ function initEditor(){
 
  $('extraFields').innerHTML='';currentMapping={...meta.default_theme_cols};
  children=meta.sample_children.map(row=>({sku:row.sku,asin:row.asin,title:row.title||'',col_values:row.col_values}));
- if(!children.length)children=[{sku:'',asin:'',title:'',col_values:{}},{sku:'',asin:'',title:'',col_values:{}}];
+ while(children.length<10)children.push({sku:'',asin:'',title:'',col_values:{}});
+ // If the source template contains more than ten sample products, retain all of them.
  renderMapping();renderChildren();notify('result','等待生成：请先复核父体和子体信息。');
 }
 function colGuess(token){
@@ -110,6 +111,7 @@ function renderMapping(){
 function renderChildren(){
  const t=tokens();$('childHeader').innerHTML='<tr><th>子 SKU *</th><th>子 ASIN *</th><th class="optional-col">子体原标题（可选）</th>'+t.map(x=>'<th>'+safe(x)+' *</th>').join('')+'<th>操作</th></tr>';
  const body=$('childBody');body.innerHTML='';
+ setText('childRowCount','当前 '+children.length+' 个子体填写位置；没有填写内容的行不会导出。');
  children.forEach((row,idx)=>{
   const tr=document.createElement('tr');tr.dataset.row=idx;
   tr.innerHTML='<td><input data-name="sku" value="'+safe(row.sku)+'" placeholder="已上架 SKU"/></td>'+
@@ -124,7 +126,13 @@ function renderChildren(){
   saveChildren();children.splice(Number(b.dataset.remove),1);renderChildren()
  }));
 }
-$('addChild').addEventListener('click',()=>{saveChildren();children.push({sku:'',asin:'',title:'',col_values:{}});renderChildren()});
+const addEmptyChildren=(count)=>{
+ saveChildren();
+ for(let i=0;i<count;i++)children.push({sku:'',asin:'',title:'',col_values:{}});
+ renderChildren();
+};
+$('addChild').addEventListener('click',()=>addEmptyChildren(1));
+$('addFiveChildren').addEventListener('click',()=>addEmptyChildren(5));
 $('showTitles').addEventListener('change',()=>{$('childrenTable').classList.toggle('show-titles',$('showTitles').checked)});
 $('theme').addEventListener('change',()=>{
  saveChildren();currentMapping=Object.fromEntries(tokens().map(t=>[t,colGuess(t)]));renderMapping();renderChildren();
