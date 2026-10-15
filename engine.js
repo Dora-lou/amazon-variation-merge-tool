@@ -43,6 +43,11 @@ function relTarget(wb,rels,name){const ss=node(wb.documentElement,'sheets');cons
  for(const p of parts){if(!p||p==='.')continue;if(p==='..')path.pop();else path.push(p)}
  return path.join('/')}
 async function fileText(zip,p){const f=zip.file(p);if(!f)fail('模板缺少内部文件：'+p);return f.async('string')}
+function isExampleCopy(value){
+ const s=String(value||'').toLowerCase().trim();
+ if(!s)return false;
+ return /this summer, boots by jette|breathable leather lining|adidas blue sneakers|^lorem ipsum|^example product (description|bullet)/i.test(s);
+}
 function findField(ids,[ex,pr]){if(ex){for(const [k,v] of Object.entries(ids))if(v===ex)return Number(k)}
  if(pr){for(const [k,v] of Object.entries(ids))if(v.startsWith(pr))return Number(k)}return null}
 function inferCol(headers,token){for(const prefix of aliases[token]||[token.toLowerCase()]){
@@ -119,8 +124,15 @@ async function inspect(buffer,filename){
   });
   if(matching.length===1)basic.item_type_keyword=matching[0];
  }
- const bullets=Object.entries(parent).filter(([c])=>(headers[c]||'').startsWith('bullet_point['))
- .map(([c,v])=>({col:Number(c),label:labels[c]||('Bullet '+c),value:v}));
+ // Collect bullet columns from schema, NOT only from already-filled data rows.
+ // Blank official templates still have five available bullet fields.
+ const bullets=Object.entries(headers).filter(([,id])=>id.startsWith('bullet_point['))
+ .map(([c,id])=>({
+  col:Number(c),
+  order:Number((/#(\d+)\.value$/.exec(id)||[])[1]||1),
+  label:'Bullet Point '+((/#(\d+)\.value$/.exec(id)||[])[1]||1),
+  value:isExampleCopy(parent[c])?'':String(parent[c]||'')
+ })).sort((a,b)=>a.order-b.order).slice(0,5);
  const sampleChildren=children.map(row=>({sku:fieldValue(row,'sku'),asin:fieldValue(row,'product_id'),title:fieldValue(row,'item_name'),col_values:Object.fromEntries(Object.entries(row).filter(([,v])=>v))}));
  const meta={header_count:Object.keys(headers).length,theme_options:themes.length?themes:[theme],default_theme:theme,
  field_options:Object.entries(headers).map(([c,id])=>({col:Number(c),label:labels[c]||'',id})).sort((x,y)=>x.col-y.col),
@@ -150,6 +162,17 @@ function validate(t,cfg){const errors=[],warnings=[],parentSku=String(cfg.parent
  if(combos.has(combo))errors.push('第 '+n+' 个子体变体属性组合重复');combos.add(combo)});
  if(!String(cfg.product_type||'').trim())errors.push('Product Type 不能为空');
  if(!String(cfg.item_name||'').trim())errors.push('父体标题不能为空');
+ const description=String(cfg.description||'').trim();
+ if(!description)errors.push('父体商品描述（Product Description）不能为空');
+ else if(isExampleCopy(description))errors.push('父体描述包含亚马逊模板的示例文案，请替换为真实商品信息');
+ else if(description.length<35)errors.push('父体商品描述过短，请填写完整的真实商品描述');
+ const bulletList=t.meta.bullets||[];
+ for(const b of bulletList){
+  const value=String((cfg.bullets||{})[b.col]||'').trim();
+  if(!value)errors.push('缺少父体卖点 '+b.order+'（Bullet Point '+b.order+'）');
+  else if(isExampleCopy(value))errors.push('卖点 '+b.order+' 仍是模板示例文案，请替换');
+  else if(value.length<12)errors.push('卖点 '+b.order+' 过短，请填写真实商品卖点');
+ }
  if(t.fields.item_type_keyword&&!String(cfg.item_type_keyword||'').trim())errors.push('Item Type Keyword 未确定，请从模板允许值中选择');
  for(const key of ['item_type_keyword','brand','origin','batteries','hazmat']){
   const opts=t.meta.dropdown_options?.[key]||[],v=String(cfg[key]||'').trim();
@@ -178,10 +201,10 @@ async function generate(t,cfg){const report=validate(t,cfg);if(report.errors.len
  for(const key of shared){setVal(po,key,fields,cfg[key]||'');setVal(co,key,fields,cfg[key]||'')}
  setVal(po,'item_name',fields,cfg.item_name||'');
  setVal(co,'item_name',fields,'');
- setVal(po,'description',fields,cfg.description||'');
+ setVal(po,'description',fields,String(cfg.description||'').trim());
  setVal(co,'description',fields,'');
  for(const [col,id] of Object.entries(t.headers))if(id.startsWith('bullet_point['))delete co[col];
- for(const [col,v] of Object.entries(cfg.bullets||{}))if((t.headers[col]||'').startsWith('bullet_point['))po[col]=v;
+ for(const [col,v] of Object.entries(cfg.bullets||{}))if((t.headers[col]||'').startsWith('bullet_point['))po[col]=String(v||'').trim();
  for(const entry of cfg.extras||[]){const col=Number(entry.col),v=String(entry.value||'');
  if(!t.headers[col]||!v.trim())continue;
  if(entry.scope==='parent'||entry.scope==='both')po[col]=v;
