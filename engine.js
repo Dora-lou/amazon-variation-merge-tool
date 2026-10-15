@@ -167,11 +167,12 @@ function validate(t,cfg){const errors=[],warnings=[],parentSku=String(cfg.parent
  else if(isExampleCopy(description))errors.push('父体描述包含亚马逊模板的示例文案，请替换为真实商品信息');
  else if(description.length<35)errors.push('父体商品描述过短，请填写完整的真实商品描述');
  const bulletList=t.meta.bullets||[];
- for(const b of bulletList){
-  const value=String((cfg.bullets||{})[b.col]||'').trim();
-  if(!value)errors.push('缺少父体卖点 '+b.order+'（Bullet Point '+b.order+'）');
-  else if(isExampleCopy(value))errors.push('卖点 '+b.order+' 仍是模板示例文案，请替换');
-  else if(value.length<12)errors.push('卖点 '+b.order+' 过短，请填写真实商品卖点');
+ const providedBullets=bulletList.map(b=>({order:b.order,value:String((cfg.bullets||{})[b.col]||'').trim()})).filter(x=>x.value);
+ if(!bulletList.length)errors.push('当前类目模板没有识别出 Bullet Point 字段，请检查模板');
+ else if(!providedBullets.length)errors.push('父体卖点至少需要填写 1 条（允许 1–5 条）');
+ for(const b of providedBullets){
+  if(isExampleCopy(b.value))errors.push('卖点 '+b.order+' 仍是模板示例文案，请替换');
+  else if(b.value.length<12)errors.push('卖点 '+b.order+' 过短，请填写真实商品卖点');
  }
  if(t.fields.item_type_keyword&&!String(cfg.item_type_keyword||'').trim())errors.push('Item Type Keyword 未确定，请从模板允许值中选择');
  for(const key of ['item_type_keyword','brand','origin','batteries','hazmat']){
@@ -203,10 +204,13 @@ async function generate(t,cfg){const report=validate(t,cfg);if(report.errors.len
  setVal(co,'item_name',fields,'');
  setVal(po,'description',fields,String(cfg.description||'').trim());
  setVal(co,'description',fields,'');
- for(const [col,id] of Object.entries(t.headers))if(id.startsWith('bullet_point['))delete co[col];
- for(const [col,v] of Object.entries(cfg.bullets||{}))if((t.headers[col]||'').startsWith('bullet_point['))po[col]=String(v||'').trim();
+ // Clear example/reused bullet values from both rows, then write only the entered 1–5 bullets.
+ for(const [col,id] of Object.entries(t.headers))if(id.startsWith('bullet_point[')){delete po[col];delete co[col]}
+ const bulletCols=[...(t.meta.bullets||[])].sort((a,b)=>a.order-b.order);
+ const bulletValues=bulletCols.map(b=>String((cfg.bullets||{})[b.col]||'').trim()).filter(Boolean);
+ bulletValues.forEach((v,i)=>{po[bulletCols[i].col]=v});
  for(const entry of cfg.extras||[]){const col=Number(entry.col),v=String(entry.value||'');
- if(!t.headers[col]||!v.trim())continue;
+ if(!t.headers[col]||!v.trim()||(t.headers[col]||'').startsWith('bullet_point['))continue;
  if(entry.scope==='parent'||entry.scope==='both')po[col]=v;
  if(entry.scope==='child'||entry.scope==='both')co[col]=v}
  setVal(po,'sku',fields,parentSku);setVal(po,'action',fields,'Create or Replace (Full Update)');
