@@ -110,8 +110,12 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
       <h3 class="block-title">C. 已有独立子体</h3>
       <div class="toolbar">
         <span class="muted">每行填写 1 个现有商品，颜色/尺寸等属性必须对应真实产品。</span>
-        <button id="addChild" type="button">＋ 添加子体</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="addChild" type="button">＋ 添加 1 行</button>
+          <button id="addFiveChildren" type="button">＋ 添加 5 行</button>
+        </div>
       </div>
+      <p id="childRowCount" class="muted">默认提供 10 行子体填写位置，空白行不会导出。</p>
       <div class="table-wrap">
         <table id="childrenTable"><thead id="childHeader"></thead><tbody id="childBody"></tbody></table>
       </div>
