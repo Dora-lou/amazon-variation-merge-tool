@@ -75,23 +75,54 @@ async function inspect(buffer,filename){
  const dataRows=[...rr.entries()].filter(([row,cols])=>row>=dataStart&&(cols[fields.sku]||'').trim()).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
  const parents=dataRows.filter(row=>(row[fields.parentage]||'').toLowerCase()==='parent');
  const parent=parents[0]||{},children=dataRows.filter(row=>(row[fields.parentage]||'').toLowerCase()==='child');
- let themes=[];
+ let themes=[],dropdown_options={};
  if(tabs.includes('Dropdown Lists')){
   const dr=values(parse(await fileText(zip,relTarget(wb,rel,'Dropdown Lists'))),shared);
-  for(const [n,head] of dr){const opt=Object.entries(head).find(([,v])=>v==='variation_theme#1.name');if(!opt)continue;
-   for(let r=n+1;r<Math.min(n+120,Math.max(...dr.keys())+1);r++){const v=(dr.get(r)||{})[Number(opt[0])];if(v&&!themes.includes(v))themes.push(v)}break}
+  const head=[...dr.entries()].find(([,cells])=>Object.values(cells).includes('variation_theme#1.name'));
+  if(head){
+   const rowNo=head[0],columns=head[1],last=Math.max(...dr.keys());
+   for(const key of ['theme','item_type_keyword','product_id_type','brand','origin','batteries','hazmat']){
+    const col=fields[key];if(!col)continue;
+    const id=headers[col],hit=Object.entries(columns).find(([,v])=>v===id);
+    if(!hit)continue;
+    const opts=[];
+    for(let row=rowNo+1;row<=last;row++){
+     const v=String((dr.get(row)||{})[Number(hit[0])]||'').trim();
+     if(v&&!opts.includes(v))opts.push(v);
+    }
+    dropdown_options[key]=opts;
+   }
+   themes=dropdown_options.theme||[];
+  }
  }
  const fieldValue=(obj,key)=>obj[fields[key]]||'';
  const parentSku=commonParent(children,fields,parent);
  const theme=fieldValue(parent,'theme')||fieldValue(children[0]||{},'theme')||themes[0]||'COLOR/SIZE';
- const basic={};for(const key of ['item_name','brand','item_type_keyword','description','origin','batteries','hazmat'])basic[key]=fieldValue(parent,key);
+ const basic={};for(const key of ['item_name','brand','item_type_keyword','description','origin','batteries','hazmat'])basic[key]=fieldValue(parent,key)||fieldValue(children[0]||{},key);
+ const defaults={origin:'China',batteries:'No',hazmat:'Not Applicable'};
+ for(const [key,choice] of Object.entries(defaults)){
+  if((dropdown_options[key]||[]).some(v=>v.toLowerCase()===choice.toLowerCase()))basic[key]=choice;
+  else if(!basic[key]&&(dropdown_options[key]||[]).length===1)basic[key]=dropdown_options[key][0];
+ }
+ for(const key of ['item_type_keyword','brand']){
+  const opts=dropdown_options[key]||[];
+  if(!basic[key]&&opts.length===1)basic[key]=opts[0];
+ }
+ if(!basic.item_type_keyword){
+  const slug=(fieldValue(parent,'product_type')||fieldValue(children[0]||{},'product_type')).toLowerCase().replace(/_/g,'-');
+  const matching=(dropdown_options.item_type_keyword||[]).filter(v=>{
+   const m=/\(([^()]*)\)\s*$/.exec(v);
+   return m&&((m[1]===slug)||(m[1]===slug+'s')||(slug&&m[1].startsWith(slug)));
+  });
+  if(matching.length===1)basic.item_type_keyword=matching[0];
+ }
  const bullets=Object.entries(parent).filter(([c])=>(headers[c]||'').startsWith('bullet_point['))
  .map(([c,v])=>({col:Number(c),label:labels[c]||('Bullet '+c),value:v}));
- const sampleChildren=children.map(row=>({sku:fieldValue(row,'sku'),asin:fieldValue(row,'product_id'),col_values:Object.fromEntries(Object.entries(row).filter(([,v])=>v))}));
+ const sampleChildren=children.map(row=>({sku:fieldValue(row,'sku'),asin:fieldValue(row,'product_id'),title:fieldValue(row,'item_name'),col_values:Object.fromEntries(Object.entries(row).filter(([,v])=>v))}));
  const meta={header_count:Object.keys(headers).length,theme_options:themes.length?themes:[theme],default_theme:theme,
  field_options:Object.entries(headers).map(([c,id])=>({col:Number(c),label:labels[c]||'',id})).sort((x,y)=>x.col-y.col),
  parent_sku:parentSku,parent_original_sku:fieldValue(parent,'sku'),sample_children_count:children.length,
- basic,product_type:fieldValue(parent,'product_type')||fieldValue(children[0]||{},'product_type'),bullets,
+ basic,dropdown_options,product_type:fieldValue(parent,'product_type')||fieldValue(children[0]||{},'product_type'),bullets,
  sample_children:sampleChildren,has_sample_parent:Object.keys(parent).length>0,has_sample_child:children.length>0,
  schema_field_indices:fields,default_theme_cols:Object.fromEntries(theme.split('/').map(t=>[t,inferCol(headers,t)]))};
  return {zip,sheetPath,sheet,headers,labels,fields,rr,shared,dataStart,parent,child:children[0]||{},meta,filename};
@@ -116,6 +147,13 @@ function validate(t,cfg){const errors=[],warnings=[],parentSku=String(cfg.parent
  if(combos.has(combo))errors.push('第 '+n+' 个子体变体属性组合重复');combos.add(combo)});
  if(!String(cfg.product_type||'').trim())errors.push('Product Type 不能为空');
  if(!String(cfg.item_name||'').trim())errors.push('父体标题不能为空');
+ if(t.fields.item_type_keyword&&!String(cfg.item_type_keyword||'').trim())errors.push('Item Type Keyword 未确定，请从模板允许值中选择');
+ for(const key of ['item_type_keyword','brand','origin','batteries','hazmat']){
+  const opts=t.meta.dropdown_options?.[key]||[],v=String(cfg[key]||'').trim();
+  if(v&&opts.length&&!opts.includes(v))errors.push(key+' 的填写值不在模板下拉选项中：'+v);
+ }
+ const idTypes=t.meta.dropdown_options?.product_id_type||[];
+ if(idTypes.length&&!idTypes.includes('ASIN'))errors.push('当前模板的 Product ID Type 下拉选项中没有 ASIN');
  return {errors,warnings}}
 function setInline(cell,v,doc){for(const x of [...cell.childNodes])if(x.nodeType===1&&['v','is','f'].includes(x.localName))cell.removeChild(x);
  cell.setAttribute('t','inlineStr');const is=doc.createElementNS(M,'is'),text=doc.createElementNS(M,'t');
@@ -133,9 +171,13 @@ async function generate(t,cfg){const report=validate(t,cfg);if(report.errors.len
  const attrCols=new Set(Object.values(cfg.theme_cols).map(x=>Number(x)).filter(Boolean));
  function base(sample,reuse){return reuse?Object.fromEntries(Object.entries(sample).filter(([c])=>!identity.has(Number(c))&&!attrCols.has(Number(c)))):{}}
  const po=base(t.parent,cfg.reuse_sample_parent),co=base(t.child,cfg.reuse_sample_child);
- const shared=['product_type','item_name','brand','item_type_keyword','origin','batteries','hazmat'];
+ const shared=['product_type','brand','item_type_keyword','origin','batteries','hazmat'];
  for(const key of shared){setVal(po,key,fields,cfg[key]||'');setVal(co,key,fields,cfg[key]||'')}
+ setVal(po,'item_name',fields,cfg.item_name||'');
+ setVal(co,'item_name',fields,'');
  setVal(po,'description',fields,cfg.description||'');
+ setVal(co,'description',fields,'');
+ for(const [col,id] of Object.entries(t.headers))if(id.startsWith('bullet_point['))delete co[col];
  for(const [col,v] of Object.entries(cfg.bullets||{}))if((t.headers[col]||'').startsWith('bullet_point['))po[col]=v;
  for(const entry of cfg.extras||[]){const col=Number(entry.col),v=String(entry.value||'');
  if(!t.headers[col]||!v.trim())continue;
@@ -152,6 +194,7 @@ async function generate(t,cfg){const report=validate(t,cfg);if(report.errors.len
  setVal(child,'sku',fields,String(item.sku).trim());setVal(child,'action',fields,'Edit (Partial Update)');
  setVal(child,'parentage',fields,'Child');setVal(child,'parent_sku',fields,parentSku);setVal(child,'theme',fields,theme);
  setVal(child,'product_id_type',fields,'ASIN');setVal(child,'product_id',fields,String(item.asin).trim().toUpperCase());
+ setVal(child,'item_name',fields,String(item.title||'').trim());
  for(const token of tokens)child[cfg.theme_cols[token]]=String(item.col_values[String(cfg.theme_cols[token])]||'').trim();
  sd.appendChild(makeRow(sheet,templateChild,t.dataStart+i+1,child))});
  const dim=node(sheet.documentElement,'dimension');if(dim){const old=dim.getAttribute('ref')||'';
