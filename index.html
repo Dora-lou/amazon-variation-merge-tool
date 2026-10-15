@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>亚马逊变体合并工具 · GitHub Pages V2</title>
+<title>亚马逊变体合并工具｜3 步生成上传表</title>
 <style>
 :root{font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:#213042;background:#f5f7fb;font-size:14px}
 *{box-sizing:border-box}body{margin:0}
@@ -45,69 +45,111 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
 .check{display:flex;align-items:center;gap:9px;font-weight:500;margin:12px 0}.check input{width:auto}
 .row-span{grid-column:1/-1}#mapArea>div{margin-top:12px}.small-heading{margin:18px 0 12px;font-weight:700}
 @media(max-width:700px){.shell{padding:20px 12px}.field-grid,.three-grid{grid-template-columns:1fr}section{padding:18px}.toolbar{flex-wrap:wrap}}
+
+/* Straightforward three-step layout */
+.how{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:19px 0 1px}
+.how-item{background:#eaf3ee;border:1px solid #d5e8dd;border-radius:11px;padding:13px 14px;color:#2a5540;font-weight:650}
+.how-item span{display:block;color:#59766a;font-size:12px;font-weight:500;margin-top:4px}
+.compact-hint{background:#f4f8fb;padding:12px 14px;border-radius:10px;color:#547088;font-size:13px;line-height:1.6;margin-top:14px}
+.block-title{margin:23px 0 14px;font-size:15px;font-weight:750}
+.optional-col{display:none}
+#childrenTable.show-titles .optional-col{display:table-cell}
+#product_type[readonly],select:disabled{background:#f5f7f9;color:#526575;cursor:default}
+#templateSummary{color:#476d56;font-size:12px;font-weight:600;margin-top:8px}
+#generate{padding:13px 25px}
+#stepsDone{font-size:12px;color:#6e8275;margin:8px 0 0}
+.top-label{font-size:13px;color:#5f7468;margin-top:16px}
+@media(max-width:700px){.how{grid-template-columns:1fr}.how-item span{display:inline;margin-left:10px}}
 </style>
 </head>
 <body>
 <main class="shell">
-  <div class="eyebrow">Variation family builder · GitHub Pages v2</div>
+  <div class="eyebrow">Amazon Variation Tool</div>
   <h1>亚马逊变体合并工具</h1>
-  <p>新建一个父体，将已经上架的独立子 ASIN 批量合并到同一变体家庭。使用亚马逊原始类目模板，不重新创建子体。</p>
-  <section>
-    <h2><span class="step">01</span> 上传亚马逊类目模板</h2>
-    <input id="file" type="file" accept=".xlsx,.xlsm"/>
-    <p class="muted">支持 .xlsx / .xlsm。可上传已填写过的样例自动预填。表格只在当前浏览器处理，不会上传至网站服务器。</p>
-    <div id="metrics" class="metrics hidden"></div><div id="loadStatus" class="notice hidden"></div>
+  <p>把<strong>已经上架的独立子 ASIN</strong> 合并到<strong>一个新建父体</strong>。不需要重新创建子体。</p>
+  <div class="how" aria-label="使用步骤">
+    <div class="how-item">① 上传模板<span>对应类目的 Excel</span></div>
+    <div class="how-item">② 填父子体<span>SKU、ASIN、变体属性</span></div>
+    <div class="how-item">③ 下载文件<span>上传亚马逊检查结果</span></div>
+  </div>
+  <section id="uploadSection">
+    <h2><span class="step">第 1 步</span> 上传亚马逊类目模板</h2>
+    <input id="file" type="file" accept=".xlsx,.xlsm" aria-label="选择亚马逊类目模板"/>
+    <p class="muted">选择你从亚马逊后台下载的原始类目模板，例如 ANIMAL_SHELTER.xlsm（户外猫屋）。</p>
+    <div id="metrics" class="metrics hidden"></div>
+    <div id="loadStatus" class="notice hidden" role="status" aria-live="polite"></div>
   </section>
   <div id="editor" class="hidden">
-    <section>
-      <h2><span class="step">02</span> 新父体信息</h2>
+    <section id="mainFields">
+      <h2><span class="step">第 2 步</span> 填写父体和子体信息</h2>
+      <p class="muted">标有 * 的内容需要填写；已经存在的子体必须使用<strong>原 SKU 和原 ASIN</strong>。</p>
+      <h3 class="block-title">A. 新建父体</h3>
       <div class="field-grid">
-        <div><label for="parent_sku">新父体 SKU *</label><input id="parent_sku" placeholder="例如：NEW-HEATING-PAD-PARENT"/></div>
-        <div><label for="theme">Variation Theme *</label><select id="theme"></select></div>
-        <div><label for="product_type">Product Type *</label><input id="product_type"/></div>
-        <div><label for="brand">品牌</label><input id="brand"/></div>
-        <div><label for="item_name">新父体标题 *</label><input id="item_name"/></div>
-        <div><label for="item_type_keyword">Item Type Keyword（自动匹配）</label><select id="item_type_keyword"></select><div id="autoKeywordStatus" class="muted">根据当前类目选择</div></div>
+        <div><label for="parent_sku">新父体 SKU *</label><input id="parent_sku" placeholder="例如：CAT-HOUSE-PARENT" autocomplete="off"/>
+          <p class="muted">必须是店铺中未使用过的 SKU；子体会自动关联它。</p>
+        </div>
+        <div><label for="item_name">父体标题 *</label><input id="item_name" placeholder="填写父体商品名称"/></div>
+        <div><label for="brand">品牌</label><input id="brand" placeholder="例如：Rest-Eazzzy"/></div>
+        <div><label for="theme">变体主题 *</label><select id="theme"></select>
+          <p class="muted">例如 Color 或 Color/Size，需符合该类目允许的变体主题。</p>
+        </div>
       </div>
       <div id="parentMismatch" class="notice warn hidden"></div>
-    </section>
-    <section>
-      <div class="toolbar"><h2><span class="step">03</span> 子体信息</h2><button id="addChild" type="button">＋ 添加子体</button></div>
-      <p style="margin-bottom:13px">填写现有子 SKU、ASIN 和变体属性。Parent SKU 自动引用新父体，Product ID Type 自动选择 ASIN；子体原标题可选，留空不会覆盖旧标题。</p>
-      <div class="table-wrap"><table><thead id="childHeader"></thead><tbody id="childBody"></tbody></table></div>
-      <details><summary>属性字段映射（默认自动识别，可手动修改）</summary>
-        <div id="mapArea"></div>
-        <p class="muted">不同类目字段位置可能不同。程序通过模板内部技术字段标识重新匹配。</p>
-      </details>
-    </section>
-    <section>
-      <h2><span class="step">04</span> 其他商品字段</h2>
-      <p>父子关系、更新方式、ASIN 类型和 Item Type Keyword 自动按类目模板处理。原产地 China、无需电池 No、危险品 Not Applicable 是默认建议值，使用前请确认适用于实际商品。</p>
-      <details><summary>父体描述、五点、原产地和安规</summary>
-        <div style="margin-top:18px"><label for="description">父体商品描述</label><textarea id="description"></textarea></div>
-        <div id="bulletFields"></div>
-        <div class="three-grid" style="margin-top:16px">
-          <div><label for="origin">Country of Origin</label><input id="origin"/></div>
-          <div><label for="batteries">Are batteries required?</label><input id="batteries"/></div>
-          <div><label for="hazmat">Dangerous Goods Regulations</label><input id="hazmat"/></div>
+      <h3 class="block-title">B. 已有独立子体</h3>
+      <div class="toolbar">
+        <span class="muted">每行填写 1 个现有商品，颜色/尺寸等属性必须对应真实产品。</span>
+        <button id="addChild" type="button">＋ 添加子体</button>
+      </div>
+      <div class="table-wrap">
+        <table id="childrenTable"><thead id="childHeader"></thead><tbody id="childBody"></tbody></table>
+      </div>
+      <label class="check muted"><input id="showTitles" type="checkbox"/> 显示“子体原标题”（可选，不填就不更新原商品标题）</label>
+      <div class="compact-hint"><strong>程序自动填：</strong>父体/子体关系、子体 Parent SKU、Product ID Type = ASIN，以及父体 Full Update / 子体 Partial Update。</div>
+      <details>
+        <summary>高级设置：查看自动字段或修改类目属性</summary>
+        <div class="field-grid" style="margin-top:17px">
+          <div><label for="product_type">Product Type（从模板识别）</label><input id="product_type" readonly/></div>
+          <div><label for="item_type_keyword">Item Type Keyword（单个选项自动填写）</label><select id="item_type_keyword"></select><p id="autoKeywordStatus" class="muted"></p></div>
         </div>
-      </details>
-      <details><summary>高级选项：复用案例 / 类目特殊字段</summary>
-        <label class="check"><input id="reuse_parent" type="checkbox"/> 复用成功案例中父体其他已填字段</label>
-        <label class="check"><input id="reuse_child" type="checkbox"/> 复用案例中子体其他已填字段（不包括 SKU、ASIN、变体关系与属性）</label>
-        <p class="muted">默认不复用其他旧商品字段，避免 Partial Update 意外覆盖子体原有信息。如确有需要再开启复用。</p>
-        <div class="small-heading">其他需要填写的字段</div>
-        <div id="extraFields"></div>
-        <button type="button" id="addExtra">＋ 增加特殊字段</button>
+        <details><summary>变体属性对应列（通常无需操作）</summary>
+          <div id="mapArea"></div>
+          <p class="muted">当颜色或尺寸列识别错误时，才需要手动改这里。</p>
+        </details>
+        <details><summary>其他商品属性（父体描述、五点、原产地等）</summary>
+          <p class="muted">只在类目要求时补充。原产地、电池及危险品信息请确认与真实商品一致。</p>
+          <div style="margin-top:15px"><label for="description">父体商品描述</label><textarea id="description"></textarea></div>
+          <div id="bulletFields"></div>
+          <div class="three-grid" style="margin-top:16px">
+            <div><label for="origin">Country of Origin</label><input id="origin"/></div>
+            <div><label for="batteries">Are batteries required?</label><input id="batteries"/></div>
+            <div><label for="hazmat">Dangerous Goods Regulations</label><input id="hazmat"/></div>
+          </div>
+        </details>
+        <details><summary>复用样例字段 / 特殊类目字段（谨慎使用）</summary>
+          <label class="check"><input id="reuse_parent" type="checkbox"/> 复用案例中父体其他已填字段</label>
+          <label class="check"><input id="reuse_child" type="checkbox"/> 复用案例中子体其他已填字段</label>
+          <p class="muted">默认关闭，避免把样例的旧商品属性带入其他商品。</p>
+          <div id="extraFields"></div>
+          <button type="button" id="addExtra">＋ 增加特殊字段</button>
+        </details>
       </details>
     </section>
-    <section>
-      <div class="summary-line"><h2><span class="step">05</span> 检查并导出</h2><button id="generate" type="button" class="primary">生成亚马逊上传文件 ↓</button></div>
-      <div id="result" class="notice">完成信息填写后生成文件，程序将检查父子关系、SKU、ASIN 和属性组合。</div>
-      <p class="muted">文件生成成功不代表亚马逊已经接受。请先小批量上传测试，查看处理报告并核对实际父子关系。</p>
+    <section id="exportSection">
+      <h2><span class="step">第 3 步</span> 检查并下载亚马逊上传表</h2>
+      <p>核对新父体 SKU、子体原 SKU / ASIN、颜色或尺寸后，点击下载。</p>
+      <div style="margin-top:17px"><button id="generate" type="button" class="primary">检查并下载 Excel ↓</button></div>
+      <div id="result" class="notice" role="status" aria-live="polite">生成前会自动检查缺失信息、重复 SKU、重复属性组合以及父子 SKU 关系。</div>
+      <p class="muted">下载后，在亚马逊后台上传库存文件，检查<strong>处理报告</strong>和实际变体关系；仅下载成功不代表合并成功。</p>
     </section>
   </div>
-  <p class="footer">纯静态网页 · Excel 在浏览器本地处理 · 不登录亚马逊 · 不保存用户 SKU / ASIN</p>
+  <details style="background:#fff">
+    <summary>第一次使用？查看 3 个常见问题</summary>
+    <p><strong>应该上传哪个模板？</strong> 使用子体所属的亚马逊商品类目模板。不同类目的模板不一定相同。</p>
+    <p><strong>需要填新 ASIN 吗？</strong> 不需要。新建的是父体 SKU，子体填写现有 ASIN。</p>
+    <p><strong>上传后如何判断成功？</strong> 看亚马逊处理报告，并在管理库存确认父子关系。若子体属于旧父体，可能需先处理旧关联。</p>
+    <p><a href="https://github.com/Dora-lou/amazon-variation-merge-tool#readme" target="_blank" rel="noopener noreferrer">查看简短使用说明 ↗</a></p>
+  </details>
+  <p class="footer">Excel 在浏览器本地处理，不会提交给网站服务器 · 不登录亚马逊 · 首次换类目建议小批量测试</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="./engine.js"></script>
