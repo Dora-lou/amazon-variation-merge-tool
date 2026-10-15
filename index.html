@@ -67,13 +67,13 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
         <div><label for="product_type">Product Type *</label><input id="product_type"/></div>
         <div><label for="brand">品牌</label><input id="brand"/></div>
         <div><label for="item_name">新父体标题 *</label><input id="item_name"/></div>
-        <div><label for="item_type_keyword">Item Type Keyword</label><input id="item_type_keyword"/></div>
+        <div><label for="item_type_keyword">Item Type Keyword（自动匹配）</label><select id="item_type_keyword"></select><div id="autoKeywordStatus" class="muted">根据当前类目选择</div></div>
       </div>
       <div id="parentMismatch" class="notice warn hidden"></div>
     </section>
     <section>
       <div class="toolbar"><h2><span class="step">03</span> 子体信息</h2><button id="addChild" type="button">＋ 添加子体</button></div>
-      <p style="margin-bottom:13px">填写现有子 SKU、ASIN 和变体属性。Parent SKU 会自动引用上方的新父体 SKU。</p>
+      <p style="margin-bottom:13px">填写现有子 SKU、ASIN 和变体属性。Parent SKU 自动引用新父体，Product ID Type 自动选择 ASIN；子体原标题可选，留空不会覆盖旧标题。</p>
       <div class="table-wrap"><table><thead id="childHeader"></thead><tbody id="childBody"></tbody></table></div>
       <details><summary>属性字段映射（默认自动识别，可手动修改）</summary>
         <div id="mapArea"></div>
@@ -82,7 +82,7 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
     </section>
     <section>
       <h2><span class="step">04</span> 其他商品字段</h2>
-      <p>部分字段会从上传的案例预填。请确认这些信息适用于新父体，避免误用原商品属性。</p>
+      <p>父子关系、更新方式、ASIN 类型和 Item Type Keyword 自动按类目模板处理。原产地 China、无需电池 No、危险品 Not Applicable 是默认建议值，使用前请确认适用于实际商品。</p>
       <details><summary>父体描述、五点、原产地和安规</summary>
         <div style="margin-top:18px"><label for="description">父体商品描述</label><textarea id="description"></textarea></div>
         <div id="bulletFields"></div>
@@ -95,7 +95,7 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
       <details><summary>高级选项：复用案例 / 类目特殊字段</summary>
         <label class="check"><input id="reuse_parent" type="checkbox"/> 复用成功案例中父体其他已填字段</label>
         <label class="check"><input id="reuse_child" type="checkbox"/> 复用案例中子体其他已填字段（不包括 SKU、ASIN、变体关系与属性）</label>
-        <p class="muted">如换了其他产品，建议关闭复用并按模板补齐特殊必填字段，避免沿用旧商品信息。</p>
+        <p class="muted">默认不复用其他旧商品字段，避免 Partial Update 意外覆盖子体原有信息。如确有需要再开启复用。</p>
         <div class="small-heading">其他需要填写的字段</div>
         <div id="extraFields"></div>
         <button type="button" id="addExtra">＋ 增加特殊字段</button>
