@@ -75,9 +75,11 @@ async function inspect(buffer,filename){
  const dataRows=[...rr.entries()].filter(([row,cols])=>row>=dataStart&&(cols[fields.sku]||'').trim()).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
  const parents=dataRows.filter(row=>(row[fields.parentage]||'').toLowerCase()==='parent');
  const parent=parents[0]||{},children=dataRows.filter(row=>(row[fields.parentage]||'').toLowerCase()==='child');
- let themes=[],dropdown_options={};
+ let themes=[],dropdown_options={},templateProductType='';
  if(tabs.includes('Dropdown Lists')){
   const dr=values(parse(await fileText(zip,relTarget(wb,rel,'Dropdown Lists'))),shared);
+  const typeSamples=[...new Set(Object.values(dr.get(2)||{}).filter(v=>/^[A-Z][A-Z_0-9-]+$/.test(v)))];
+  if(typeSamples.length===1)templateProductType=typeSamples[0];
   const head=[...dr.entries()].find(([,cells])=>Object.values(cells).includes('variation_theme#1.name'));
   if(head){
    const rowNo=head[0],columns=head[1],last=Math.max(...dr.keys());
@@ -96,6 +98,7 @@ async function inspect(buffer,filename){
   }
  }
  const fieldValue=(obj,key)=>obj[fields[key]]||'';
+ const resolvedProductType=fieldValue(parent,'product_type')||fieldValue(children[0]||{},'product_type')||templateProductType;
  const parentSku=commonParent(children,fields,parent);
  const theme=fieldValue(parent,'theme')||fieldValue(children[0]||{},'theme')||themes[0]||'COLOR/SIZE';
  const basic={};for(const key of ['item_name','brand','item_type_keyword','description','origin','batteries','hazmat'])basic[key]=fieldValue(parent,key)||fieldValue(children[0]||{},key);
@@ -109,7 +112,7 @@ async function inspect(buffer,filename){
   if(!basic[key]&&opts.length===1)basic[key]=opts[0];
  }
  if(!basic.item_type_keyword){
-  const slug=(fieldValue(parent,'product_type')||fieldValue(children[0]||{},'product_type')).toLowerCase().replace(/_/g,'-');
+  const slug=resolvedProductType.toLowerCase().replace(/_/g,'-');
   const matching=(dropdown_options.item_type_keyword||[]).filter(v=>{
    const m=/\(([^()]*)\)\s*$/.exec(v);
    return m&&((m[1]===slug)||(m[1]===slug+'s')||(slug&&m[1].startsWith(slug)));
@@ -122,7 +125,7 @@ async function inspect(buffer,filename){
  const meta={header_count:Object.keys(headers).length,theme_options:themes.length?themes:[theme],default_theme:theme,
  field_options:Object.entries(headers).map(([c,id])=>({col:Number(c),label:labels[c]||'',id})).sort((x,y)=>x.col-y.col),
  parent_sku:parentSku,parent_original_sku:fieldValue(parent,'sku'),sample_children_count:children.length,
- basic,dropdown_options,product_type:fieldValue(parent,'product_type')||fieldValue(children[0]||{},'product_type'),bullets,
+ basic,dropdown_options,product_type:resolvedProductType,bullets,
  sample_children:sampleChildren,has_sample_parent:Object.keys(parent).length>0,has_sample_child:children.length>0,
  schema_field_indices:fields,default_theme_cols:Object.fromEntries(theme.split('/').map(t=>[t,inferCol(headers,t)]))};
  return {zip,sheetPath,sheet,headers,labels,fields,rr,shared,dataStart,parent,child:children[0]||{},meta,filename};
