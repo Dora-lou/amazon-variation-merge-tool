@@ -73,14 +73,14 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
   <h1>亚马逊变体合并工具</h1>
   <p>把<strong>已经上架的独立子 ASIN</strong> 合并到<strong>一个新建父体</strong>。不需要重新创建子体。</p>
   <div class="how" aria-label="使用步骤">
-    <div class="how-item">① 上传模板<span>对应类目的 Excel</span></div>
+    <div class="how-item">① 上传空白模板<span>对应类目的 Excel</span></div>
     <div class="how-item">② 填父子体<span>SKU、ASIN、变体属性</span></div>
     <div class="how-item">③ 下载文件<span>上传亚马逊检查结果</span></div>
   </div>
   <section id="uploadSection">
-    <h2><span class="step">第 1 步</span> 上传亚马逊类目模板</h2>
+    <h2><span class="step">第 1 步</span> 上传亚马逊空白类目模板</h2>
     <input id="file" type="file" accept=".xlsx,.xlsm" aria-label="选择亚马逊类目模板"/>
-    <p class="muted">选择你从亚马逊后台下载的原始类目模板，例如 ANIMAL_SHELTER.xlsm（户外猫屋）。</p>
+    <p class="muted">从亚马逊卖家后台下载对应类目的空白 Excel 模板（.xlsx / .xlsm），无需提前填写。</p>
     <div id="metrics" class="metrics hidden"></div>
     <div id="loadStatus" class="notice hidden" role="status" aria-live="polite"></div>
   </section>
@@ -151,19 +151,13 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
     </section>
     <section id="exportSection">
       <h2><span class="step">第 3 步</span> 检查并下载亚马逊上传表</h2>
-      <p>下载前自动检查父体描述和五点是否都已填写，并防止亚马逊模板示例文案混入上传表格。</p>
+      <p>下载前检查父体描述与至少 1 条卖点，并防止亚马逊模板示例文案混入上传表格。</p>
       <div style="margin-top:17px"><button id="generate" type="button" class="primary">检查并下载 Excel ↓</button></div>
       <div id="result" class="notice" role="status" aria-live="polite">生成前会自动检查缺失信息、重复 SKU、重复属性组合以及父子 SKU 关系。</div>
       <p class="muted">下载后，在亚马逊后台上传库存文件，检查<strong>处理报告</strong>和实际变体关系；仅下载成功不代表合并成功。</p>
     </section>
   </div>
-  <details style="background:#fff">
-    <summary>第一次使用？查看 3 个常见问题</summary>
-    <p><strong>应该上传哪个模板？</strong> 使用子体所属的亚马逊商品类目模板。不同类目的模板不一定相同。</p>
-    <p><strong>需要填新 ASIN 吗？</strong> 不需要。新建的是父体 SKU，子体填写现有 ASIN。</p>
-    <p><strong>上传后如何判断成功？</strong> 看亚马逊处理报告，并在管理库存确认父子关系。若子体属于旧父体，可能需先处理旧关联。</p>
-    <p><a href="https://github.com/Dora-lou/amazon-variation-merge-tool#readme" target="_blank" rel="noopener noreferrer">查看简短使用说明 ↗</a></p>
-  </details>
+  <p class="top-label"><a href="./使用说明.txt" download="使用说明.txt">下载简短使用说明（TXT） ↓</a></p>
   <p class="footer">Excel 在浏览器本地处理，不会提交给网站服务器 · 不登录亚马逊 · 首次换类目建议小批量测试</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
