@@ -20,6 +20,10 @@ $('file').addEventListener('change',async(e)=>{
   notify('loadStatus','模板已识别。请检查标题、SKU、变体属性和其他必填字段。');
  }catch(err){notify('loadStatus',err.message,'error')}
 });
+function updateBulletCount(){
+ const count=[...document.querySelectorAll('textarea[data-bullet]')].filter(el=>el.value.trim()).length;
+ setText('bulletCount','已填写 '+count+' / 5 条卖点（至少填写 1 条）；空白行不会写入上传表格。');
+}
 function initEditor(){
  setVal('parent_sku',meta.parent_sku);setVal('product_type',meta.product_type);
  for(const key of ['item_name','brand','item_type_keyword','description','origin','batteries','hazmat']){
@@ -61,13 +65,15 @@ function initEditor(){
  for(const b of meta.bullets){
   const wrap=document.createElement('div');
   const label=document.createElement('label');
-  label.textContent='Bullet Point '+b.order+'｜父体卖点 '+b.order+' *';
+  label.textContent='Bullet Point '+b.order+'｜父体卖点 '+b.order+'（可留空）';
   const textarea=document.createElement('textarea');
   textarea.dataset.bullet=String(b.col);
   textarea.placeholder='填写与所有变体一致的真实卖点 '+b.order;
   textarea.value=b.value||'';
+  textarea.addEventListener('input',updateBulletCount);
   wrap.append(label,textarea);$('bulletFields').appendChild(wrap);
  }
+ updateBulletCount();
 
  $('extraFields').innerHTML='';currentMapping={...meta.default_theme_cols};
  children=meta.sample_children.map(row=>({sku:row.sku,asin:row.asin,title:row.title||'',col_values:row.col_values}));
