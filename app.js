@@ -62,7 +62,12 @@ function saveChildren(){
   const idx=Number(tr.dataset.row),prev=children[idx]||{col_values:{}},col_values={...(prev.col_values||{})};
   for(const inp of tr.querySelectorAll('input[data-token]')){
    const column=currentMapping[inp.dataset.token];if(column)col_values[String(column)]=inp.value}
-  return {sku:tr.querySelector('input[data-name="sku"]').value,asin:tr.querySelector('input[data-name="asin"]').value,title:tr.querySelector('input[data-name="title"]').value,col_values};
+  const sku=tr.querySelector('input[data-name="sku"]').value;
+  const asin=tr.querySelector('input[data-name="asin"]').value;
+  let title=tr.querySelector('input[data-name="title"]').value;
+  const old=(meta?.sample_children||[])[idx];
+  if(old&&(sku.trim()!==old.sku.trim()||asin.trim().toUpperCase()!==old.asin.trim().toUpperCase())&&title===(old.title||''))title='';
+  return {sku,asin,title,col_values};
  });
 }
 function renderMapping(){
