@@ -52,6 +52,11 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
 .how-item span{display:block;color:#59766a;font-size:12px;font-weight:500;margin-top:4px}
 .compact-hint{background:#f4f8fb;padding:12px 14px;border-radius:10px;color:#547088;font-size:13px;line-height:1.6;margin-top:14px}
 .block-title{margin:23px 0 14px;font-size:15px;font-weight:750}
+.copy-section{background:#f8fbf9;border:1px solid #cfe6d7;border-radius:13px;padding:18px;margin:18px 0 20px}
+.bullet-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-top:14px}
+.bullet-grid > div:last-child:nth-child(odd){grid-column:1/-1}
+.bullet-grid textarea{min-height:86px}
+@media(max-width:700px){.bullet-grid{grid-template-columns:1fr}.bullet-grid > div:last-child:nth-child(odd){grid-column:auto}}
 .optional-col{display:none}
 #childrenTable.show-titles .optional-col{display:table-cell}
 #product_type[readonly],select:disabled{background:#f5f7f9;color:#526575;cursor:default}
@@ -95,7 +100,17 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
         </div>
       </div>
       <div id="parentMismatch" class="notice warn hidden"></div>
-      <h3 class="block-title">B. 已有独立子体</h3>
+      <div class="copy-section">
+        <div class="toolbar"><h3 class="block-title" style="margin:16px 0 9px">B. 新父体描述与五点（必填）</h3>
+          <button id="catCopy" type="button" class="hidden">一键填入猫屋参考文案</button>
+        </div>
+        <p class="muted">这里只填写新父体的内容；不会覆盖已有子体的五点。不能使用亚马逊模板里的鞋子、皮靴等示例。参考文案使用前请核实产品功能。</p>
+        <div style="margin-top:15px"><label for="description">Product Description｜父体商品描述 *</label>
+          <textarea id="description" placeholder="粘贴现有猫屋 Listing 中准确的商品描述，或使用上方参考文案并核对。"></textarea></div>
+        <div id="bulletFields" class="bullet-grid"></div>
+        <p id="copyWarning" class="muted hidden">已填入猫屋通用参考文案。请逐项核对：防水顶篷、保温层、可洗垫、组装结构是否适用于这次合并的全部款式。</p>
+      </div>
+      <h3 class="block-title">C. 已有独立子体</h3>
       <div class="toolbar">
         <span class="muted">每行填写 1 个现有商品，颜色/尺寸等属性必须对应真实产品。</span>
         <button id="addChild" type="button">＋ 添加子体</button>
@@ -115,10 +130,8 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
           <div id="mapArea"></div>
           <p class="muted">当颜色或尺寸列识别错误时，才需要手动改这里。</p>
         </details>
-        <details><summary>其他商品属性（父体描述、五点、原产地等）</summary>
+        <details><summary>其他商品属性（原产地、电池、危险品等）</summary>
           <p class="muted">只在类目要求时补充。原产地、电池及危险品信息请确认与真实商品一致。</p>
-          <div style="margin-top:15px"><label for="description">父体商品描述</label><textarea id="description"></textarea></div>
-          <div id="bulletFields"></div>
           <div class="three-grid" style="margin-top:16px">
             <div><label for="origin">Country of Origin</label><input id="origin"/></div>
             <div><label for="batteries">Are batteries required?</label><input id="batteries"/></div>
@@ -136,7 +149,7 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
     </section>
     <section id="exportSection">
       <h2><span class="step">第 3 步</span> 检查并下载亚马逊上传表</h2>
-      <p>核对新父体 SKU、子体原 SKU / ASIN、颜色或尺寸后，点击下载。</p>
+      <p>下载前自动检查父体描述和五点是否都已填写，并防止亚马逊模板示例文案混入上传表格。</p>
       <div style="margin-top:17px"><button id="generate" type="button" class="primary">检查并下载 Excel ↓</button></div>
       <div id="result" class="notice" role="status" aria-live="polite">生成前会自动检查缺失信息、重复 SKU、重复属性组合以及父子 SKU 关系。</div>
       <p class="muted">下载后，在亚马逊后台上传库存文件，检查<strong>处理报告</strong>和实际变体关系；仅下载成功不代表合并成功。</p>
