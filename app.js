@@ -34,7 +34,7 @@ function initEditor(){
  }
  kw.value=meta.basic.item_type_keyword||'';
  setText('autoKeywordStatus',kw.value?'已自动选择类目节点；如有需要，可在下方更改':'没有唯一匹配，请确认下方的类目节点');
- $('reuse_parent').checked=meta.has_sample_parent;$('reuse_child').checked=meta.has_sample_child;
+ $('reuse_parent').checked=false;$('reuse_child').checked=false;
  $('parentMismatch').classList.toggle('hidden',!meta.parent_original_sku||meta.parent_original_sku===meta.parent_sku);
  if(meta.parent_original_sku!==meta.parent_sku&&meta.parent_original_sku){
   setText('parentMismatch','原样例父 SKU 为 '+meta.parent_original_sku+'，但子体共同引用 '+meta.parent_sku+'。已按子体引用值预填，请核对。');
