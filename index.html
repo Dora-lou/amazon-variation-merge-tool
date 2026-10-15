@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>亚马逊变体合并工具 · GitHub Pages V2</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:#213042;background:#f5f7fb;font-size:14px}
+*{box-sizing:border-box}body{margin:0}
+.shell{max-width:1120px;margin:0 auto;padding:38px 22px 70px}
+.eyebrow{font-size:12px;font-weight:750;letter-spacing:.10em;color:#38745c;text-transform:uppercase;margin-bottom:11px}
+h1{font-size:30px;letter-spacing:-.05em;margin:0 0 9px}h2{font-size:17px;margin:0 0 18px;letter-spacing:-.015em}
+p{color:#69798a;line-height:1.6;margin:7px 0 0}
+section{background:#fff;border-radius:16px;border:1px solid #e1e7ef;padding:25px;margin-top:18px;box-shadow:0 4px 18px rgba(31,47,67,.025)}
+.step{color:#438061;margin-right:7px}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 21px}
+.three-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+label{font-size:13px;font-weight:650;display:block;margin:0 0 7px;color:#334456}
+input,select,textarea{font:inherit;width:100%;color:#213042;border:1px solid #cfd9e3;border-radius:9px;padding:10px 12px;background:white;outline:none}
+input:focus,select:focus,textarea:focus{border-color:#438467;box-shadow:0 0 0 3px #4384671a}
+textarea{min-height:94px;resize:vertical;line-height:1.5}
+#file{padding:17px;background:#f8fafc;cursor:pointer}
+.muted{font-size:12px;color:#7a8895;margin-top:7px}
+.metrics{display:flex;gap:12px;flex-wrap:wrap;margin-top:15px}
+.pill{border:1px solid #dfe7ed;border-radius:9px;background:#fbfcfd;padding:10px 15px;font-size:13px;color:#637487}
+.pill strong{color:#263747;font-size:18px;margin-right:5px}
+.notice{padding:12px 15px;border-radius:10px;font-size:13px;margin-top:12px;line-height:1.6;background:#eff7f2;color:#285c3e;border:1px solid #cde6d6}
+.notice.warn{background:#fff8eb;border-color:#f3dbab;color:#895d18}
+.notice.error{background:#fff1f2;border-color:#f1c4cc;color:#b03448}
+.hidden{display:none!important}
+button{font:inherit;font-weight:650;border-radius:10px;padding:11px 16px;cursor:pointer;border:1px solid #cfdae4;background:#fff;color:#334c5d}
+button:hover{background:#f5f8f9}
+button.primary{background:#267651;color:white;border-color:#267651}
+button.primary:hover{background:#1f6244}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.ghost{font-weight:500;border:0;color:#a33a47;padding:4px 10px;background:transparent}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:13px}
+.table-wrap{overflow:auto;border:1px solid #e2e8ef;border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:690px}th,td{border-bottom:1px solid #e6ebf1;padding:10px;text-align:left}
+th{white-space:nowrap;background:#f8fafc;font-size:12px;font-weight:650;color:#5a6c7e}
+tr:last-child td{border:0}td input{min-width:130px;padding:9px 10px}
+details{border:1px solid #e1e7ef;border-radius:10px;padding:14px 16px;margin-top:16px}
+summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.footer{font-size:12px;color:#788593;margin-top:21px}
+.check{display:flex;align-items:center;gap:9px;font-weight:500;margin:12px 0}.check input{width:auto}
+.row-span{grid-column:1/-1}#mapArea>div{margin-top:12px}.small-heading{margin:18px 0 12px;font-weight:700}
+@media(max-width:700px){.shell{padding:20px 12px}.field-grid,.three-grid{grid-template-columns:1fr}section{padding:18px}.toolbar{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="eyebrow">Variation family builder · GitHub Pages v2</div>
+  <h1>亚马逊变体合并工具</h1>
+  <p>新建一个父体，将已经上架的独立子 ASIN 批量合并到同一变体家庭。使用亚马逊原始类目模板，不重新创建子体。</p>
+  <section>
+    <h2><span class="step">01</span> 上传亚马逊类目模板</h2>
+    <input id="file" type="file" accept=".xlsx,.xlsm"/>
+    <p class="muted">支持 .xlsx / .xlsm。可上传已填写过的样例自动预填。表格只在当前浏览器处理，不会上传至网站服务器。</p>
+    <div id="metrics" class="metrics hidden"></div><div id="loadStatus" class="notice hidden"></div>
+  </section>
+  <div id="editor" class="hidden">
+    <section>
+      <h2><span class="step">02</span> 新父体信息</h2>
+      <div class="field-grid">
+        <div><label for="parent_sku">新父体 SKU *</label><input id="parent_sku" placeholder="例如：NEW-HEATING-PAD-PARENT"/></div>
+        <div><label for="theme">Variation Theme *</label><select id="theme"></select></div>
+        <div><label for="product_type">Product Type *</label><input id="product_type"/></div>
+        <div><label for="brand">品牌</label><input id="brand"/></div>
+        <div><label for="item_name">新父体标题 *</label><input id="item_name"/></div>
+        <div><label for="item_type_keyword">Item Type Keyword</label><input id="item_type_keyword"/></div>
+      </div>
+      <div id="parentMismatch" class="notice warn hidden"></div>
+    </section>
+    <section>
+      <div class="toolbar"><h2><span class="step">03</span> 子体信息</h2><button id="addChild" type="button">＋ 添加子体</button></div>
+      <p style="margin-bottom:13px">填写现有子 SKU、ASIN 和变体属性。Parent SKU 会自动引用上方的新父体 SKU。</p>
+      <div class="table-wrap"><table><thead id="childHeader"></thead><tbody id="childBody"></tbody></table></div>
+      <details><summary>属性字段映射（默认自动识别，可手动修改）</summary>
+        <div id="mapArea"></div>
+        <p class="muted">不同类目字段位置可能不同。程序通过模板内部技术字段标识重新匹配。</p>
+      </details>
+    </section>
+    <section>
+      <h2><span class="step">04</span> 其他商品字段</h2>
+      <p>部分字段会从上传的案例预填。请确认这些信息适用于新父体，避免误用原商品属性。</p>
+      <details><summary>父体描述、五点、原产地和安规</summary>
+        <div style="margin-top:18px"><label for="description">父体商品描述</label><textarea id="description"></textarea></div>
+        <div id="bulletFields"></div>
+        <div class="three-grid" style="margin-top:16px">
+          <div><label for="origin">Country of Origin</label><input id="origin"/></div>
+          <div><label for="batteries">Are batteries required?</label><input id="batteries"/></div>
+          <div><label for="hazmat">Dangerous Goods Regulations</label><input id="hazmat"/></div>
+        </div>
+      </details>
+      <details><summary>高级选项：复用案例 / 类目特殊字段</summary>
+        <label class="check"><input id="reuse_parent" type="checkbox"/> 复用成功案例中父体其他已填字段</label>
+        <label class="check"><input id="reuse_child" type="checkbox"/> 复用案例中子体其他已填字段（不包括 SKU、ASIN、变体关系与属性）</label>
+        <p class="muted">如换了其他产品，建议关闭复用并按模板补齐特殊必填字段，避免沿用旧商品信息。</p>
+        <div class="small-heading">其他需要填写的字段</div>
+        <div id="extraFields"></div>
+        <button type="button" id="addExtra">＋ 增加特殊字段</button>
+      </details>
+    </section>
+    <section>
+      <div class="summary-line"><h2><span class="step">05</span> 检查并导出</h2><button id="generate" type="button" class="primary">生成亚马逊上传文件 ↓</button></div>
+      <div id="result" class="notice">完成信息填写后生成文件，程序将检查父子关系、SKU、ASIN 和属性组合。</div>
+      <p class="muted">文件生成成功不代表亚马逊已经接受。请先小批量上传测试，查看处理报告并核对实际父子关系。</p>
+    </section>
+  </div>
+  <p class="footer">纯静态网页 · Excel 在浏览器本地处理 · 不登录亚马逊 · 不保存用户 SKU / ASIN</p>
+</main>
+<script src="./vendor/jszip.min.js"></script>
+<script src="./engine.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
