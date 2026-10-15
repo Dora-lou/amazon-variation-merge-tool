@@ -26,6 +26,14 @@ function initEditor(){
  $('theme').innerHTML='';for(const theme of meta.theme_options)$('theme').appendChild(optionEl(theme,theme));
  if(!meta.theme_options.includes(meta.default_theme))$('theme').appendChild(optionEl(meta.default_theme,meta.default_theme));
  $('theme').value=meta.default_theme;
+ const kw=$('item_type_keyword');kw.innerHTML='';
+ kw.appendChild(optionEl('','请选择对应的类目节点'));
+ for(const value of meta.dropdown_options?.item_type_keyword||[])kw.appendChild(optionEl(value,value));
+ if(meta.basic.item_type_keyword&&!Array.from(kw.options).some(opt=>opt.value===meta.basic.item_type_keyword)){
+  kw.appendChild(optionEl(meta.basic.item_type_keyword,meta.basic.item_type_keyword));
+ }
+ kw.value=meta.basic.item_type_keyword||'';
+ setText('autoKeywordStatus',kw.value?'已自动选择类目节点；如有需要，可在下方更改':'没有唯一匹配，请确认下方的类目节点');
  $('reuse_parent').checked=meta.has_sample_parent;$('reuse_child').checked=meta.has_sample_child;
  $('parentMismatch').classList.toggle('hidden',!meta.parent_original_sku||meta.parent_original_sku===meta.parent_sku);
  if(meta.parent_original_sku!==meta.parent_sku&&meta.parent_original_sku){
@@ -36,8 +44,8 @@ function initEditor(){
   wrap.innerHTML='<label>'+safe(b.label)+'</label><textarea data-bullet="'+b.col+'"></textarea>';
   wrap.querySelector('textarea').value=b.value;$('bulletFields').appendChild(wrap)}
  $('extraFields').innerHTML='';currentMapping={...meta.default_theme_cols};
- children=meta.sample_children.map(row=>({sku:row.sku,asin:row.asin,col_values:row.col_values}));
- if(!children.length)children=[{sku:'',asin:'',col_values:{}},{sku:'',asin:'',col_values:{}}];
+ children=meta.sample_children.map(row=>({sku:row.sku,asin:row.asin,title:row.title||'',col_values:row.col_values}));
+ if(!children.length)children=[{sku:'',asin:'',title:'',col_values:{}},{sku:'',asin:'',title:'',col_values:{}}];
  renderMapping();renderChildren();notify('result','等待生成：请先复核父体和子体信息。');
 }
 function colGuess(token){
@@ -54,7 +62,7 @@ function saveChildren(){
   const idx=Number(tr.dataset.row),prev=children[idx]||{col_values:{}},col_values={...(prev.col_values||{})};
   for(const inp of tr.querySelectorAll('input[data-token]')){
    const column=currentMapping[inp.dataset.token];if(column)col_values[String(column)]=inp.value}
-  return {sku:tr.querySelector('input[data-name="sku"]').value,asin:tr.querySelector('input[data-name="asin"]').value,col_values};
+  return {sku:tr.querySelector('input[data-name="sku"]').value,asin:tr.querySelector('input[data-name="asin"]').value,title:tr.querySelector('input[data-name="title"]').value,col_values};
  });
 }
 function renderMapping(){
@@ -69,12 +77,13 @@ function renderMapping(){
   div.appendChild(sel);area.appendChild(div)}
 }
 function renderChildren(){
- const t=tokens();$('childHeader').innerHTML='<tr><th>子 SKU *</th><th>子 ASIN *</th>'+t.map(x=>'<th>'+safe(x)+' *</th>').join('')+'<th>操作</th></tr>';
+ const t=tokens();$('childHeader').innerHTML='<tr><th>子 SKU *</th><th>子 ASIN *</th><th>子体原标题（可选）</th>'+t.map(x=>'<th>'+safe(x)+' *</th>').join('')+'<th>操作</th></tr>';
  const body=$('childBody');body.innerHTML='';
  children.forEach((row,idx)=>{
   const tr=document.createElement('tr');tr.dataset.row=idx;
   tr.innerHTML='<td><input data-name="sku" value="'+safe(row.sku)+'" placeholder="已上架 SKU"/></td>'+
   '<td><input data-name="asin" value="'+safe(row.asin)+'" placeholder="B0XXXXXXXX"/></td>'+
+  '<td><input data-name="title" value="'+safe(row.title||'')+'" placeholder="原有标题（留空则不更新）" style="min-width:235px"/></td>'+
   t.map(token=>{const col=currentMapping[token],val=(row.col_values||{})[String(col)]||'';
    return '<td><input data-token="'+safe(token)+'" value="'+safe(val)+'" placeholder="'+safe(token)+'"/></td>'}).join('')+
   '<td><button type="button" class="ghost" data-remove="'+idx+'">移除</button></td>';
@@ -84,7 +93,7 @@ function renderChildren(){
   saveChildren();children.splice(Number(b.dataset.remove),1);renderChildren()
  }));
 }
-$('addChild').addEventListener('click',()=>{saveChildren();children.push({sku:'',asin:'',col_values:{}});renderChildren()});
+$('addChild').addEventListener('click',()=>{saveChildren();children.push({sku:'',asin:'',title:'',col_values:{}});renderChildren()});
 $('theme').addEventListener('change',()=>{
  saveChildren();currentMapping=Object.fromEntries(tokens().map(t=>[t,colGuess(t)]));renderMapping();renderChildren();
 });
@@ -109,7 +118,7 @@ function gather(){
  const bullets={};for(const el of document.querySelectorAll('textarea[data-bullet]'))bullets[el.dataset.bullet]=el.value;
  return {
   parent_sku:$('parent_sku').value,theme,theme_cols:Object.fromEntries(tokens().map(t=>[t,currentMapping[t]])),
-  children:children.filter(x=>x.sku||x.asin||tokens().some(t=>x.col_values[String(currentMapping[t])])),
+  children:children.filter(x=>x.sku||x.asin||x.title||tokens().some(t=>x.col_values[String(currentMapping[t])])),
   product_type:$('product_type').value,item_name:$('item_name').value,brand:$('brand').value,
   item_type_keyword:$('item_type_keyword').value,description:$('description').value,
   origin:$('origin').value,batteries:$('batteries').value,hazmat:$('hazmat').value,
