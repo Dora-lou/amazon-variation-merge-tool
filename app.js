@@ -27,13 +27,25 @@ function initEditor(){
  if(!meta.theme_options.includes(meta.default_theme))$('theme').appendChild(optionEl(meta.default_theme,meta.default_theme));
  $('theme').value=meta.default_theme;
  const kw=$('item_type_keyword');kw.innerHTML='';
- kw.appendChild(optionEl('','请选择对应的类目节点'));
- for(const value of meta.dropdown_options?.item_type_keyword||[])kw.appendChild(optionEl(value,value));
- if(meta.basic.item_type_keyword&&!Array.from(kw.options).some(opt=>opt.value===meta.basic.item_type_keyword)){
-  kw.appendChild(optionEl(meta.basic.item_type_keyword,meta.basic.item_type_keyword));
+ const keywordChoices=meta.dropdown_options?.item_type_keyword||[];
+ kw.disabled=false;
+ if(keywordChoices.length===1){
+  kw.appendChild(optionEl(keywordChoices[0],keywordChoices[0]));
+  kw.value=keywordChoices[0];
+  kw.disabled=true;
+  setText('autoKeywordStatus','模板仅有 1 个有效选项，程序已自动填入，无需操作');
+ }else{
+  kw.appendChild(optionEl('','请选择对应的类目节点'));
+  for(const value of keywordChoices)kw.appendChild(optionEl(value,value));
+  if(meta.basic.item_type_keyword&&!Array.from(kw.options).some(opt=>opt.value===meta.basic.item_type_keyword)){
+   kw.appendChild(optionEl(meta.basic.item_type_keyword,meta.basic.item_type_keyword));
+  }
+  kw.value=meta.basic.item_type_keyword||'';
+  setText('autoKeywordStatus',kw.value?'已根据原模板预选；多个选项可手动调整':'模板有多个选项，请确认需要的类目节点');
  }
- kw.value=meta.basic.item_type_keyword||'';
- setText('autoKeywordStatus',kw.value?'已自动选择类目节点；如有需要，可在下方更改':'没有唯一匹配，请确认下方的类目节点');
+ const pt=$('product_type');
+ pt.readOnly=!!meta.product_type;
+ pt.title=meta.product_type?'已从当前类目模板自动识别':'此模板尚未找到产品类型，需要填写';
  $('reuse_parent').checked=false;$('reuse_child').checked=false;
  $('parentMismatch').classList.toggle('hidden',!meta.parent_original_sku||meta.parent_original_sku===meta.parent_sku);
  if(meta.parent_original_sku!==meta.parent_sku&&meta.parent_original_sku){
