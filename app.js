@@ -47,6 +47,8 @@ function initEditor(){
  pt.readOnly=!!meta.product_type;
  pt.title=meta.product_type?'已从当前类目模板自动识别':'此模板尚未找到产品类型，需要填写';
  $('reuse_parent').checked=false;$('reuse_child').checked=false;
+ $('showTitles').checked=false;
+ $('childrenTable').classList.remove('show-titles');
  $('parentMismatch').classList.toggle('hidden',!meta.parent_original_sku||meta.parent_original_sku===meta.parent_sku);
  if(meta.parent_original_sku!==meta.parent_sku&&meta.parent_original_sku){
   setText('parentMismatch','原样例父 SKU 为 '+meta.parent_original_sku+'，但子体共同引用 '+meta.parent_sku+'。已按子体引用值预填，请核对。');
@@ -94,13 +96,13 @@ function renderMapping(){
   div.appendChild(sel);area.appendChild(div)}
 }
 function renderChildren(){
- const t=tokens();$('childHeader').innerHTML='<tr><th>子 SKU *</th><th>子 ASIN *</th><th>子体原标题（可选）</th>'+t.map(x=>'<th>'+safe(x)+' *</th>').join('')+'<th>操作</th></tr>';
+ const t=tokens();$('childHeader').innerHTML='<tr><th>子 SKU *</th><th>子 ASIN *</th><th class="optional-col">子体原标题（可选）</th>'+t.map(x=>'<th>'+safe(x)+' *</th>').join('')+'<th>操作</th></tr>';
  const body=$('childBody');body.innerHTML='';
  children.forEach((row,idx)=>{
   const tr=document.createElement('tr');tr.dataset.row=idx;
   tr.innerHTML='<td><input data-name="sku" value="'+safe(row.sku)+'" placeholder="已上架 SKU"/></td>'+
   '<td><input data-name="asin" value="'+safe(row.asin)+'" placeholder="B0XXXXXXXX"/></td>'+
-  '<td><input data-name="title" value="'+safe(row.title||'')+'" placeholder="原有标题（留空则不更新）" style="min-width:235px"/></td>'+
+  '<td class="optional-col"><input data-name="title" value="'+safe(row.title||'')+'" placeholder="原有标题（留空不更新）" style="min-width:235px"/></td>'+
   t.map(token=>{const col=currentMapping[token],val=(row.col_values||{})[String(col)]||'';
    return '<td><input data-token="'+safe(token)+'" value="'+safe(val)+'" placeholder="'+safe(token)+'"/></td>'}).join('')+
   '<td><button type="button" class="ghost" data-remove="'+idx+'">移除</button></td>';
@@ -111,6 +113,7 @@ function renderChildren(){
  }));
 }
 $('addChild').addEventListener('click',()=>{saveChildren();children.push({sku:'',asin:'',title:'',col_values:{}});renderChildren()});
+$('showTitles').addEventListener('change',()=>{$('childrenTable').classList.toggle('show-titles',$('showTitles').checked)});
 $('theme').addEventListener('change',()=>{
  saveChildren();currentMapping=Object.fromEntries(tokens().map(t=>[t,colGuess(t)]));renderMapping();renderChildren();
 });
