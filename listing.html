@@ -75,8 +75,8 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
           <div id="descriptionFields" class="edit-fields hidden"><label for="listingDescription">新商品描述</label><textarea id="listingDescription" placeholder="填写新的商品描述"></textarea></div>
         </div>
         <div class="edit-option">
-          <label class="check"><input id="editPrice" type="checkbox"/> 售价（Your Price USD）</label>
-          <div id="priceFields" class="edit-fields hidden"><label for="listingPrice">新售价（USD）</label><input id="listingPrice" type="number" min="0.01" step="0.01" placeholder="例如 26.99"/></div>
+          <label class="check"><input id="editHighlights" type="checkbox"/> 亮点（Product Highlights）</label>
+          <div id="highlightsFields" class="edit-fields hidden"><label for="listingHighlights">新亮点（每行一条）</label><textarea id="listingHighlights" rows="5" placeholder="每行填写一条亮点，程序会按模板中的亮点字段依次写入。"></textarea><p class="muted">可填写的条数取决于当前类目模板中识别到的 Product Highlights 字段数量。</p></div>
         </div>
       </div>
       <div style="margin-top:18px" class="edit-option">
@@ -87,13 +87,9 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
           <button id="addListingBullet" type="button" style="margin-top:12px">＋ 添加下一条 Bullet Point</button>
         </div>
       </div>
-      <div style="margin-top:18px" class="edit-option">
-        <label class="check"><input id="editSearchTerms" type="checkbox"/> Search Terms / Generic Keyword</label>
-        <div id="searchTermsFields" class="edit-fields hidden"><label for="listingSearchTerms">新的 Search Terms</label><textarea id="listingSearchTerms" placeholder="填写新的 Search Terms"></textarea></div>
-      </div>
       <details style="margin-top:18px;border:1px solid #e1e7ef;border-radius:10px;padding:14px">
         <summary style="font-weight:650;cursor:pointer">其他类目字段（高级）</summary>
-        <p class="muted">从当前模板中选择额外字段。只填写你确认需要修改的属性。</p>
+        <p class="muted">标题、五点、商品描述和亮点在上方单独操作。售价、Search Terms 及其他类目属性仍可在这里选择；只填写你确认需要修改的字段。</p>
         <div class="three-grid" style="margin-top:13px">
           <div><label for="advancedFieldSelect">模板字段</label><select id="advancedFieldSelect"><option value="">请先加载模板</option></select></div>
           <div style="display:flex;align-items:end"><button id="addAdvancedField" type="button">添加字段</button></div>
