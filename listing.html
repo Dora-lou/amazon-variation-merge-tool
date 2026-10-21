@@ -120,11 +120,21 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
       <div id="productFormStatus" class="notice">商品资料保存在当前浏览器中。</div>
     </section>
     <section>
-      <h2>批量导入商品资料</h2>
-      <p class="muted">粘贴 Excel 复制出来的表格（推荐 Tab 分隔），每行一个子体。表头至少需要 category、parent_asin、child_asin、child_sku、brand；parent_sku 可选。也支持“商品分类、父 ASIN、子 ASIN、子 SKU、品牌”等中文表头。</p>
-      <textarea id="productImportText" rows="6" placeholder="category&#9;parent_asin&#9;parent_sku&#9;brand&#9;child_asin&#9;child_sku&#10;Pet Playpen&#9;B0XXXXXXXX&#9;parent-sku&#9;Your Brand&#9;B0YYYYYYYY&#9;child-sku"></textarea>
-      <div class="toolbar" style="margin-top:12px"><button id="importProducts" type="button">导入商品资料</button></div>
-      <div id="importStatus" class="notice">导入时会按“商品分类 + 父 ASIN”归组，并按子 ASIN 去重。</div>
+      <h2>批量导入商品资料 Excel</h2>
+      <p class="muted">直接上传你的商品资料 Excel（.xlsx、.xls、.xlsm 或 .csv）。至少需要父 ASIN、子 ASIN、SKU 三列；商品分类、父 SKU、品牌、标题、颜色、尺寸等列可选。程序会自动识别表头、统计父体和子体数量，并把资料保存到本地资料库。</p>
+      <div class="field-grid" style="margin-top:14px">
+        <div><label for="productExcelFile">选择商品资料文件</label><input id="productExcelFile" type="file" accept=".xlsx,.xls,.xlsm,.csv"/></div>
+        <div><label for="importDefaultCategory">默认商品分类（仅当 Excel 没有类目列时使用）</label><input id="importDefaultCategory" value="户外猫屋" placeholder="例如：户外猫屋 / Pet Playpen"/></div>
+      </div>
+      <div class="toolbar" style="margin-top:12px"><button id="previewProductExcel" type="button">识别文件并统计</button><button id="importExcelProducts" class="primary" type="button" disabled>确认导入并保存</button></div>
+      <div id="importPreview" class="notice">选择文件后，先点击“识别文件并统计”检查识别到的列和商品数量，再确认导入。</div>
+      <div id="importStatus" class="notice">导入后，商品组和子 ASIN/SKU 对应关系会保存在当前浏览器资料库中。</div>
+      <details style="margin-top:16px">
+        <summary style="font-weight:650;cursor:pointer">备用方式：粘贴 Excel 内容</summary>
+        <p class="muted">如果暂时无法上传文件，也可以复制 Excel 表格后粘贴在这里。表头至少需要父 ASIN、子 ASIN、SKU。</p>
+        <textarea id="productImportText" rows="5" placeholder="父 ASIN&#9;子 ASIN&#9;SKU&#10;B0XXXXXXXX&#9;B0YYYYYYYY&#9;your-child-sku"></textarea>
+        <div class="toolbar" style="margin-top:10px"><button id="importProducts" type="button">导入粘贴内容</button></div>
+      </details>
     </section>
     <section>
       <h2>已保存的商品组</h2>
@@ -150,6 +160,7 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
   <p class="footer">Excel 在浏览器本地处理；不登录亚马逊、不连接卖家后台、不向网站服务器上传文件。生成文件不代表亚马逊已成功更新，请检查处理报告。</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="./engine.js"></script>
 <script src="./listing.js"></script>
 </body>
