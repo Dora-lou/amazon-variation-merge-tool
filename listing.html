@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>亚马逊运营工具箱｜Listing 修改</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:#213042;background:#f5f7fb;font-size:14px}
+*{box-sizing:border-box}body{margin:0}.shell{max-width:1120px;margin:0 auto;padding:32px 22px 70px}
+.eyebrow{font-size:12px;font-weight:750;letter-spacing:.1em;color:#38745c;text-transform:uppercase;margin-bottom:11px}
+h1{font-size:30px;letter-spacing:-.05em;margin:0 0 9px}h2{font-size:18px;margin:0 0 14px}h3{font-size:15px;margin:0 0 12px}
+p{color:#69798a;line-height:1.6;margin:7px 0 0}section{background:#fff;border-radius:16px;border:1px solid #e1e7ef;padding:24px;margin-top:17px;box-shadow:0 4px 18px rgba(31,47,67,.025)}
+label{font-size:13px;font-weight:650;display:block;margin:0 0 7px;color:#334456}
+input,select,textarea{font:inherit;width:100%;color:#213042;border:1px solid #cfd9e3;border-radius:9px;padding:10px 12px;background:white;outline:none}
+input:focus,select:focus,textarea:focus{border-color:#438467;box-shadow:0 0 0 3px #4384671a}
+textarea{min-height:74px;resize:vertical;line-height:1.5}button{font:inherit;font-weight:650;border-radius:10px;padding:10px 15px;cursor:pointer;border:1px solid #cfdae4;background:#fff;color:#334c5d}
+button:hover{background:#f5f8f9}button.primary{background:#267651;color:white;border-color:#267651}button.primary:hover{background:#1f6244}button:disabled{opacity:.5;cursor:not-allowed}
+a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.module-nav a{text-decoration:none;border:1px solid #d4e0e7;background:white;padding:10px 14px;border-radius:10px;color:#405668;font-weight:650}.module-nav a.active{background:#eaf3ee;border-color:#cce1d5;color:#236644}
+.page-tabs button.active{background:#267651;color:#fff;border-color:#267651}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}.row-span{grid-column:1/-1}.three-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.bullet-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}.edit-option{border:1px solid #e1e7ef;border-radius:10px;padding:12px}.edit-fields{margin-top:10px}.edit-fields label{margin-top:4px}.bullet-grid textarea{min-height:86px}
+.notice{padding:12px 15px;border-radius:10px;font-size:13px;margin-top:12px;line-height:1.6;background:#eff7f2;color:#285c3e;border:1px solid #cde6d6}.notice.warn{background:#fff8eb;border-color:#f3dbab;color:#895d18}.notice.error{background:#fff1f2;border-color:#f1c4cc;color:#b03448}
+.muted{font-size:12px;color:#7a8895;margin-top:7px}.hidden{display:none!important}.check{display:flex;align-items:center;gap:9px;font-weight:500;margin:12px 0}.check input{width:auto}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px}.child-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px}
+.child-choice{display:flex;gap:9px;align-items:flex-start;border:1px solid #e1e7ef;border-radius:9px;padding:10px 12px;font-weight:500;margin:0}.child-choice input{width:auto;margin-top:3px}.advanced-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;gap:10px;border:1px solid #e1e7ef;border-radius:10px;padding:12px;margin-top:10px}
+.table-wrap{overflow:auto;border:1px solid #e2e8ef;border-radius:10px;margin-top:12px}table{border-collapse:collapse;width:100%;min-width:700px}th,td{border-bottom:1px solid #e6ebf1;padding:10px;text-align:left;vertical-align:top}th{white-space:nowrap;background:#f8fafc;font-size:12px;color:#5a6c7e}td{font-size:13px}tr:last-child td{border:0}.data-table button{margin:2px;padding:6px 9px;font-size:12px}.danger{color:#a33a47}.quiet{border:0;background:transparent;padding:4px 8px}.footer{font-size:12px;color:#788593;margin-top:22px}
+@media(max-width:700px){.shell{padding:20px 12px}.field-grid,.three-grid,.bullet-grid,.child-list{grid-template-columns:1fr}section{padding:17px}.advanced-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="eyebrow">Amazon Operations Toolkit</div>
+  <h1>亚马逊运营工具箱</h1>
+  <p>Listing 修改、类目模板保存、父子 ASIN/SKU 匹配和修改历史。所有数据默认保存在当前浏览器。</p>
+  <nav class="module-nav" aria-label="工具模块">
+    <a href="./index.html">合并变体</a>
+    <a href="./listing.html" class="active">Listing 修改</a>
+  </nav>
+  <div class="page-tabs">
+    <button id="openListingTab" class="active" type="button">Listing 修改</button>
+    <button id="openLibraryTab" type="button">商品资料库 / 历史记录</button>
+  </div>
+
+  <div id="listingWorkspace">
+    <section>
+      <h2>第 1 步｜选择类目模板</h2>
+      <div class="field-grid">
+        <div><label for="listingTemplateSelect">已保存的类目模板</label><select id="listingTemplateSelect"><option value="">请选择模板</option></select><p class="muted">例如 Pet Playpen、Pet Heating Pad、Outdoor Cat House。每个类目可以保存自己的亚马逊模板。</p></div>
+        <div><label for="listingTemplateName">新模板的分类名称</label><input id="listingTemplateName" value="户外猫屋" placeholder="例如：Pet Playpen"/></div>
+        <div class="row-span"><label for="listingTemplateFile">选择亚马逊类目模板（.xlsx / .xlsm）</label><input id="listingTemplateFile" type="file" accept=".xlsx,.xlsm"/><div class="toolbar" style="margin-top:10px"><button id="saveListingTemplate" class="primary" type="button">保存类目模板</button></div><p class="muted">先填写分类名称，再选择文件并点击保存。首次保存一次即可；以后选择这个分类就会自动调用模板。上传新版本时可替换旧模板。</p></div>
+      </div>
+      <div id="listingTemplateStatus" class="notice" role="status">请选择已保存的类目模板，或上传一个新的亚马逊类目模板。</div>
+    </section>
+
+    <section>
+      <h2>第 2 步｜选择商品与子体</h2>
+      <div class="field-grid">
+        <div><label for="listingProductSelect">选择商品组 / 父 ASIN</label><select id="listingProductSelect"><option value="">请选择商品组</option></select></div>
+        <div><label for="listingChildSelect">快速选择单个子 ASIN（可选）</label><select id="listingChildSelect" disabled><option value="">请先选择商品组</option></select></div>
+      </div>
+      <p class="muted">选择父 ASIN 后，程序会匹配资料库中已保存的所有子 ASIN 和 SKU。默认勾选全部子体，也可以取消勾选，只修改指定子体。</p>
+      <div id="listingChildChecklist" class="child-list">请先在商品资料库添加商品组。</div>
+    </section>
+
+    <section>
+      <h2>第 3 步｜选择要修改的字段</h2>
+      <p class="muted">只勾选本次要更新的字段；未勾选的字段不会写入上传表。批量选择多个子体时，填写的内容会应用到所有已勾选子体。</p>
+      <div class="field-grid" style="margin-top:17px">
+        <div class="edit-option">
+          <label class="check"><input id="editTitle" type="checkbox"/> 标题（Item Name）</label>
+          <div id="titleFields" class="edit-fields hidden"><label for="listingTitle">新标题</label><input id="listingTitle" placeholder="填写新的英文标题"/></div>
+        </div>
+        <div class="edit-option">
+          <label class="check"><input id="editDescription" type="checkbox"/> 商品描述（Product Description）</label>
+          <div id="descriptionFields" class="edit-fields hidden"><label for="listingDescription">新商品描述</label><textarea id="listingDescription" placeholder="填写新的商品描述"></textarea></div>
+        </div>
+        <div class="edit-option">
+          <label class="check"><input id="editPrice" type="checkbox"/> 售价（Your Price USD）</label>
+          <div id="priceFields" class="edit-fields hidden"><label for="listingPrice">新售价（USD）</label><input id="listingPrice" type="number" min="0.01" step="0.01" placeholder="例如 26.99"/></div>
+        </div>
+      </div>
+      <div style="margin-top:18px" class="edit-option">
+        <label class="check"><input id="editBullets" type="checkbox"/> 五点描述（Bullet Point）</label>
+        <div id="bulletFieldsPanel" class="edit-fields hidden">
+          <p class="muted">默认提供 5 条。需要第 6 条、第 7 条时点击添加，程序会在模板中插入新列，并将技术字段编号依次设为 #6、#7……</p>
+          <div id="listingBulletFields" class="bullet-grid"></div>
+          <button id="addListingBullet" type="button" style="margin-top:12px">＋ 添加下一条 Bullet Point</button>
+        </div>
+      </div>
+      <div style="margin-top:18px" class="edit-option">
+        <label class="check"><input id="editSearchTerms" type="checkbox"/> Search Terms / Generic Keyword</label>
+        <div id="searchTermsFields" class="edit-fields hidden"><label for="listingSearchTerms">新的 Search Terms</label><textarea id="listingSearchTerms" placeholder="填写新的 Search Terms"></textarea></div>
+      </div>
+      <details style="margin-top:18px;border:1px solid #e1e7ef;border-radius:10px;padding:14px">
+        <summary style="font-weight:650;cursor:pointer">其他类目字段（高级）</summary>
+        <p class="muted">从当前模板中选择额外字段。只填写你确认需要修改的属性。</p>
+        <div class="three-grid" style="margin-top:13px">
+          <div><label for="advancedFieldSelect">模板字段</label><select id="advancedFieldSelect"><option value="">请先加载模板</option></select></div>
+          <div style="display:flex;align-items:end"><button id="addAdvancedField" type="button">添加字段</button></div>
+        </div>
+        <div id="advancedFieldRows"></div>
+      </details>
+      <div style="margin-top:20px"><button id="generateListing" class="primary" type="button">检查并生成 Listing 上传表 ↓</button></div>
+      <div id="listingResult" class="notice" role="status">生成前会检查 SKU、ASIN、字段映射和必填内容。生成后请先检查 Excel，再上传亚马逊并查看处理报告。</div>
+    </section>
+  </div>
+
+  <div id="libraryWorkspace" class="hidden">
+    <section>
+      <h2>商品资料库｜添加或编辑商品组</h2>
+      <p class="muted">每个商品组保存一个父 ASIN 和对应的子 ASIN/SKU。录入一次后，Listing 修改模块即可自动匹配。</p>
+      <div class="field-grid" style="margin-top:16px">
+        <div><label for="productCategory">商品分类 *</label><input id="productCategory" value="户外猫屋" placeholder="例如：Pet Playpen"/></div>
+        <div><label for="productParentAsin">父 ASIN *</label><input id="productParentAsin" placeholder="B0XXXXXXXX"/></div>
+        <div><label for="productParentSku">父 SKU（可选）</label><input id="productParentSku" placeholder="如有则填写"/></div>
+        <div><label for="productBrand">品牌名称 *</label><input id="productBrand" placeholder="填写该商品真实的 Brand Name"/></div>
+      </div>
+      <div style="margin-top:15px"><label for="productChildren">子 ASIN / SKU 清单 *</label><textarea id="productChildren" rows="6" placeholder="每行一个子体，推荐用 Tab 分隔：&#10;B0XXXXXXXX&#9;your-child-sku&#9;原商品标题（可选）&#10;B0YYYYYYYY&#9;your-child-sku-2&#9;原商品标题（可选）"></textarea><p class="muted">ASIN 和 SKU 必须使用卖家后台的真实数据。品牌也需要按实际店铺商品填写；程序不会从模板示例中猜品牌。</p></div>
+      <div class="toolbar" style="margin-top:12px"><button id="saveProductGroup" class="primary" type="button">保存商品组</button><button id="resetProductForm" type="button">清空 / 新建</button></div>
+      <div id="productFormStatus" class="notice">商品资料保存在当前浏览器中。</div>
+    </section>
+    <section>
+      <h2>批量导入商品资料</h2>
+      <p class="muted">粘贴 Excel 复制出来的表格（推荐 Tab 分隔），每行一个子体。表头至少需要 category、parent_asin、child_asin、child_sku、brand；parent_sku 可选。也支持“商品分类、父 ASIN、子 ASIN、子 SKU、品牌”等中文表头。</p>
+      <textarea id="productImportText" rows="6" placeholder="category&#9;parent_asin&#9;parent_sku&#9;brand&#9;child_asin&#9;child_sku&#10;Pet Playpen&#9;B0XXXXXXXX&#9;parent-sku&#9;Your Brand&#9;B0YYYYYYYY&#9;child-sku"></textarea>
+      <div class="toolbar" style="margin-top:12px"><button id="importProducts" type="button">导入商品资料</button></div>
+      <div id="importStatus" class="notice">导入时会按“商品分类 + 父 ASIN”归组，并按子 ASIN 去重。</div>
+    </section>
+    <section>
+      <h2>已保存的商品组</h2>
+      <div id="productLibraryTable" class="table-wrap">正在读取资料库…</div>
+    </section>
+    <section>
+      <h2>已保存的类目模板</h2>
+      <div id="savedTemplateTable" class="table-wrap">正在读取模板…</div>
+      <div id="libraryStatus" class="notice">模板会保存在当前浏览器中。</div>
+    </section>
+    <section>
+      <h2>修改历史</h2>
+      <p class="muted">记录成功生成的文件、目标子体和本次填写的字段。由于网页未连接卖家后台，历史记录不会自动读取亚马逊当前在线 Listing 的旧值。</p>
+      <div id="listingHistoryTable" class="table-wrap">暂无记录。</div>
+    </section>
+    <section>
+      <h2>资料库备份与恢复</h2>
+      <p class="muted">更换电脑或清理浏览器数据前，请先导出备份。备份包含商品组、类目模板和修改历史。</p>
+      <div class="toolbar" style="margin-top:13px"><button id="exportBackup" class="primary" type="button">导出资料库备份 ZIP</button><label for="importBackup" style="margin:0">恢复备份 ZIP</label><input id="importBackup" type="file" accept=".zip"/></div>
+      <div id="backupStatus" class="notice">备份文件请保存在你自己的电脑中。</div>
+    </section>
+  </div>
+  <p class="footer">Excel 在浏览器本地处理；不登录亚马逊、不连接卖家后台、不向网站服务器上传文件。生成文件不代表亚马逊已成功更新，请检查处理报告。</p>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="./engine.js"></script>
+<script src="./listing.js"></script>
+</body>
+</html>
