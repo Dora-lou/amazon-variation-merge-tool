@@ -47,7 +47,7 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
       <div class="field-grid">
         <div><label for="listingTemplateSelect">已保存的类目模板</label><select id="listingTemplateSelect"><option value="">请选择模板</option></select><p class="muted">例如 Pet Playpen、Pet Heating Pad、Outdoor Cat House。每个类目可以保存自己的亚马逊模板。</p></div>
         <div><label for="listingTemplateName">新模板的分类名称</label><input id="listingTemplateName" placeholder="例如：Pet Playpen"/></div>
-        <div class="row-span"><label for="listingTemplateFile">上传亚马逊类目模板（.xlsx / .xlsm）</label><input id="listingTemplateFile" type="file" accept=".xlsx,.xlsm"/><p class="muted">首次使用某个类目时上传一次即可。模板保存在当前浏览器，不会上传到网站服务器。</p></div>
+        <div class="row-span"><label for="listingTemplateFile">选择亚马逊类目模板（.xlsx / .xlsm）</label><input id="listingTemplateFile" type="file" accept=".xlsx,.xlsm"/><div class="toolbar" style="margin-top:10px"><button id="saveListingTemplate" class="primary" type="button">保存类目模板</button></div><p class="muted">先填写分类名称，再选择文件并点击保存。首次保存一次即可；以后选择这个分类就会自动调用模板。上传新版本时可替换旧模板。</p></div>
       </div>
       <div id="listingTemplateStatus" class="notice" role="status">请选择已保存的类目模板，或上传一个新的亚马逊类目模板。</div>
     </section>
