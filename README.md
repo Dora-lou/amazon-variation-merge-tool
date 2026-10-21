@@ -15,7 +15,7 @@
 3. 如果商品资料没有类目列，可在导入页面指定默认分类（默认「户外猫屋」）；有类目列时会读取表格中的类目。品牌、父 SKU、标题、颜色、尺寸等列均可选。
 4. 确认导入后，按父 ASIN 归组并保存子 ASIN/SKU 对应关系。重复导入会更新匹配到的子体并保留该组里未出现在新文件中的旧子体；如检测到一个子 ASIN 对应多个父 ASIN 或 SKU 冲突，会停止导入并提示。
 5. 选择父 ASIN 后，可全选子体或手动勾选部分子体。商品分类会用于自动匹配对应类目模板。
-6. 勾选需要修改的字段后才显示输入框，支持标题、五点、商品描述、Search Terms、普通售价，以及其他类目字段。
+6. 主操作区仅保留四项：标题（Item Name）、五点描述（Bullet Point）、商品描述（Product Description）、亮点（Item Highlight）。售价、Search Terms 及其他类目属性暂时保留在「其他类目字段（高级）」中。
 7. 现有 Listing 输出行包含身份字段：Product Type、Listing Action（Edit (Partial Update)）、Seller SKU、Product Id Type（ASIN）、Product Id（目标子 ASIN）、Brand Name；另外只写入本次选择的修改字段。
 8. 五点默认 5 条；需要第 6 条及更多时点击添加，程序会在模板中插入列并调整技术字段编号。
 
