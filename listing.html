@@ -18,7 +18,7 @@ button:hover{background:#f5f8f9}button.primary{background:#267651;color:white;bo
 a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.module-nav a{text-decoration:none;border:1px solid #d4e0e7;background:white;padding:10px 14px;border-radius:10px;color:#405668;font-weight:650}.module-nav a.active{background:#eaf3ee;border-color:#cce1d5;color:#236644}
 .page-tabs button.active{background:#267651;color:#fff;border-color:#267651}
 .field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}.row-span{grid-column:1/-1}.three-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
-.bullet-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}.bullet-grid textarea{min-height:86px}
+.bullet-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}.edit-option{border:1px solid #e1e7ef;border-radius:10px;padding:12px}.edit-fields{margin-top:10px}.edit-fields label{margin-top:4px}.bullet-grid textarea{min-height:86px}
 .notice{padding:12px 15px;border-radius:10px;font-size:13px;margin-top:12px;line-height:1.6;background:#eff7f2;color:#285c3e;border:1px solid #cde6d6}.notice.warn{background:#fff8eb;border-color:#f3dbab;color:#895d18}.notice.error{background:#fff1f2;border-color:#f1c4cc;color:#b03448}
 .muted{font-size:12px;color:#7a8895;margin-top:7px}.hidden{display:none!important}.check{display:flex;align-items:center;gap:9px;font-weight:500;margin:12px 0}.check input{width:auto}
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px}.child-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px}
@@ -66,24 +66,30 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
       <h2>第 3 步｜选择要修改的字段</h2>
       <p class="muted">只勾选本次要更新的字段；未勾选的字段不会写入上传表。批量选择多个子体时，填写的内容会应用到所有已勾选子体。</p>
       <div class="field-grid" style="margin-top:17px">
-        <div>
+        <div class="edit-option">
           <label class="check"><input id="editTitle" type="checkbox"/> 标题（Item Name）</label>
-          <input id="listingTitle" placeholder="填写新的英文标题"/>
+          <div id="titleFields" class="edit-fields hidden"><label for="listingTitle">新标题</label><input id="listingTitle" placeholder="填写新的英文标题"/></div>
         </div>
-        <div>
+        <div class="edit-option">
           <label class="check"><input id="editDescription" type="checkbox"/> 商品描述（Product Description）</label>
-          <textarea id="listingDescription" placeholder="填写新的商品描述"></textarea>
+          <div id="descriptionFields" class="edit-fields hidden"><label for="listingDescription">新商品描述</label><textarea id="listingDescription" placeholder="填写新的商品描述"></textarea></div>
+        </div>
+        <div class="edit-option">
+          <label class="check"><input id="editPrice" type="checkbox"/> 售价（Your Price USD）</label>
+          <div id="priceFields" class="edit-fields hidden"><label for="listingPrice">新售价（USD）</label><input id="listingPrice" type="number" min="0.01" step="0.01" placeholder="例如 26.99"/></div>
         </div>
       </div>
-      <div style="margin-top:18px">
+      <div style="margin-top:18px" class="edit-option">
         <label class="check"><input id="editBullets" type="checkbox"/> 五点描述（Bullet Point）</label>
-        <p class="muted">默认显示 5 条。需要第 6 条、第 7 条时点击添加，程序会自动插入新列，并把技术字段编号改为 #6、#7……</p>
-        <div id="listingBulletFields" class="bullet-grid"></div>
-        <button id="addListingBullet" type="button" style="margin-top:12px">＋ 添加下一条 Bullet Point</button>
+        <div id="bulletFieldsPanel" class="edit-fields hidden">
+          <p class="muted">默认提供 5 条。需要第 6 条、第 7 条时点击添加，程序会在模板中插入新列，并将技术字段编号依次设为 #6、#7……</p>
+          <div id="listingBulletFields" class="bullet-grid"></div>
+          <button id="addListingBullet" type="button" style="margin-top:12px">＋ 添加下一条 Bullet Point</button>
+        </div>
       </div>
-      <div style="margin-top:18px">
+      <div style="margin-top:18px" class="edit-option">
         <label class="check"><input id="editSearchTerms" type="checkbox"/> Search Terms / Generic Keyword</label>
-        <textarea id="listingSearchTerms" placeholder="填写新的 Search Terms"></textarea>
+        <div id="searchTermsFields" class="edit-fields hidden"><label for="listingSearchTerms">新的 Search Terms</label><textarea id="listingSearchTerms" placeholder="填写新的 Search Terms"></textarea></div>
       </div>
       <details style="margin-top:18px;border:1px solid #e1e7ef;border-radius:10px;padding:14px">
         <summary style="font-weight:650;cursor:pointer">其他类目字段（高级）</summary>
@@ -107,15 +113,16 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
         <div><label for="productCategory">商品分类 *</label><input id="productCategory" placeholder="例如：Pet Playpen"/></div>
         <div><label for="productParentAsin">父 ASIN *</label><input id="productParentAsin" placeholder="B0XXXXXXXX"/></div>
         <div><label for="productParentSku">父 SKU（可选）</label><input id="productParentSku" placeholder="如有则填写"/></div>
+        <div><label for="productBrand">品牌名称 *</label><input id="productBrand" placeholder="填写该商品真实的 Brand Name"/></div>
       </div>
-      <div style="margin-top:15px"><label for="productChildren">子 ASIN / SKU 清单 *</label><textarea id="productChildren" rows="6" placeholder="每行一个子体，推荐用 Tab 分隔：&#10;B0XXXXXXXX&#9;your-child-sku&#9;原商品标题（可选）&#10;B0YYYYYYYY&#9;your-child-sku-2&#9;原商品标题（可选）"></textarea><p class="muted">ASIN 和 SKU 必须使用卖家后台的真实数据。这里不会自动读取亚马逊店铺。</p></div>
+      <div style="margin-top:15px"><label for="productChildren">子 ASIN / SKU 清单 *</label><textarea id="productChildren" rows="6" placeholder="每行一个子体，推荐用 Tab 分隔：&#10;B0XXXXXXXX&#9;your-child-sku&#9;原商品标题（可选）&#10;B0YYYYYYYY&#9;your-child-sku-2&#9;原商品标题（可选）"></textarea><p class="muted">ASIN 和 SKU 必须使用卖家后台的真实数据。品牌也需要按实际店铺商品填写；程序不会从模板示例中猜品牌。</p></div>
       <div class="toolbar" style="margin-top:12px"><button id="saveProductGroup" class="primary" type="button">保存商品组</button><button id="resetProductForm" type="button">清空 / 新建</button></div>
       <div id="productFormStatus" class="notice">商品资料保存在当前浏览器中。</div>
     </section>
     <section>
       <h2>批量导入商品资料</h2>
-      <p class="muted">粘贴 Excel 复制出来的表格（推荐 Tab 分隔），每行一个子体。表头至少需要 category、parent_asin、child_asin、child_sku；parent_sku 可选。也支持“商品分类、父 ASIN、子 ASIN、子 SKU”等中文表头。</p>
-      <textarea id="productImportText" rows="6" placeholder="category&#9;parent_asin&#9;parent_sku&#9;child_asin&#9;child_sku&#10;Pet Playpen&#9;B0XXXXXXXX&#9;parent-sku&#9;B0YYYYYYYY&#9;child-sku"></textarea>
+      <p class="muted">粘贴 Excel 复制出来的表格（推荐 Tab 分隔），每行一个子体。表头至少需要 category、parent_asin、child_asin、child_sku、brand；parent_sku 可选。也支持“商品分类、父 ASIN、子 ASIN、子 SKU、品牌”等中文表头。</p>
+      <textarea id="productImportText" rows="6" placeholder="category&#9;parent_asin&#9;parent_sku&#9;brand&#9;child_asin&#9;child_sku&#10;Pet Playpen&#9;B0XXXXXXXX&#9;parent-sku&#9;Your Brand&#9;B0YYYYYYYY&#9;child-sku"></textarea>
       <div class="toolbar" style="margin-top:12px"><button id="importProducts" type="button">导入商品资料</button></div>
       <div id="importStatus" class="notice">导入时会按“商品分类 + 父 ASIN”归组，并按子 ASIN 去重。</div>
     </section>
