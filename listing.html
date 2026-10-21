@@ -75,8 +75,8 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
           <div id="descriptionFields" class="edit-fields hidden"><label for="listingDescription">新商品描述</label><textarea id="listingDescription" placeholder="填写新的商品描述"></textarea></div>
         </div>
         <div class="edit-option">
-          <label class="check"><input id="editHighlights" type="checkbox"/> 亮点（Product Highlights）</label>
-          <div id="highlightsFields" class="edit-fields hidden"><label for="listingHighlights">新亮点（每行一条）</label><textarea id="listingHighlights" rows="5" placeholder="每行填写一条亮点，程序会按模板中的亮点字段依次写入。"></textarea><p class="muted">可填写的条数取决于当前类目模板中识别到的 Product Highlights 字段数量。</p></div>
+          <label class="check"><input id="editHighlights" type="checkbox"/> 亮点（Item Highlight）</label>
+          <div id="highlightsFields" class="edit-fields hidden"><label for="listingHighlights">新亮点</label><input id="listingHighlights" placeholder="填写简短卖点短语，不要写完整句子或重复标题内容"/><p class="muted">猫屋模板对应 Item Highlight 字段；该字段用于简短的产品特点/利益点表达。</p></div>
         </div>
       </div>
       <div style="margin-top:18px" class="edit-option">
@@ -158,6 +158,6 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="./engine.js"></script>
-<script src="./listing.js?v=product-excel-import"></script>
+<script src="./listing.js?v=listing-fields-v2"></script>
 </body>
 </html>
