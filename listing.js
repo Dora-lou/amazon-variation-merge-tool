@@ -392,7 +392,8 @@ function initEvents(){
  $('addListingBullet').addEventListener('click',()=>{const vals=readBulletValues();vals.push('');renderBulletInputs(vals)});
  $('addAdvancedField').addEventListener('click',addAdvancedField);
  $('generateListing').addEventListener('click',async()=>{const btn=$('generateListing');btn.disabled=true;try{await generateListing()}catch(err){setStatus('listingResult',err.message,'error')}finally{btn.disabled=false}});
- $('exportProductCsv').addEventListener('click',()=>{try{exportProductCsv()}catch(err){setStatus('productCsvStatus',err.message,'error')}});\n $('exportBackup').addEventListener('click',async()=>{try{await exportBackup()}catch(err){setStatus('backupStatus',err.message,'error')}});
+ $('exportProductCsv').addEventListener('click',()=>{try{exportProductCsv()}catch(err){setStatus('productCsvStatus',err.message,'error')}});
+ $('exportBackup').addEventListener('click',async()=>{try{await exportBackup()}catch(err){setStatus('backupStatus',err.message,'error')}});
  $('importBackup').addEventListener('change',async()=>{const f=$('importBackup').files[0];if(!f)return;try{await importBackup(f)}catch(err){setStatus('backupStatus',err.message,'error')}finally{$('importBackup').value=''}});
 }
 function start(){
