@@ -23,8 +23,9 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 .muted{font-size:12px;color:#7a8895;margin-top:7px}.hidden{display:none!important}.check{display:flex;align-items:center;gap:9px;font-weight:500;margin:12px 0}.check input{width:auto}
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px}.child-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px}
 .child-choice{display:flex;gap:9px;align-items:flex-start;border:1px solid #e1e7ef;border-radius:9px;padding:10px 12px;font-weight:500;margin:0}.child-choice input{width:auto;margin-top:3px}.advanced-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;gap:10px;border:1px solid #e1e7ef;border-radius:10px;padding:12px;margin-top:10px}
+.submodule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}.submodule{border:1px solid #e1e7ef;border-radius:12px;padding:16px;min-width:0}.submodule h3{margin-bottom:8px}.pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 4px 2px}.pagination-info{font-size:12px;color:#68798a}.pagination-buttons{display:flex;gap:8px;align-items:center}.pagination-buttons button{padding:7px 11px;font-size:12px}.pagination-buttons .page-number{font-weight:750;color:#267651}
 .table-wrap{overflow:auto;border:1px solid #e2e8ef;border-radius:10px;margin-top:12px}table{border-collapse:collapse;width:100%;min-width:700px}th,td{border-bottom:1px solid #e6ebf1;padding:10px;text-align:left;vertical-align:top}th{white-space:nowrap;background:#f8fafc;font-size:12px;color:#5a6c7e}td{font-size:13px}tr:last-child td{border:0}.data-table button{margin:2px;padding:6px 9px;font-size:12px}.danger{color:#a33a47}.quiet{border:0;background:transparent;padding:4px 8px}.footer{font-size:12px;color:#788593;margin-top:22px}
-@media(max-width:700px){.shell{padding:20px 12px}.field-grid,.three-grid,.bullet-grid,.child-list{grid-template-columns:1fr}section{padding:17px}.advanced-row{grid-template-columns:1fr}}
+@media(max-width:700px){.shell{padding:20px 12px}.field-grid,.three-grid,.bullet-grid,.child-list,.submodule-grid{grid-template-columns:1fr}section{padding:17px}.advanced-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -131,46 +132,56 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 
     <div id="productLibraryPane" class="hidden">
       <section>
-        <h2>商品库｜添加或编辑商品组</h2>
-        <p class="muted">只维护三项核心数据：父 ASIN、子 ASIN、子 SKU。每行一个子体，子 ASIN 与 SKU 用 Tab 或逗号分隔。</p>
-        <div style="margin-top:16px"><label for="productParentAsin">父 ASIN *</label><input id="productParentAsin" placeholder="输入 10 位父 ASIN" autocomplete="off"/></div>
-        <div style="margin-top:15px"><label for="productChildren">子 ASIN / SKU 清单 *</label><textarea id="productChildren" rows="7" placeholder="每行一个子体，Tab 分隔：&#10;B0XXXXXXXX&#9;your-child-sku&#10;B0YYYYYYYY&#9;your-child-sku-2"></textarea></div>
-        <div class="toolbar" style="margin-top:12px"><button id="saveProductGroup" class="primary" type="button">保存商品组</button><button id="resetProductForm" type="button">清空 / 新建</button></div>
-        <div id="productFormStatus" class="notice">商品资料保存在当前浏览器。SKU 会在生成上传表时按子 ASIN 自动匹配。</div>
+        <h2>模块一｜导入商品</h2>
+        <p class="muted">选择适合你的方式维护商品库：手动添加单个父 ASIN，或上传表格批量导入。</p>
+        <div class="submodule-grid">
+          <div class="submodule">
+            <h3>方式 A｜手动添加</h3>
+            <p class="muted">适合新增或修改少量商品。每行填写一个子体，顺序为子 ASIN、SKU。</p>
+            <div style="margin-top:14px"><label for="productParentAsin">父 ASIN *</label><input id="productParentAsin" placeholder="输入 10 位父 ASIN" autocomplete="off"/></div>
+            <div style="margin-top:13px"><label for="productChildren">子 ASIN / SKU 清单 *</label><textarea id="productChildren" rows="7" placeholder="每行一个子体，Tab 分隔：&#10;B0XXXXXXXX&#9;your-child-sku&#10;B0YYYYYYYY&#9;your-child-sku-2"></textarea></div>
+            <div class="toolbar" style="margin-top:12px"><button id="saveProductGroup" class="primary" type="button">保存商品组</button><button id="resetProductForm" type="button">清空 / 新建</button></div>
+            <div id="productFormStatus" class="notice">保存后，生成上传表时会根据子 ASIN 自动匹配 SKU。</div>
+          </div>
+          <div class="submodule">
+            <h3>方式 B｜表格批量导入</h3>
+            <p class="muted">上传 Excel 或 CSV，表格至少包含「父 ASIN、子 ASIN、SKU」三列。程序会先识别并检查数据，再保存到商品库。</p>
+            <div style="margin-top:14px"><label for="productExcelFile">选择商品资料文件（.xlsx / .xls / .xlsm / .csv）</label><input id="productExcelFile" type="file" accept=".xlsx,.xls,.xlsm,.csv"/></div>
+            <div class="toolbar" style="margin-top:12px"><button id="previewProductExcel" type="button">识别文件并统计</button><button id="importExcelProducts" class="primary" type="button" disabled>确认导入并保存</button></div>
+            <div id="importPreview" class="notice">先识别文件，确认父 ASIN、子 ASIN、SKU 数量无误后再导入。</div>
+            <div id="importStatus" class="notice">导入数据保存在当前浏览器。</div>
+            <details style="margin-top:14px">
+              <summary style="font-weight:650;cursor:pointer">备用方式：粘贴表格内容</summary>
+              <p class="muted">复制 Excel 表格内容后粘贴，表头至少需要父 ASIN、子 ASIN、SKU。</p>
+              <textarea id="productImportText" rows="5" placeholder="父 ASIN&#9;子 ASIN&#9;SKU&#10;B0XXXXXXXX&#9;B0YYYYYYYY&#9;your-child-sku"></textarea>
+              <div class="toolbar" style="margin-top:10px"><button id="importProducts" type="button">导入粘贴内容</button></div>
+            </details>
+          </div>
+        </div>
       </section>
 
       <section>
-        <h2>批量导入商品库</h2>
-        <p class="muted">上传 Excel 或 CSV，表格至少包含「父 ASIN、子 ASIN、SKU」三列。其他列不会用于商品匹配。导入前会先检查识别结果和重复数据。</p>
-        <div style="margin-top:14px"><label for="productExcelFile">选择商品资料文件（.xlsx / .xls / .xlsm / .csv）</label><input id="productExcelFile" type="file" accept=".xlsx,.xls,.xlsm,.csv"/></div>
-        <div class="toolbar" style="margin-top:12px"><button id="previewProductExcel" type="button">识别文件并统计</button><button id="importExcelProducts" class="primary" type="button" disabled>确认导入并保存</button></div>
-        <div id="importPreview" class="notice">选择文件后，先检查识别到的父 ASIN、子 ASIN、SKU 和商品数量，再确认导入。</div>
-        <div id="importStatus" class="notice">导入后会更新本地商品库，不会上传到网站服务器。</div>
-        <details style="margin-top:16px">
-          <summary style="font-weight:650;cursor:pointer">备用方式：粘贴商品表格</summary>
-          <p class="muted">复制 Excel 表格内容后粘贴，表头至少需要父 ASIN、子 ASIN、SKU。</p>
-          <textarea id="productImportText" rows="5" placeholder="父 ASIN&#9;子 ASIN&#9;SKU&#10;B0XXXXXXXX&#9;B0YYYYYYYY&#9;your-child-sku"></textarea>
-          <div class="toolbar" style="margin-top:10px"><button id="importProducts" type="button">导入粘贴内容</button></div>
-        </details>
-      </section>
-
-      <section>
-        <h2>已保存的商品</h2>
-        <p class="muted">可以把商品对应关系下载为 CSV 文件，用 Excel 查看或保存；以后在上方「批量导入商品库」中重新上传。只备份商品数据时用 CSV；要连同类目模板一起备份，请使用下方完整 ZIP 备份。</p>
+        <h2>模块二｜已保存商品</h2>
+        <p class="muted">每页最多显示 5 个父 ASIN。可以搜索父 ASIN、编辑或删除商品组，也可以下载 CSV 用 Excel 查看商品对应关系。</p>
         <div class="toolbar" style="margin:12px 0">
           <div style="max-width:380px;flex:1"><label for="productLibrarySearch">搜索父 ASIN</label><input id="productLibrarySearch" placeholder="输入完整或部分父 ASIN"/></div>
           <button id="exportProductCsv" class="primary" type="button">下载商品库 CSV</button>
         </div>
         <div id="productLibraryTable" class="table-wrap">正在读取商品库…</div>
-        <div id="productCsvStatus" class="notice" role="status">CSV 包含父 ASIN、子 ASIN、SKU 三列，不包含类目模板文件。</div>
+        <div id="productCsvStatus" class="notice" role="status">CSV 包含父 ASIN、子 ASIN、SKU 三列；完整 ZIP 备份还会包含所有类目模板。</div>
       </section>
 
-      <details style="margin-top:17px;background:#fff;border:1px solid #e1e7ef;border-radius:12px;padding:16px">
-        <summary style="font-weight:650;cursor:pointer">资料库备份与恢复（可选）</summary>
-        <p class="muted">备份包含类目模板和商品库，可用于更换电脑或恢复浏览器资料。</p>
-        <div class="toolbar" style="margin-top:13px"><button id="exportBackup" class="primary" type="button">导出资料库备份 ZIP</button><label for="importBackup" style="margin:0">恢复备份 ZIP</label><input id="importBackup" type="file" accept=".zip"/></div>
-        <div id="backupStatus" class="notice">备份文件请保存在自己的电脑中。</div>
-      </details>
+      <section>
+        <h2>模块三｜资料库备份与恢复（可选）</h2>
+        <p class="muted">一键下载全部资料，包含商品库记录和所有已保存的类目模板文件。更换电脑、清理浏览器数据前建议先备份。</p>
+        <div class="toolbar" style="margin-top:14px">
+          <button id="exportBackup" class="primary" type="button">一键下载全部资料（ZIP）</button>
+        </div>
+        <p class="muted">恢复时选择之前下载的完整 ZIP，再点击恢复。程序会先检查备份内容；确认后会用备份中的商品库和类目模板整体替换当前资料库。</p>
+        <div style="margin-top:14px"><label for="importBackup">选择完整备份 ZIP</label><input id="importBackup" type="file" accept=".zip"/></div>
+        <div class="toolbar" style="margin-top:12px"><button id="restoreBackup" class="primary" type="button" disabled>上传并恢复全部资料</button></div>
+        <div id="backupStatus" class="notice" role="status">ZIP 包含商品库和类目模板。恢复会覆盖当前两份资料库，请确认已备份当前资料。</div>
+      </section>
     </div>
   </div>
   <p class="footer">Excel 在浏览器本地处理；不登录亚马逊、不连接卖家后台、不向网站服务器上传文件。资料库保存在当前浏览器，可通过 ZIP 备份迁移。</p>
@@ -178,6 +189,6 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="./engine.js"></script>
-<script src="./listing.js?v=product-csv-v2-20261022"></script>
+<script src="./listing.js?v=library-modules-pagination-20261022"></script>
 </body>
 </html>
