@@ -330,7 +330,7 @@ function exportProductCsv(){
  for(const p of state.products){
   for(const c of p.children||[])rows.push([p.parentAsin,c.asin,c.sku]);
  }
- const csv='\\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\\r\\n');
+ const csv='\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\r\n');
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
  setDownload(blob,'Amazon_Product_Library_'+new Date().toISOString().slice(0,10)+'.csv');
  setStatus('productCsvStatus','已导出 '+state.products.length+' 个父 ASIN、'+(rows.length-1)+' 条子 ASIN / SKU 对应记录。需要恢复时，请在「批量导入商品库」中选择该 CSV，先识别检查，再确认导入。');
