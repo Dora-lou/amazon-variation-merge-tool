@@ -31,35 +31,39 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 <main class="shell">
   <div class="eyebrow">Amazon Operations Toolkit</div>
   <h1>亚马逊运营工具箱</h1>
-  <p>Listing 修改、类目模板保存、父子 ASIN/SKU 匹配和修改历史。所有数据默认保存在当前浏览器。</p>
+  <p>管理类目模板、父子 ASIN/SKU 对应关系，并批量生成商品信息修改表格。资料保存在当前浏览器。</p>
   <nav class="module-nav" aria-label="工具模块">
     <a href="./index.html">合并变体</a>
     <a href="./listing.html" class="active">Listing 修改</a>
   </nav>
   <div class="page-tabs">
-    <button id="openListingTab" class="active" type="button">Listing 修改</button>
-    <button id="openLibraryTab" type="button">商品资料库 / 历史记录</button>
+    <button id="openListingTab" class="active" type="button">修改商品信息</button>
+    <button id="openLibraryTab" type="button">资料库</button>
   </div>
 
   <div id="listingWorkspace">
     <section>
       <h2>第 1 步｜选择类目模板</h2>
       <div class="field-grid">
-        <div><label for="listingTemplateSelect">已保存的类目模板</label><select id="listingTemplateSelect"><option value="">请选择模板</option></select><p class="muted">例如 Pet Playpen、Pet Heating Pad、Outdoor Cat House。每个类目可以保存自己的亚马逊模板。</p></div>
-        <div><label for="listingTemplateName">新模板的分类名称</label><input id="listingTemplateName" value="户外猫屋" placeholder="例如：Pet Playpen"/></div>
-        <div class="row-span"><label for="listingTemplateFile">选择亚马逊类目模板（.xlsx / .xlsm）</label><input id="listingTemplateFile" type="file" accept=".xlsx,.xlsm"/><div class="toolbar" style="margin-top:10px"><button id="saveListingTemplate" class="primary" type="button">保存类目模板</button></div><p class="muted">先填写分类名称，再选择文件并点击保存。首次保存一次即可；以后选择这个分类就会自动调用模板。上传新版本时可替换旧模板。</p></div>
+        <div><label for="listingTemplateSelect">已保存的类目模板</label><select id="listingTemplateSelect"><option value="">请选择模板</option></select><p class="muted">模板在「资料库 → 类目模板库」中添加和维护。</p></div>
       </div>
-      <div id="listingTemplateStatus" class="notice" role="status">请选择已保存的类目模板，或上传一个新的亚马逊类目模板。</div>
+      <div id="listingTemplateStatus" class="notice" role="status">请选择已保存的类目模板。</div>
     </section>
 
     <section>
       <h2>第 2 步｜选择商品与子体</h2>
       <div class="field-grid">
-        <div><label for="listingProductSelect">选择商品组 / 父 ASIN</label><select id="listingProductSelect"><option value="">请选择商品组</option></select></div>
-        <div><label for="listingChildSelect">快速选择单个子 ASIN（可选）</label><select id="listingChildSelect" disabled><option value="">请先选择商品组</option></select></div>
+        <div><label for="listingParentAsinSearch">搜索父 ASIN</label><input id="listingParentAsinSearch" placeholder="输入完整或部分父 ASIN" autocomplete="off"/></div>
+        <div><label for="listingProductSelect">匹配到的父 ASIN</label><select id="listingProductSelect"><option value="">请选择父 ASIN</option></select></div>
+        <div><label for="listingChildSelect">快速选择单个子 ASIN（可选）</label><select id="listingChildSelect" disabled><option value="">请先选择父 ASIN</option></select></div>
+        <div><label for="listingBrand">Brand Name（按实际商品填写）*</label><input id="listingBrand" placeholder="填写本次上传商品的真实品牌"/></div>
       </div>
-      <p class="muted">选择父 ASIN 后，程序会匹配资料库中已保存的所有子 ASIN 和 SKU。默认勾选全部子体，也可以取消勾选，只修改指定子体。</p>
-      <div id="listingChildChecklist" class="child-list">请先在商品资料库添加商品组。</div>
+      <div id="listingProductStatus" class="notice">搜索并选择父 ASIN 后，程序会匹配全部子 ASIN；SKU 在生成表格时自动匹配。</div>
+      <div class="toolbar" style="margin-top:16px">
+        <span class="muted">选择清单只显示子 ASIN，不显示 SKU；默认全选，可按需取消部分商品。</span>
+        <div><button id="selectAllChildren" type="button">全选</button> <button id="clearAllChildren" type="button">取消全选</button></div>
+      </div>
+      <div id="listingChildChecklist" class="child-list">请先搜索并选择父 ASIN。</div>
     </section>
 
     <section>
@@ -102,58 +106,69 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
   </div>
 
   <div id="libraryWorkspace" class="hidden">
-    <section>
-      <h2>商品资料库｜添加或编辑商品组</h2>
-      <p class="muted">每个商品组保存一个父 ASIN 和对应的子 ASIN/SKU。录入一次后，Listing 修改模块即可自动匹配。</p>
-      <div class="field-grid" style="margin-top:16px">
-        <div><label for="productCategory">商品分类 *</label><input id="productCategory" value="户外猫屋" placeholder="例如：Pet Playpen"/></div>
-        <div><label for="productParentAsin">父 ASIN *</label><input id="productParentAsin" placeholder="B0XXXXXXXX"/></div>
-        <div><label for="productParentSku">父 SKU（可选）</label><input id="productParentSku" placeholder="如有则填写"/></div>
-        <div><label for="productBrand">品牌名称 *</label><input id="productBrand" placeholder="填写该商品真实的 Brand Name"/></div>
-      </div>
-      <div style="margin-top:15px"><label for="productChildren">子 ASIN / SKU 清单 *</label><textarea id="productChildren" rows="6" placeholder="每行一个子体，推荐用 Tab 分隔：&#10;B0XXXXXXXX&#9;your-child-sku&#9;原商品标题（可选）&#10;B0YYYYYYYY&#9;your-child-sku-2&#9;原商品标题（可选）"></textarea><p class="muted">ASIN 和 SKU 必须使用卖家后台的真实数据。品牌也需要按实际店铺商品填写；程序不会从模板示例中猜品牌。</p></div>
-      <div class="toolbar" style="margin-top:12px"><button id="saveProductGroup" class="primary" type="button">保存商品组</button><button id="resetProductForm" type="button">清空 / 新建</button></div>
-      <div id="productFormStatus" class="notice">商品资料保存在当前浏览器中。</div>
-    </section>
-    <section>
-      <h2>批量导入商品资料 Excel</h2>
-      <p class="muted">直接上传你的商品资料 Excel（.xlsx、.xls、.xlsm 或 .csv）。至少需要父 ASIN、子 ASIN、SKU 三列；商品分类、父 SKU、品牌、标题、颜色、尺寸等列可选。程序会自动识别表头、统计父体和子体数量，并把资料保存到本地资料库。</p>
-      <div class="field-grid" style="margin-top:14px">
-        <div><label for="productExcelFile">选择商品资料文件</label><input id="productExcelFile" type="file" accept=".xlsx,.xls,.xlsm,.csv"/></div>
-        <div><label for="importDefaultCategory">默认商品分类（仅当 Excel 没有类目列时使用）</label><input id="importDefaultCategory" value="户外猫屋" placeholder="例如：户外猫屋 / Pet Playpen"/></div>
-      </div>
-      <div class="toolbar" style="margin-top:12px"><button id="previewProductExcel" type="button">识别文件并统计</button><button id="importExcelProducts" class="primary" type="button" disabled>确认导入并保存</button></div>
-      <div id="importPreview" class="notice">选择文件后，先点击“识别文件并统计”检查识别到的列和商品数量，再确认导入。</div>
-      <div id="importStatus" class="notice">导入后，商品组和子 ASIN/SKU 对应关系会保存在当前浏览器资料库中。</div>
-      <details style="margin-top:16px">
-        <summary style="font-weight:650;cursor:pointer">备用方式：粘贴 Excel 内容</summary>
-        <p class="muted">如果暂时无法上传文件，也可以复制 Excel 表格后粘贴在这里。表头至少需要父 ASIN、子 ASIN、SKU。</p>
-        <textarea id="productImportText" rows="5" placeholder="父 ASIN&#9;子 ASIN&#9;SKU&#10;B0XXXXXXXX&#9;B0YYYYYYYY&#9;your-child-sku"></textarea>
-        <div class="toolbar" style="margin-top:10px"><button id="importProducts" type="button">导入粘贴内容</button></div>
+    <div class="page-tabs library-tabs">
+      <button id="openTemplateLibraryTab" class="active" type="button">类目模板库</button>
+      <button id="openProductLibraryTab" type="button">商品库</button>
+    </div>
+
+    <div id="templateLibraryPane">
+      <section>
+        <h2>类目模板库</h2>
+        <p class="muted">给类目起一个容易识别的名称，上传对应的亚马逊空白类目模板。以后修改商品信息时直接选择保存好的模板即可。同名类目可替换旧模板。</p>
+        <div class="field-grid" style="margin-top:16px">
+          <div><label for="listingTemplateName">类目名称 *</label><input id="listingTemplateName" placeholder="例如：Outdoor Cat House / Pet Heating Pad"/></div>
+          <div><label for="listingTemplateFile">对应的空白 Excel 模板（.xlsx / .xlsm）*</label><input id="listingTemplateFile" type="file" accept=".xlsx,.xlsm"/></div>
+        </div>
+        <div class="toolbar" style="margin-top:14px"><button id="saveListingTemplate" class="primary" type="button">保存类目模板</button></div>
+        <div id="templateLibraryStatus" class="notice" role="status">尚未保存模板。上传前请确认是从亚马逊卖家后台下载的正确类目空白模板。</div>
+      </section>
+      <section>
+        <h2>已保存的类目模板</h2>
+        <div id="savedTemplateTable" class="table-wrap">正在读取模板…</div>
+        <div id="libraryStatus" class="notice">模板保存在当前浏览器中。</div>
+      </section>
+    </div>
+
+    <div id="productLibraryPane" class="hidden">
+      <section>
+        <h2>商品库｜添加或编辑商品组</h2>
+        <p class="muted">只维护三项核心数据：父 ASIN、子 ASIN、子 SKU。每行一个子体，子 ASIN 与 SKU 用 Tab 或逗号分隔。</p>
+        <div style="margin-top:16px"><label for="productParentAsin">父 ASIN *</label><input id="productParentAsin" placeholder="输入 10 位父 ASIN" autocomplete="off"/></div>
+        <div style="margin-top:15px"><label for="productChildren">子 ASIN / SKU 清单 *</label><textarea id="productChildren" rows="7" placeholder="每行一个子体，Tab 分隔：&#10;B0XXXXXXXX&#9;your-child-sku&#10;B0YYYYYYYY&#9;your-child-sku-2"></textarea></div>
+        <div class="toolbar" style="margin-top:12px"><button id="saveProductGroup" class="primary" type="button">保存商品组</button><button id="resetProductForm" type="button">清空 / 新建</button></div>
+        <div id="productFormStatus" class="notice">商品资料保存在当前浏览器。SKU 会在生成上传表时按子 ASIN 自动匹配。</div>
+      </section>
+
+      <section>
+        <h2>批量导入商品库</h2>
+        <p class="muted">上传 Excel 或 CSV，表格至少包含「父 ASIN、子 ASIN、SKU」三列。其他列不会用于商品匹配。导入前会先检查识别结果和重复数据。</p>
+        <div style="margin-top:14px"><label for="productExcelFile">选择商品资料文件（.xlsx / .xls / .xlsm / .csv）</label><input id="productExcelFile" type="file" accept=".xlsx,.xls,.xlsm,.csv"/></div>
+        <div class="toolbar" style="margin-top:12px"><button id="previewProductExcel" type="button">识别文件并统计</button><button id="importExcelProducts" class="primary" type="button" disabled>确认导入并保存</button></div>
+        <div id="importPreview" class="notice">选择文件后，先检查识别到的父 ASIN、子 ASIN、SKU 和商品数量，再确认导入。</div>
+        <div id="importStatus" class="notice">导入后会更新本地商品库，不会上传到网站服务器。</div>
+        <details style="margin-top:16px">
+          <summary style="font-weight:650;cursor:pointer">备用方式：粘贴商品表格</summary>
+          <p class="muted">复制 Excel 表格内容后粘贴，表头至少需要父 ASIN、子 ASIN、SKU。</p>
+          <textarea id="productImportText" rows="5" placeholder="父 ASIN&#9;子 ASIN&#9;SKU&#10;B0XXXXXXXX&#9;B0YYYYYYYY&#9;your-child-sku"></textarea>
+          <div class="toolbar" style="margin-top:10px"><button id="importProducts" type="button">导入粘贴内容</button></div>
+        </details>
+      </section>
+
+      <section>
+        <h2>已保存的商品</h2>
+        <div style="max-width:380px;margin-bottom:12px"><label for="productLibrarySearch">搜索父 ASIN</label><input id="productLibrarySearch" placeholder="输入完整或部分父 ASIN"/></div>
+        <div id="productLibraryTable" class="table-wrap">正在读取商品库…</div>
+      </section>
+
+      <details style="margin-top:17px;background:#fff;border:1px solid #e1e7ef;border-radius:12px;padding:16px">
+        <summary style="font-weight:650;cursor:pointer">资料库备份与恢复（可选）</summary>
+        <p class="muted">备份包含类目模板和商品库，可用于更换电脑或恢复浏览器资料。历史记录不保存。</p>
+        <div class="toolbar" style="margin-top:13px"><button id="exportBackup" class="primary" type="button">导出资料库备份 ZIP</button><label for="importBackup" style="margin:0">恢复备份 ZIP</label><input id="importBackup" type="file" accept=".zip"/></div>
+        <div id="backupStatus" class="notice">备份文件请保存在自己的电脑中。</div>
       </details>
-    </section>
-    <section>
-      <h2>已保存的商品组</h2>
-      <div id="productLibraryTable" class="table-wrap">正在读取资料库…</div>
-    </section>
-    <section>
-      <h2>已保存的类目模板</h2>
-      <div id="savedTemplateTable" class="table-wrap">正在读取模板…</div>
-      <div id="libraryStatus" class="notice">模板会保存在当前浏览器中。</div>
-    </section>
-    <section>
-      <h2>修改历史</h2>
-      <p class="muted">记录成功生成的文件、目标子体和本次填写的字段。由于网页未连接卖家后台，历史记录不会自动读取亚马逊当前在线 Listing 的旧值。</p>
-      <div id="listingHistoryTable" class="table-wrap">暂无记录。</div>
-    </section>
-    <section>
-      <h2>资料库备份与恢复</h2>
-      <p class="muted">更换电脑或清理浏览器数据前，请先导出备份。备份包含商品组、类目模板和修改历史。</p>
-      <div class="toolbar" style="margin-top:13px"><button id="exportBackup" class="primary" type="button">导出资料库备份 ZIP</button><label for="importBackup" style="margin:0">恢复备份 ZIP</label><input id="importBackup" type="file" accept=".zip"/></div>
-      <div id="backupStatus" class="notice">备份文件请保存在你自己的电脑中。</div>
-    </section>
+    </div>
   </div>
-  <p class="footer">Excel 在浏览器本地处理；不登录亚马逊、不连接卖家后台、不向网站服务器上传文件。生成文件不代表亚马逊已成功更新，请检查处理报告。</p>
+  <p class="footer">Excel 在浏览器本地处理；不登录亚马逊、不连接卖家后台、不向网站服务器上传文件。资料库保存在当前浏览器，可通过 ZIP 备份迁移。</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
