@@ -1,6 +1,6 @@
 /* Web UI for Amazon variation family generation (local-only). */
 let meta=null, selectedFile=null, currentTemplate=null, children=[], currentMapping={};
-let libraryDb=null, savedTemplates=[], libraryProducts=[];
+let libraryDb=null, savedTemplates=[];
 const $=(id)=>document.getElementById(id);
 const safe=(v)=>String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 const setText=(id,v)=>{$(id).textContent=String(v??'')};
@@ -38,49 +38,16 @@ function renderSavedTemplateOptions(){
  for(const t of items)select.appendChild(optionEl(t.id,String(t.category||'未命名类目')+'｜'+String(t.filename||'template.xlsx')));
  if(items.some(t=>String(t.id)===previous))select.value=previous;
 }
-function renderMergeParentOptions(){
- const list=$('mergeParentOptions');list.innerHTML='';
- [...libraryProducts].sort((a,b)=>String(a.parentAsin||'').localeCompare(String(b.parentAsin||''))).forEach(p=>{
-  const option=optionEl(String(p.parentAsin||''),String(p.parentAsin||''));
-  option.label=String((p.children||[]).length)+' 个 SKU';
-  list.appendChild(option);
- });
-}
-function renderMergeSkuChoices(){
- const query=String($('mergeParentSearch').value||'').trim().toUpperCase();
- const host=$('mergeSkuChoices');host.innerHTML='';host.classList.add('hidden');
- if(!libraryProducts.length){
-  notify('mergeSkuStatus','商品库目前没有商品记录。可先到「Listing 修改 → 商品库」添加/导入，或继续在下方手动填写子体。','warn');return;
- }
- if(!query){notify('mergeSkuStatus','输入或选择完整父 ASIN 后，这里会显示该父体下可选的 SKU。');return}
- const exact=libraryProducts.find(p=>String(p.parentAsin||'').toUpperCase()===query);
- if(!exact){
-  const matches=libraryProducts.filter(p=>String(p.parentAsin||'').toUpperCase().includes(query));
-  notify('mergeSkuStatus',matches.length?'找到 '+matches.length+' 个匹配的父 ASIN。请从输入框建议中选择完整父 ASIN，再勾选 SKU。':'商品库中没有找到匹配的父 ASIN。你仍可在下方手动填写子体。',matches.length?'':'warn');
-  return;
- }
- const choices=(exact.children||[]).filter(c=>String(c.sku||'').trim()&&String(c.asin||'').trim());
- if(!choices.length){notify('mergeSkuStatus','已找到父 ASIN，但没有完整的 SKU / 子 ASIN 对应记录。请检查商品库。','warn');return}
- notify('mergeSkuStatus','已找到 '+choices.length+' 个 SKU。选项只显示 SKU；加入子体表后会自动带入对应子 ASIN。');
- for(const child of choices){
-  const label=document.createElement('label');label.className='sku-choice';
-  const input=document.createElement('input');input.type='checkbox';input.dataset.mergeSku=String(child.sku);input.dataset.mergeAsin=String(child.asin).toUpperCase();
-  const name=document.createElement('span');name.className='sku-name';name.textContent=String(child.sku);
-  label.append(input,name);host.appendChild(label);
- }
- host.classList.remove('hidden');
-}
 async function refreshLibraryData(){
  try{
   if(!libraryDb)libraryDb=await openLibraryDB();
   savedTemplates=await readLibraryStore('templates');
-  libraryProducts=(await readLibraryStore('products')).map(p=>({...p,parentAsin:String(p.parentAsin||'').trim().toUpperCase(),children:(p.children||[]).map(c=>({asin:String(c.asin||'').trim().toUpperCase(),sku:String(c.sku||'').trim()}))}));
-  renderSavedTemplateOptions();renderMergeParentOptions();renderMergeSkuChoices();
-  if(!savedTemplates.length)notify('savedTemplateStatus','暂无已保存的类目模板。你可以直接上传模板，或先到「Listing 修改 → 类目模板库」保存常用模板。','warn');
+  renderSavedTemplateOptions();
+  if(!savedTemplates.length)notify('savedTemplateStatus','暂无已保存的类目模板。你可以直接上传模板，或先到「Listing 修改与资料库 → 类目模板库」保存常用模板。','warn');
   else notify('savedTemplateStatus','已读取 '+savedTemplates.length+' 个已保存的类目模板。');
  }catch(err){
+  renderSavedTemplateOptions();
   notify('savedTemplateStatus','读取本地模板库失败：'+err.message+'。你仍然可以直接上传模板。','warn');
-  notify('mergeSkuStatus','读取商品库失败：'+err.message+'。你仍然可以手动填写子体。','warn');
  }
 }
 async function activateTemplate(source,name,sourceLabel){
@@ -116,49 +83,6 @@ $('loadSavedTemplate').addEventListener('click',async()=>{
 });
 $('refreshSavedTemplates').addEventListener('click',refreshLibraryData);
 $('savedTemplateSearch').addEventListener('input',renderSavedTemplateOptions);
-$('mergeParentSearch').addEventListener('input',renderMergeSkuChoices);
-$('mergeParentSearch').addEventListener('change',renderMergeSkuChoices);
-$('selectAllMergeSkus').addEventListener('click',()=>document.querySelectorAll('#mergeSkuChoices input[data-merge-sku]').forEach(input=>input.checked=true));
-$('clearAllMergeSkus').addEventListener('click',()=>document.querySelectorAll('#mergeSkuChoices input[data-merge-sku]').forEach(input=>input.checked=false));
-function normalizedColValues(values){
- return Object.entries(values||{}).filter(([,v])=>String(v??'').trim()!=='').sort(([a],[b])=>a.localeCompare(b));
-}
-function isUntouchedTemplateSample(row,index){
- const original=(meta?.sample_children||[])[index];if(!original)return false;
- return String(row.sku||'').trim()===String(original.sku||'').trim()
-  &&String(row.asin||'').trim().toUpperCase()===String(original.asin||'').trim().toUpperCase()
-  &&String(row.title||'')===String(original.title||'')
-  &&JSON.stringify(normalizedColValues(row.col_values))===JSON.stringify(normalizedColValues(original.col_values));
-}
-function isBlankChildRow(row){
- return !String(row.sku||'').trim()&&!String(row.asin||'').trim()&&!String(row.title||'').trim()
-  &&!Object.values(row.col_values||{}).some(v=>String(v??'').trim());
-}
-function addSelectedLibraryChildren(){
- if(!meta){notify('mergeSkuStatus','请先选择或上传类目模板，再添加 SKU。','warn');return}
- saveChildren();
- const checked=[...document.querySelectorAll('#mergeSkuChoices input[data-merge-sku]:checked')];
- if(!checked.length){notify('mergeSkuStatus','请先勾选至少一个 SKU。','warn');return}
- const selected=checked.map(input=>({sku:String(input.dataset.mergeSku||'').trim(),asin:String(input.dataset.mergeAsin||'').trim().toUpperCase()}));
- const toAdd=[];let skipped=0;
- for(const item of selected){
-  if(children.some(row=>String(row.sku||'').trim()===item.sku||String(row.asin||'').trim().toUpperCase()===item.asin)){skipped++;continue}
-  toAdd.push(item);
- }
- if(!toAdd.length){notify('mergeSkuStatus','所选 SKU 已经在子体表中，无需重复添加。','warn');return}
- for(const item of toAdd){
-  let index=children.findIndex((row,i)=>isUntouchedTemplateSample(row,i));
-  if(index<0)index=children.findIndex(isBlankChildRow);
-  const row={sku:item.sku,asin:item.asin,title:'',col_values:{}};
-  if(index>=0)children[index]=row;else children.push(row);
- }
- // Clear unused example rows from the blank Amazon template so sample SKUs/ASINs are not accidentally exported.
- children=children.map((row,index)=>isUntouchedTemplateSample(row,index)?{sku:'',asin:'',title:'',col_values:{}}:row);
- renderChildren();
- document.querySelectorAll('#mergeSkuChoices input[data-merge-sku]').forEach(input=>input.checked=false);
- notify('mergeSkuStatus','已添加 '+toAdd.length+' 个 SKU，并自动填入对应子 ASIN。'+(skipped?'另有 '+skipped+' 个因已存在于表格而跳过。':'')+'请继续填写每个子体真实的颜色、尺寸等变体属性。');
-}
-$('addMergeSkus').addEventListener('click',addSelectedLibraryChildren);
 function updateBulletCount(){
  const count=[...document.querySelectorAll('textarea[data-bullet]')].filter(el=>el.value.trim()).length;
  setText('bulletCount','已填写 '+count+' / 5 条卖点（至少填写 1 条）；空白行不会写入上传表格。');
