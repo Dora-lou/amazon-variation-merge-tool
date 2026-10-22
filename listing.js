@@ -252,14 +252,14 @@ function renderProductOptions(){
 }
 function renderChildChoices(product,onlyAsin){
  const sel=$('listingChildSelect'),host=$('listingChildChecklist');sel.innerHTML='';host.innerHTML='';
- if(!product){sel.disabled=true;addOption(sel,'','请先搜索父 ASIN');host.textContent='选择父 ASIN 后，程序会列出全部子 ASIN。';return}
- sel.disabled=false;addOption(sel,'__all__','全部子体（下方可勾选）');
- for(const c of product.children||[])addOption(sel,c.asin,c.asin);
+ if(!product){sel.disabled=true;addOption(sel,'','请先搜索父 ASIN');host.textContent='选择父 ASIN 后，程序会列出对应 SKU。';return}
+ sel.disabled=false;addOption(sel,'__all__','全部 SKU（下方可勾选）');
+ for(const c of product.children||[])addOption(sel,c.asin,c.sku||c.asin);
  sel.value=onlyAsin||'__all__';
  for(const c of product.children||[]){
   const label=document.createElement('label');label.className='child-choice';
   const box=document.createElement('input');box.type='checkbox';box.value=c.asin;box.checked=!onlyAsin||onlyAsin===c.asin;
-  const span=document.createElement('span');span.textContent=c.asin;
+  const span=document.createElement('span');span.textContent=c.sku||c.asin;span.title='子 ASIN：'+c.asin;
   label.append(box,span);host.appendChild(label);
  }
 }
@@ -421,8 +421,8 @@ function onProductChange(){
  const id=$('listingProductSelect').value;state.product=state.products.find(p=>p.id===id)||null;
  if(previous!==(state.product?.id||''))$('listingBrand').value='';
  renderChildChoices(state.product);
- if(state.product)setStatus('listingProductStatus','已匹配 '+state.product.children.length+' 个子 ASIN。SKU 不显示在选择清单中，生成表格时会自动匹配。');
- else setStatus('listingProductStatus','搜索并选择父 ASIN 后，程序会匹配全部子 ASIN。');
+ if(state.product)setStatus('listingProductStatus','已匹配 '+state.product.children.length+' 个子体。下方按 SKU 显示并勾选；生成表格时会自动匹配对应 ASIN。');
+ else setStatus('listingProductStatus','搜索并选择父 ASIN 后，程序会列出对应 SKU。');
 }
 function syncEditPanels(){for(const [checkbox,panel] of [['editTitle','titleFields'],['editDescription','descriptionFields'],['editHighlights','highlightsFields'],['editBullets','bulletFieldsPanel']])$(panel).classList.toggle('hidden',!$(checkbox).checked)}
 function initEvents(){
