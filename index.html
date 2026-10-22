@@ -61,6 +61,15 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
 #childrenTable.show-titles .optional-col{display:table-cell}
 #product_type[readonly],select:disabled{background:#f5f7f9;color:#526575;cursor:default}
 #templateSummary{color:#476d56;font-size:12px;font-weight:600;margin-top:8px}
+.template-picker{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:end;margin-top:14px}
+.template-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.sku-picker{margin:18px 0 22px;padding:16px;background:#f8fafc;border:1px solid #e1e7ef;border-radius:12px}
+.sku-choice-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.sku-choice{display:flex;gap:9px;align-items:center;padding:10px 12px;border:1px solid #dfe7ed;border-radius:9px;background:white;font-weight:500;min-width:0}
+.sku-choice input{width:auto;margin:0}
+.sku-choice .sku-name{font-weight:650;overflow-wrap:anywhere}
+#savedTemplateStatus,#mergeSkuStatus{margin-top:10px}
+@media(max-width:700px){.template-picker,.sku-choice-list{grid-template-columns:1fr}}
 #generate{padding:13px 25px}
 #stepsDone{font-size:12px;color:#6e8275;margin:8px 0 0}
 .top-label{font-size:13px;color:#5f7468;margin-top:16px}
@@ -81,16 +90,39 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
     <div class="how-item">③ 下载文件<span>上传亚马逊检查结果</span></div>
   </div>
   <section id="uploadSection">
-    <h2><span class="step">第 1 步</span> 上传亚马逊空白类目模板</h2>
+    <h2><span class="step">第 1 步</span> 选择亚马逊空白类目模板</h2>
+    <div class="template-picker">
+      <div><label for="savedTemplateSearch">筛选已保存的模板</label><input id="savedTemplateSearch" type="search" placeholder="输入类目名称或文件名"/></div>
+      <div><label for="savedTemplateSelect">类目模板库</label><select id="savedTemplateSelect"><option value="">正在读取已保存模板…</option></select></div>
+    </div>
+    <div class="template-actions">
+      <button id="loadSavedTemplate" class="primary" type="button">使用已保存模板</button>
+      <button id="refreshSavedTemplates" type="button">刷新模板列表</button>
+      <span class="muted">模板来自「Listing 修改 → 类目模板库」。</span>
+    </div>
+    <div id="savedTemplateStatus" class="notice" role="status" aria-live="polite">正在读取当前浏览器中已保存的类目模板…</div>
+    <div class="block-title">或者，直接上传新的模板</div>
     <input id="file" type="file" accept=".xlsx,.xlsm" aria-label="选择亚马逊类目模板"/>
-    <p class="muted">从亚马逊卖家后台下载对应类目的空白 Excel 模板（.xlsx / .xlsm），无需提前填写。</p>
+    <p class="muted">仍可随时上传亚马逊卖家后台下载的空白 Excel 模板（.xlsx / .xlsm），不必先存入模板库。</p>
     <div id="metrics" class="metrics hidden"></div>
     <div id="loadStatus" class="notice hidden" role="status" aria-live="polite"></div>
   </section>
   <div id="editor" class="hidden">
     <section id="mainFields">
-      <h2><span class="step">第 2 步</span> 填写父体和子体信息</h2>
+      <h2><span class="step">第 2 步</span> 选择商品与子体，填写父体信息</h2>
       <p class="muted">标有 * 的内容需要填写；已经存在的子体必须使用<strong>原 SKU 和原 ASIN</strong>。</p>
+      <div class="sku-picker">
+        <h3 class="block-title" style="margin:0 0 7px">从商品库选择已有子体（可选）</h3>
+        <p class="muted">先搜索父 ASIN，再从该父体下勾选需要的 SKU。选择项只显示 SKU，加入后程序会自动带入对应子 ASIN；颜色、尺寸等变体属性仍需核对并填写。</p>
+        <div style="margin-top:13px"><label for="mergeParentSearch">搜索父 ASIN</label><input id="mergeParentSearch" type="search" list="mergeParentOptions" placeholder="输入或选择商品库中的父 ASIN" autocomplete="off"/><datalist id="mergeParentOptions"></datalist></div>
+        <div id="mergeSkuStatus" class="notice" role="status" aria-live="polite">正在读取商品库…</div>
+        <div id="mergeSkuChoices" class="sku-choice-list hidden"></div>
+        <div class="template-actions">
+          <button id="selectAllMergeSkus" type="button">全选 SKU</button>
+          <button id="clearAllMergeSkus" type="button">取消全选</button>
+          <button id="addMergeSkus" class="primary" type="button">添加选中 SKU 到子体表</button>
+        </div>
+      </div>
       <h3 class="block-title">A. 新建父体</h3>
       <div class="field-grid">
         <div><label for="parent_sku">新父体 SKU *</label><input id="parent_sku" placeholder="例如：CAT-HOUSE-PARENT" autocomplete="off"/>
@@ -165,6 +197,6 @@ summary{font-weight:650;cursor:pointer}.summary-line{display:flex;flex-wrap:wrap
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="./engine.js"></script>
-<script src="./app.js"></script>
+<script src="./app.js?v=saved-templates-sku-picker-20261022"></script>
 </body>
 </html>
