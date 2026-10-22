@@ -3,7 +3,7 @@
 'use strict';
 const DB_NAME='amazonOpsToolkit', DB_VERSION=2;
 const $=id=>document.getElementById(id);
-const state={db:null,products:[],templates:[],template:null,templateRecord:null,product:null,editingProductId:null,bulletCount:5,pendingProductImport:null};
+const state={db:null,products:[],templates:[],template:null,templateRecord:null,product:null,editingProductId:null,bulletCount:5,pendingProductImport:null,productPage:1,pendingBackupFile:null};
 const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 const XNS='http://www.w3.org/XML/1998/namespace';
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
@@ -109,12 +109,15 @@ async function saveProductGroup(){
 }
 function renderProducts(){
  const host=$('productLibraryTable'),query=String($('productLibrarySearch')?.value||'').trim().toUpperCase();
- host.innerHTML='';const items=state.products.filter(p=>!query||p.parentAsin.includes(query));
- if(!items.length){host.textContent=state.products.length?'没有匹配的父 ASIN。':'暂无商品资料。可手动添加商品组，或批量导入 Excel/CSV。';return}
+ host.innerHTML='';
+ const items=state.products.filter(p=>!query||p.parentAsin.includes(query));
+ const pageSize=5,pageCount=Math.max(1,Math.ceil(items.length/pageSize));
+ state.productPage=Math.min(Math.max(1,state.productPage||1),pageCount);
+ if(!items.length){host.textContent=state.products.length?'没有匹配的父 ASIN。':'暂无商品资料。请先在上方「模块一｜导入商品」中添加或导入。';return}
  const table=document.createElement('table');table.className='data-table';
  table.innerHTML='<thead><tr><th>父 ASIN</th><th>子体数量</th><th>子 ASIN / SKU 对应关系</th><th>操作</th></tr></thead><tbody></tbody>';
- const body=table.querySelector('tbody');
- for(const p of items){
+ const body=table.querySelector('tbody'),start=(state.productPage-1)*pageSize,pageItems=items.slice(start,start+pageSize);
+ for(const p of pageItems){
   const tr=document.createElement('tr');
   [p.parentAsin,String((p.children||[]).length),(p.children||[]).map(c=>c.asin+'　→　'+c.sku).join('\n')].forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===2)td.style.whiteSpace='pre-line';tr.appendChild(td)});
   const actions=document.createElement('td'),edit=document.createElement('button'),del=document.createElement('button');
@@ -123,6 +126,13 @@ function renderProducts(){
   actions.append(edit,del);tr.appendChild(actions);body.appendChild(tr);
  }
  host.appendChild(table);
+ const pager=document.createElement('div');pager.className='pagination';
+ const info=document.createElement('span');info.className='pagination-info';info.textContent='共 '+items.length+' 个父 ASIN，每页最多 5 行';
+ const controls=document.createElement('div');controls.className='pagination-buttons';
+ const prev=document.createElement('button');prev.type='button';prev.textContent='上一页';prev.disabled=state.productPage<=1;prev.addEventListener('click',()=>{state.productPage--;renderProducts()});
+ const page=document.createElement('span');page.className='page-number';page.textContent='第 '+state.productPage+' / '+pageCount+' 页';
+ const next=document.createElement('button');next.type='button';next.textContent='下一页';next.disabled=state.productPage>=pageCount;next.addEventListener('click',()=>{state.productPage++;renderProducts()});
+ controls.append(prev,page,next);pager.append(info,controls);host.appendChild(pager);
 }
 function importHeaderMap(row){const h=row.map(normalizeHeader),idx=names=>h.findIndex(x=>names.includes(x));const parentAsin=idx(['parentasin','父asin','父体asin','父级asin','父商品asin','父asin码']);let childAsin=idx(['childasin','子asin','子体asin','子级asin','子商品asin','子asin码']);if(childAsin<0)childAsin=idx(['asin','商品asin','亚马逊asin']);const childSku=idx(['childsku','childsellersku','childmerchantsku','子sku','子体sku','子级sku','sellersku','merchantsku','sku','卖家sku','商家sku','商品sku']);return{category:idx(['category','productcategory','itemcategory','商品分类','商品类目','类目','分类']),parentAsin,parentSku:idx(['parentsku','父sku','父体sku','父级sku']),childAsin,childSku,brand:idx(['brand','brandname','品牌','品牌名称']),title:idx(['childtitle','title','itemname','商品标题','标题','原标题','子体标题']),color:idx(['color','颜色']),size:idx(['size','尺寸','大小']),header:h}}
 function detectImportHeader(rows){let best=null;for(let r=0;r<Math.min(rows.length,30);r++){const map=importHeaderMap(rows[r]||[]);if(map.parentAsin>=0&&map.childAsin>=0&&map.childSku>=0){const score=4+(map.category>=0?1:0)+(map.brand>=0?1:0)+(map.parentSku>=0?1:0);if(!best||score>best.score)best={rowIndex:r,map,score}}}return best}
@@ -337,12 +347,80 @@ function exportProductCsv(){
 }
 async function exportBackup(){
  const zip=new JSZip(),manifest={schemaVersion:2,exportedAt:new Date().toISOString(),products:state.products,templates:[]};
- for(const t of state.templates){const path='templates/'+t.id+'_'+String(t.filename||'template.xlsx').replace(/[\\/:*?"<>|]/g,'_');zip.file(path,t.blob);manifest.templates.push({id:t.id,category:t.category,filename:t.filename,size:t.size,createdAt:t.createdAt,updatedAt:t.updatedAt,path})}
+ for(const t of state.templates){
+  const path='templates/'+t.id+'_'+String(t.filename||'template.xlsx').replace(/[\\/:*?"<>|]/g,'_');
+  zip.file(path,t.blob);
+  manifest.templates.push({id:t.id,category:t.category,filename:t.filename,size:t.size,createdAt:t.createdAt,updatedAt:t.updatedAt,path});
+ }
+ const csvRows=[['Parent ASIN','Child ASIN','SKU']];
+ for(const p of state.products)for(const c of p.children||[])csvRows.push([p.parentAsin,c.asin,c.sku]);
+ const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+ zip.file('products.csv','\uFEFF'+csvRows.map(row=>row.map(quote).join(',')).join('\r\n'));
  zip.file('manifest.json',JSON.stringify(manifest,null,2));
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:5}});
- setDownload(blob,'Amazon_Ops_Toolkit_Library_'+new Date().toISOString().slice(0,10)+'.zip');setStatus('backupStatus','类目模板和商品库备份已导出。');
+ setDownload(blob,'Amazon_Ops_Toolkit_Full_Backup_'+new Date().toISOString().slice(0,10)+'.zip');
+ setStatus('backupStatus','完整备份已下载：包含 '+state.products.length+' 个父 ASIN 商品组、'+state.templates.length+' 个类目模板，以及便于查看的 products.csv。');
+}
+function replaceAllLibrary(products,templates){
+ return new Promise((resolve,reject)=>{
+  const tx=state.db.transaction(['products','templates'],'readwrite');
+  const productStore=tx.objectStore('products'),templateStore=tx.objectStore('templates');
+  productStore.clear();templateStore.clear();
+  products.forEach(record=>productStore.put(record));
+  templates.forEach(record=>templateStore.put(record));
+  tx.oncomplete=()=>resolve();
+  tx.onerror=()=>reject(tx.error||new Error('恢复资料库失败'));
+  tx.onabort=()=>reject(tx.error||new Error('恢复资料库已取消'));
+ });
 }
 async function importBackup(file){
+ if(!file)throw new Error('请先选择完整备份 ZIP');
+ const zip=await JSZip.loadAsync(await file.arrayBuffer()),manifestFile=zip.file('manifest.json');
+ if(!manifestFile)throw new Error('备份文件中没有 manifest.json，不是有效的完整资料库备份');
+ let manifest;
+ try{manifest=JSON.parse(await manifestFile.async('string'))}catch(_){throw new Error('备份文件的索引内容无法读取')}
+ if(!Array.isArray(manifest.products)||!Array.isArray(manifest.templates))throw new Error('备份不完整：必须同时包含商品库和类目模板清单');
+ const products=[],templates=[],parentSet=new Set(),childOwners=new Map(),skuOwners=new Map(),templateNames=new Set(),productIds=new Set(),templateIds=new Set();
+ for(const p of manifest.products){
+  const parentAsin=String(p.parentAsin||'').trim().toUpperCase();
+  if(!validateAsin(parentAsin))throw new Error('备份中发现无效父 ASIN：'+(p.parentAsin||'空白'));
+  if(parentSet.has(parentAsin))throw new Error('备份中父 ASIN 重复：'+parentAsin);
+  parentSet.add(parentAsin);
+  if(!Array.isArray(p.children)||!p.children.length)throw new Error('父 ASIN '+parentAsin+' 没有子 ASIN / SKU 记录');
+  const children=[],localAsins=new Set(),localSkus=new Set();
+  for(const c of p.children){
+   const asin=String(c.asin||'').trim().toUpperCase(),sku=String(c.sku||'').trim();
+   if(!validateAsin(asin)||!sku)throw new Error('父 ASIN '+parentAsin+' 中存在无效的子 ASIN 或空 SKU');
+   if(localAsins.has(asin))throw new Error('父 ASIN '+parentAsin+' 中子 ASIN 重复：'+asin);
+   if(localSkus.has(sku))throw new Error('父 ASIN '+parentAsin+' 中 SKU 重复：'+sku);
+   if(childOwners.has(asin)&&childOwners.get(asin)!==parentAsin)throw new Error('子 ASIN '+asin+' 同时归属多个父 ASIN');
+   if(skuOwners.has(sku)&&skuOwners.get(sku)!==asin)throw new Error('SKU '+sku+' 对应多个子 ASIN');
+   localAsins.add(asin);localSkus.add(sku);childOwners.set(asin,parentAsin);skuOwners.set(sku,asin);
+   children.push({asin,sku});
+  }
+  const id=String(p.id||uid());
+  if(productIds.has(id))throw new Error('备份中商品记录 ID 重复');
+  productIds.add(id);
+  products.push({id,parentAsin,children,createdAt:p.createdAt||new Date().toISOString(),updatedAt:p.updatedAt||p.createdAt||new Date().toISOString()});
+ }
+ for(const t of manifest.templates){
+  const category=String(t.category||'').trim(),path=String(t.path||'').trim();
+  if(!category||!path)throw new Error('备份中存在缺少类目名称或模板文件路径的记录');
+  const norm=category.toLowerCase();
+  if(templateNames.has(norm))throw new Error('备份中类目名称重复：'+category);
+  templateNames.add(norm);
+  const entry=zip.file(path);
+  if(!entry)throw new Error('备份缺少类目模板文件：'+category+'（'+path+'）');
+  const blob=await entry.async('blob'),id=String(t.id||uid());
+  if(templateIds.has(id))throw new Error('备份中类目模板 ID 重复');
+  templateIds.add(id);
+  templates.push({id,category,filename:String(t.filename||path.split('/').pop()),size:Number(t.size)||blob.size,createdAt:t.createdAt||new Date().toISOString(),updatedAt:t.updatedAt||t.createdAt||new Date().toISOString(),blob});
+ }
+ await replaceAllLibrary(products,templates);
+ await refreshAll();
+ state.productPage=1;
+ setStatus('backupStatus','完整恢复成功：已恢复 '+products.length+' 个父 ASIN 商品组和 '+templates.length+' 个类目模板。当前资料库已被备份内容整体替换。');
+}
  const zip=await JSZip.loadAsync(await file.arrayBuffer()),mf=zip.file('manifest.json');
  if(!mf)throw new Error('备份文件中没有 manifest.json');
  const manifest=JSON.parse(await mf.async('string'));
