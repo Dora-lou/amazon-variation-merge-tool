@@ -421,22 +421,6 @@ async function importBackup(file){
  state.productPage=1;
  setStatus('backupStatus','完整恢复成功：已恢复 '+products.length+' 个父 ASIN 商品组和 '+templates.length+' 个类目模板。当前资料库已被备份内容整体替换。');
 }
- const zip=await JSZip.loadAsync(await file.arrayBuffer()),mf=zip.file('manifest.json');
- if(!mf)throw new Error('备份文件中没有 manifest.json');
- const manifest=JSON.parse(await mf.async('string'));
- for(const p of manifest.products||[]){
-  const parentAsin=String(p.parentAsin||'').trim().toUpperCase();if(!parentAsin)continue;
-  const old=state.products.find(x=>x.parentAsin===parentAsin);
-  const children=(p.children||[]).map(c=>({asin:String(c.asin||'').trim().toUpperCase(),sku:String(c.sku||'').trim()}));
-  await put('products',{id:old?.id||p.id||uid(),parentAsin,children,createdAt:old?.createdAt||p.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()});
- }
- for(const t of manifest.templates||[]){
-  const fileEntry=zip.file(t.path);if(!fileEntry)continue;
-  const blob=await fileEntry.async('blob'),old=state.templates.find(x=>x.category.toLowerCase()===String(t.category||'').toLowerCase());
-  await put('templates',{id:old?.id||t.id||uid(),category:t.category,filename:t.filename,size:t.size||blob.size,createdAt:old?.createdAt||t.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),blob});
- }
- await refreshAll();setStatus('backupStatus','备份恢复完成：类目模板和商品库已导入。');
-}
 function onProductChange(){
  const previous=state.product?.id||'';
  const id=$('listingProductSelect').value;state.product=state.products.find(p=>p.id===id)||null;
