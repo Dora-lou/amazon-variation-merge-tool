@@ -61,7 +61,7 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
       </div>
       <div id="listingProductStatus" class="notice">搜索并选择父 ASIN 后，程序会匹配全部子 ASIN；SKU 在生成表格时自动匹配。</div>
       <div class="toolbar" style="margin-top:16px">
-        <span class="muted">选择清单只显示子 ASIN，不显示 SKU；默认全选，可按需取消部分商品。</span>
+        <span class="muted">选择清单显示 SKU，方便辨认；默认全选，可按需取消不需要修改的商品。</span>
         <div><button id="selectAllChildren" type="button">全选</button> <button id="clearAllChildren" type="button">取消全选</button></div>
       </div>
       <div id="listingChildChecklist" class="child-list">请先搜索并选择父 ASIN。</div>
@@ -184,11 +184,11 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
       </section>
     </div>
   </div>
-  <p class="footer">Excel 在浏览器本地处理；不登录亚马逊、不连接卖家后台、不向网站服务器上传文件。资料库保存在当前浏览器，可通过 ZIP 备份迁移。</p>
+  <p class="footer"><a href="./使用说明.txt" download="使用说明.txt">下载新手使用说明（TXT）</a><br/>Excel 在浏览器本地处理；不登录亚马逊、不连接卖家后台、不向网站服务器上传文件。资料库保存在当前浏览器，可通过 ZIP 备份迁移。</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="./engine.js"></script>
-<script src="./listing.js?v=remove-unneeded-brand-field-20261022"></script>
+<script src="./listing.js?v=beginner-manual-sku-note-20261022"></script>
 </body>
 </html>
