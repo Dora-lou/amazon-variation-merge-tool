@@ -391,6 +391,9 @@ function start(){
   setStatus('templateLibraryStatus',state.templates.length?'已加载 '+state.templates.length+' 个类目模板。':'尚未保存模板。');
  }).catch(err=>setStatus('listingTemplateStatus','本地资料库无法启动：'+err.message,'error'));
 }
+document.addEventListener('DOMContentLoaded',start);
+})();
+
 /* Excel listing-update engine: uses the Amazon template structure and preserves other workbook parts. */
 const ListingEngine=(function(){
 'use strict';
