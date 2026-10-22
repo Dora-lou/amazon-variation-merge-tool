@@ -156,8 +156,13 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 
       <section>
         <h2>已保存的商品</h2>
-        <div style="max-width:380px;margin-bottom:12px"><label for="productLibrarySearch">搜索父 ASIN</label><input id="productLibrarySearch" placeholder="输入完整或部分父 ASIN"/></div>
+        <p class="muted">可以把商品对应关系下载为 CSV 文件，用 Excel 查看或保存；以后在上方「批量导入商品库」中重新上传。只备份商品数据时用 CSV；要连同类目模板一起备份，请使用下方完整 ZIP 备份。</p>
+        <div class="toolbar" style="margin:12px 0">
+          <div style="max-width:380px;flex:1"><label for="productLibrarySearch">搜索父 ASIN</label><input id="productLibrarySearch" placeholder="输入完整或部分父 ASIN"/></div>
+          <button id="exportProductCsv" class="primary" type="button">下载商品库 CSV</button>
+        </div>
         <div id="productLibraryTable" class="table-wrap">正在读取商品库…</div>
+        <div id="productCsvStatus" class="notice" role="status">CSV 包含父 ASIN、子 ASIN、SKU 三列，不包含类目模板文件。</div>
       </section>
 
       <details style="margin-top:17px;background:#fff;border:1px solid #e1e7ef;border-radius:12px;padding:16px">
