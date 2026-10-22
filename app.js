@@ -41,7 +41,8 @@ function renderSavedTemplateOptions(){
 function renderMergeParentOptions(){
  const list=$('mergeParentOptions');list.innerHTML='';
  [...libraryProducts].sort((a,b)=>String(a.parentAsin||'').localeCompare(String(b.parentAsin||''))).forEach(p=>{
-  const option=optionEl(String(p.parentAsin||''),String((p.children||[]).length)+' 个 SKU');
+  const option=optionEl(String(p.parentAsin||''),String(p.parentAsin||''));
+  option.label=String((p.children||[]).length)+' 个 SKU';
   list.appendChild(option);
  });
 }
@@ -84,6 +85,7 @@ async function refreshLibraryData(){
 }
 async function activateTemplate(source,name,sourceLabel){
  $('editor').classList.add('hidden');$('metrics').classList.add('hidden');
+ $('loadStatus').classList.remove('hidden');
  selectedFile={name,arrayBuffer:()=>source.arrayBuffer()};
  notify('loadStatus','正在解析模板，请稍候…');
  try{
