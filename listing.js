@@ -323,6 +323,18 @@ async function generateListing(){
  setDownload(result.blob,filename);
  setStatus('listingResult','已生成 '+filename+'。本次更新 '+children.length+' 个子体；请先检查 Excel，再上传亚马逊并查看处理报告。'+(result.warnings.length?' 提示：'+result.warnings.join('；'):''));
 }
+function exportProductCsv(){
+ if(!state.products.length)throw new Error('商品库目前没有记录，暂时无法导出。');
+ const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+ const rows=[['Parent ASIN','Child ASIN','SKU']];
+ for(const p of state.products){
+  for(const c of p.children||[])rows.push([p.parentAsin,c.asin,c.sku]);
+ }
+ const csv='\\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\\r\\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+ setDownload(blob,'Amazon_Product_Library_'+new Date().toISOString().slice(0,10)+'.csv');
+ setStatus('productCsvStatus','已导出 '+state.products.length+' 个父 ASIN、'+(rows.length-1)+' 条子 ASIN / SKU 对应记录。需要恢复时，请在「批量导入商品库」中选择该 CSV，先识别检查，再确认导入。');
+}
 async function exportBackup(){
  const zip=new JSZip(),manifest={schemaVersion:2,exportedAt:new Date().toISOString(),products:state.products,templates:[]};
  for(const t of state.templates){const path='templates/'+t.id+'_'+String(t.filename||'template.xlsx').replace(/[\\/:*?"<>|]/g,'_');zip.file(path,t.blob);manifest.templates.push({id:t.id,category:t.category,filename:t.filename,size:t.size,createdAt:t.createdAt,updatedAt:t.updatedAt,path})}
@@ -380,7 +392,7 @@ function initEvents(){
  $('addListingBullet').addEventListener('click',()=>{const vals=readBulletValues();vals.push('');renderBulletInputs(vals)});
  $('addAdvancedField').addEventListener('click',addAdvancedField);
  $('generateListing').addEventListener('click',async()=>{const btn=$('generateListing');btn.disabled=true;try{await generateListing()}catch(err){setStatus('listingResult',err.message,'error')}finally{btn.disabled=false}});
- $('exportBackup').addEventListener('click',async()=>{try{await exportBackup()}catch(err){setStatus('backupStatus',err.message,'error')}});
+ $('exportProductCsv').addEventListener('click',()=>{try{exportProductCsv()}catch(err){setStatus('productCsvStatus',err.message,'error')}});\n $('exportBackup').addEventListener('click',async()=>{try{await exportBackup()}catch(err){setStatus('backupStatus',err.message,'error')}});
  $('importBackup').addEventListener('change',async()=>{const f=$('importBackup').files[0];if(!f)return;try{await importBackup(f)}catch(err){setStatus('backupStatus',err.message,'error')}finally{$('importBackup').value=''}});
 }
 function start(){
