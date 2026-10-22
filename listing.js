@@ -462,7 +462,7 @@ function initEvents(){
  $('clearAllChildren').addEventListener('click',()=>setChildChecks(false));
  $('saveProductGroup').addEventListener('click',async()=>{try{await saveProductGroup()}catch(err){setStatus('productFormStatus',err.message,'error')}});
  $('resetProductForm').addEventListener('click',resetProductForm);
- $('productLibrarySearch').addEventListener('input',renderProducts);
+ $('productLibrarySearch').addEventListener('input',()=>{state.productPage=1;renderProducts()});
  $('importProducts').addEventListener('click',async()=>{try{await importProductRows()}catch(err){setStatus('importStatus',err.message,'error')}});
  $('productExcelFile').addEventListener('change',()=>{state.pendingProductImport=null;$('importExcelProducts').disabled=true;if($('productExcelFile').files[0])setStatus('importPreview','已选择：'+$('productExcelFile').files[0].name+'。点击「识别文件并统计」开始读取。')});
  $('previewProductExcel').addEventListener('click',async()=>{try{$('previewProductExcel').disabled=true;setStatus('importPreview','正在读取 Excel 并识别父子 ASIN/SKU…');await previewProductExcel()}catch(err){state.pendingProductImport=null;$('importExcelProducts').disabled=true;setStatus('importPreview',err.message,'error')}finally{$('previewProductExcel').disabled=false}});
@@ -472,7 +472,25 @@ function initEvents(){
  $('generateListing').addEventListener('click',async()=>{const btn=$('generateListing');btn.disabled=true;try{await generateListing()}catch(err){setStatus('listingResult',err.message,'error')}finally{btn.disabled=false}});
  $('exportProductCsv').addEventListener('click',()=>{try{exportProductCsv()}catch(err){setStatus('productCsvStatus',err.message,'error')}});
  $('exportBackup').addEventListener('click',async()=>{try{await exportBackup()}catch(err){setStatus('backupStatus',err.message,'error')}});
- $('importBackup').addEventListener('change',async()=>{const f=$('importBackup').files[0];if(!f)return;try{await importBackup(f)}catch(err){setStatus('backupStatus',err.message,'error')}finally{$('importBackup').value=''}});
+ $('importBackup').addEventListener('change',()=>{
+ state.pendingBackupFile=$('importBackup').files[0]||null;
+ $('restoreBackup').disabled=!state.pendingBackupFile;
+ if(state.pendingBackupFile)setStatus('backupStatus','已选择备份文件：'+state.pendingBackupFile.name+'。点击「上传并恢复全部资料」后，当前商品库和类目模板会被完整替换。');
+});
+$('restoreBackup').addEventListener('click',async()=>{
+ const file=state.pendingBackupFile;
+ if(!file){setStatus('backupStatus','请先选择完整备份 ZIP。','warn');return}
+ if(!confirm('恢复会完整替换当前商品库和类目模板，当前未备份的内容将被覆盖。建议先下载当前完整备份。确定继续吗？'))return;
+ const btn=$('restoreBackup');btn.disabled=true;
+ try{
+  state.product=null;state.template=null;state.templateRecord=null;
+  await importBackup(file);
+  state.pendingBackupFile=null;$('importBackup').value='';btn.disabled=true;
+ }catch(err){
+  setStatus('backupStatus',err.message,'error');
+  btn.disabled=!state.pendingBackupFile;
+ }
+});
 }
 function start(){
  openDB().then(async db=>{
