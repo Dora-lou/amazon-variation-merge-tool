@@ -187,7 +187,7 @@ async function previewProductExcel(){
  }else{
   if(!window.XLSX)throw new Error('Excel 解析组件未加载，请刷新页面后重试');
   const wb=XLSX.read(await file.arrayBuffer(),{type:'array',raw:false,cellDates:false});
-  for(const name of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:false,blankrows:false});const parsed=parseProductImportSheet(rows,'',name);if(parsed&&parsed.groups.length)parts.push(parsed)}
+  for(const name of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:false,blankrows:true});const parsed=parseProductImportSheet(rows,'',name);if(parsed&&parsed.groups.length)parts.push(parsed)}
  }
  if(!parts.length)throw new Error('没有识别到包含「父 ASIN、子 ASIN、SKU」的表头。请确认表头在前 30 行内，且列名清晰。');
  const result=mergeImportResults(parts);
