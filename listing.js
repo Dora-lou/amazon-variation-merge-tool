@@ -57,19 +57,19 @@ function parseChildLines(text){
  const rows=[];
  for(const line of String(text||'').split(/\r?\n/).filter(x=>x.trim())){
   const vals=line.includes('\t')?line.split('\t'):line.split(',');
-  const asin=String(vals[0]||'').trim().toUpperCase(),sku=String(vals[1]||'').trim();
+  const asin=normalizeAsin(vals[0]),sku=String(vals[1]||'').trim();
   if(asin||sku)rows.push({asin,sku});
  }
  return rows;
 }
-function validateAsin(v){return /^[A-Z0-9]{10}$/.test(String(v||'').trim().toUpperCase())}
+function normalizeAsin(v){return String(v??'').normalize('NFKC').replace(/[\u200B-\u200D\uFEFF\u00A0]/g,'').trim().replace(/^['’]/,'').toUpperCase()}
+ function validateAsin(v){return /^[A-Z0-9]{10}$/.test(normalizeAsin(v))}
 function assertNoCrossGroupConflicts(parentAsin,children,excludeId){
  const otherChildren=state.products.filter(p=>p.id!==excludeId&&p.parentAsin!==parentAsin).flatMap(p=>(p.children||[]).map(c=>({...c,parentAsin:p.parentAsin})));
  for(const child of children){
   const sameAsin=otherChildren.find(c=>c.asin===child.asin);
   if(sameAsin)throw new Error('子 ASIN '+child.asin+' 已在商品库中归属于父 ASIN '+sameAsin.parentAsin+'，请先核对重复关系');
-  const sameSku=otherChildren.find(c=>c.sku===child.sku&&c.asin!==child.asin);
-  if(sameSku)throw new Error('SKU '+child.sku+' 已对应另一个子 ASIN '+sameSku.asin+'，请先核对 SKU');
+  // SKU 可以在不同父 ASIN 分组中重复；后续先筛选父 ASIN，再选择 SKU，因此不做跨父体 SKU 唯一性校验。
  }
 }
 function resetProductForm(){
@@ -88,7 +88,7 @@ function editProduct(id){
  window.scrollTo({top:0,behavior:'smooth'});
 }
 async function saveProductGroup(){
- const parentAsin=$('productParentAsin').value.trim().toUpperCase();
+ const parentAsin=normalizeAsin($('productParentAsin').value);
  const children=parseChildLines($('productChildren').value);
  if(!validateAsin(parentAsin))throw new Error('父 ASIN 格式应为 10 位字母或数字');
  if(!children.length)throw new Error('请至少添加一个子 ASIN 和子 SKU');
@@ -138,21 +138,19 @@ function importHeaderMap(row){const h=row.map(normalizeHeader),idx=names=>h.find
 function detectImportHeader(rows){let best=null;for(let r=0;r<Math.min(rows.length,30);r++){const map=importHeaderMap(rows[r]||[]);if(map.parentAsin>=0&&map.childAsin>=0&&map.childSku>=0){const score=4+(map.category>=0?1:0)+(map.brand>=0?1:0)+(map.parentSku>=0?1:0);if(!best||score>best.score)best={rowIndex:r,map,score}}}return best}
 function parseProductImportSheet(rows,defaultCategory,sheetName){
  const found=detectImportHeader(rows);if(!found)return null;
- const ix=found.map,grouped=new Map(),errors=[],childToParent=new Map(),skuToChild=new Map();
+ const ix=found.map,grouped=new Map(),errors=[],childToParent=new Map();
  let lastParent='',validRows=0;
  for(let r=found.rowIndex+1;r<rows.length;r++){
   const row=rows[r]||[],get=k=>ix[k]>=0?String(row[ix[k]]??'').trim():'';
   const childRaw=get('childAsin'),sku=get('childSku');if(!childRaw&&!sku)continue;
-  const parentRaw=get('parentAsin');if(parentRaw)lastParent=parentRaw.toUpperCase();
-  const parentAsin=(parentRaw||lastParent).trim().toUpperCase(),childAsin=childRaw.trim().toUpperCase(),lineNo=r+1;
-  if(!validateAsin(parentAsin)){errors.push('「'+sheetName+'」第 '+lineNo+' 行父 ASIN 缺失或格式不正确');continue}
-  if(!validateAsin(childAsin)){errors.push('「'+sheetName+'」第 '+lineNo+' 行子 ASIN 缺失或格式不正确');continue}
+  const parentRaw=normalizeAsin(get('parentAsin'));if(parentRaw)lastParent=parentRaw;
+  const parentAsin=normalizeAsin(parentRaw||lastParent),childAsin=normalizeAsin(childRaw),lineNo=r+1;
+  if(!validateAsin(parentAsin)){const rawParent=ix.parentAsin>=0?String(row[ix.parentAsin]??''):'';errors.push('「'+sheetName+'」第 '+lineNo+' 行父 ASIN 缺失或格式不正确（读取值：'+JSON.stringify(rawParent)+'；识别列：'+String(rows[found.rowIndex][ix.parentAsin]??'父 ASIN')+'）');continue}
+  if(!validateAsin(childAsin)){const rawChild=ix.childAsin>=0?String(row[ix.childAsin]??''):'';errors.push('「'+sheetName+'」第 '+lineNo+' 行子 ASIN 缺失或格式不正确（读取值：'+JSON.stringify(rawChild)+'）');continue}
   if(!sku){errors.push('「'+sheetName+'」第 '+lineNo+' 行缺少 SKU');continue}
   const prevParent=childToParent.get(childAsin);
   if(prevParent&&prevParent!==parentAsin){errors.push('子 ASIN '+childAsin+' 被分配给多个父 ASIN：'+prevParent+' / '+parentAsin);continue}
-  const prevChild=skuToChild.get(sku);
-  if(prevChild&&prevChild!==childAsin){errors.push('SKU '+sku+' 对应多个子 ASIN：'+prevChild+' / '+childAsin);continue}
-  childToParent.set(childAsin,parentAsin);skuToChild.set(sku,childAsin);
+  childToParent.set(childAsin,parentAsin);
   let g=grouped.get(parentAsin);if(!g){g={parentAsin,children:[],sourceSheet:sheetName};grouped.set(parentAsin,g)}
   const c={asin:childAsin,sku},prior=g.children.find(x=>x.asin===childAsin);
   if(prior&&prior.sku!==sku)errors.push('同一子 ASIN '+childAsin+' 出现不同 SKU：'+prior.sku+' / '+sku);
@@ -162,7 +160,7 @@ function parseProductImportSheet(rows,defaultCategory,sheetName){
  return{groups:[...grouped.values()],errors,validRows,sheetName,headerRow:found.rowIndex+1,columns:{parentAsin:rows[found.rowIndex][ix.parentAsin],childAsin:rows[found.rowIndex][ix.childAsin],sku:rows[found.rowIndex][ix.childSku]}};
 }
 function mergeImportResults(parts){
- const groups=new Map(),errors=[],childToParent=new Map(),skuToChild=new Map();let validRows=0;
+ const groups=new Map(),errors=[],childToParent=new Map();let validRows=0;
  for(const part of parts){
   errors.push(...part.errors);validRows+=part.validRows;
   for(const g of part.groups){
@@ -172,9 +170,7 @@ function mergeImportResults(parts){
    for(const c of g.children){
     const previousParent=childToParent.get(c.asin);
     if(previousParent&&previousParent!==g.parentAsin){errors.push('子 ASIN '+c.asin+' 在多个父 ASIN 中出现：'+previousParent+' / '+g.parentAsin);continue}
-    const previousChild=skuToChild.get(c.sku);
-    if(previousChild&&previousChild!==c.asin){errors.push('SKU '+c.sku+' 对应多个子 ASIN：'+previousChild+' / '+c.asin);continue}
-    childToParent.set(c.asin,g.parentAsin);skuToChild.set(c.sku,c.asin);
+    childToParent.set(c.asin,g.parentAsin);
     const same=target.children.find(x=>x.asin===c.asin);
     if(same){if(same.sku!==c.sku)errors.push('子 ASIN '+c.asin+' 出现不同 SKU：'+same.sku+' / '+c.sku)}
     else target.children.push({asin:c.asin,sku:c.sku});
@@ -380,22 +376,21 @@ async function importBackup(file){
  let manifest;
  try{manifest=JSON.parse(await manifestFile.async('string'))}catch(_){throw new Error('备份文件的索引内容无法读取')}
  if(!Array.isArray(manifest.products)||!Array.isArray(manifest.templates))throw new Error('备份不完整：必须同时包含商品库和类目模板清单');
- const products=[],templates=[],parentSet=new Set(),childOwners=new Map(),skuOwners=new Map(),templateNames=new Set(),productIds=new Set(),templateIds=new Set();
+ const products=[],templates=[],parentSet=new Set(),childOwners=new Map(),templateNames=new Set(),productIds=new Set(),templateIds=new Set();
  for(const p of manifest.products){
-  const parentAsin=String(p.parentAsin||'').trim().toUpperCase();
+  const parentAsin=normalizeAsin(p.parentAsin);
   if(!validateAsin(parentAsin))throw new Error('备份中发现无效父 ASIN：'+(p.parentAsin||'空白'));
   if(parentSet.has(parentAsin))throw new Error('备份中父 ASIN 重复：'+parentAsin);
   parentSet.add(parentAsin);
   if(!Array.isArray(p.children)||!p.children.length)throw new Error('父 ASIN '+parentAsin+' 没有子 ASIN / SKU 记录');
   const children=[],localAsins=new Set(),localSkus=new Set();
   for(const c of p.children){
-   const asin=String(c.asin||'').trim().toUpperCase(),sku=String(c.sku||'').trim();
+   const asin=normalizeAsin(c.asin),sku=String(c.sku||'').trim();
    if(!validateAsin(asin)||!sku)throw new Error('父 ASIN '+parentAsin+' 中存在无效的子 ASIN 或空 SKU');
    if(localAsins.has(asin))throw new Error('父 ASIN '+parentAsin+' 中子 ASIN 重复：'+asin);
    if(localSkus.has(sku))throw new Error('父 ASIN '+parentAsin+' 中 SKU 重复：'+sku);
    if(childOwners.has(asin)&&childOwners.get(asin)!==parentAsin)throw new Error('子 ASIN '+asin+' 同时归属多个父 ASIN');
-   if(skuOwners.has(sku)&&skuOwners.get(sku)!==asin)throw new Error('SKU '+sku+' 对应多个子 ASIN');
-   localAsins.add(asin);localSkus.add(sku);childOwners.set(asin,parentAsin);skuOwners.set(sku,asin);
+   localAsins.add(asin);localSkus.add(sku);childOwners.set(asin,parentAsin);
    children.push({asin,sku});
   }
   const id=String(p.id||uid());
