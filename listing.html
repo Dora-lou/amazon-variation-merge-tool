@@ -22,7 +22,8 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 .notice{padding:12px 15px;border-radius:10px;font-size:13px;margin-top:12px;line-height:1.6;background:#eff7f2;color:#285c3e;border:1px solid #cde6d6}.notice.warn{background:#fff8eb;border-color:#f3dbab;color:#895d18}.notice.error{background:#fff1f2;border-color:#f1c4cc;color:#b03448}
 .muted{font-size:12px;color:#7a8895;margin-top:7px}.hidden{display:none!important}.check{display:flex;align-items:center;gap:9px;font-weight:500;margin:12px 0}.check input{width:auto}
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px}.child-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px}
-.child-choice{display:flex;gap:9px;align-items:flex-start;border:1px solid #e1e7ef;border-radius:9px;padding:10px 12px;font-weight:500;margin:0}.child-choice input{width:auto;margin-top:3px}.advanced-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;gap:10px;border:1px solid #e1e7ef;border-radius:10px;padding:12px;margin-top:10px}
+.child-choice{display:flex;gap:9px;align-items:flex-start;border:1px solid #e1e7ef;border-radius:9px;padding:10px 12px;font-weight:500;margin:0}.child-choice input{width:auto;margin-top:3px}
+.child-choice .msku-content{flex:1;min-width:0}.child-choice .msku-title{font-size:13px;font-weight:750;color:#34465a;overflow-wrap:anywhere}.child-choice .msku-asin{font-size:11px;color:#8795a3;margin-top:3px}.child-choice select{margin-top:7px;max-width:100%}.child-choice .msku-required{font-size:11px;color:#a46b1b;margin-top:5px}.advanced-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;gap:10px;border:1px solid #e1e7ef;border-radius:10px;padding:12px;margin-top:10px}
 .submodule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}.submodule{border:1px solid #e1e7ef;border-radius:12px;padding:16px;min-width:0}.submodule h3{margin-bottom:8px}.pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 4px 2px}.pagination-info{font-size:12px;color:#68798a}.pagination-buttons{display:flex;gap:8px;align-items:center}.pagination-buttons button{padding:7px 11px;font-size:12px}.pagination-buttons .page-number{font-weight:750;color:#267651}
 .table-wrap{overflow:auto;border:1px solid #e2e8ef;border-radius:10px;margin-top:12px}table{border-collapse:collapse;width:100%;min-width:700px}th,td{border-bottom:1px solid #e6ebf1;padding:10px;text-align:left;vertical-align:top}th{white-space:nowrap;background:#f8fafc;font-size:12px;color:#5a6c7e}td{font-size:13px}tr:last-child td{border:0}.data-table button{margin:2px;padding:6px 9px;font-size:12px}.danger{color:#a33a47}.quiet{border:0;background:transparent;padding:4px 8px}.footer{font-size:12px;color:#788593;margin-top:22px}
 @media(max-width:700px){.shell{padding:20px 12px}.field-grid,.three-grid,.bullet-grid,.child-list,.submodule-grid{grid-template-columns:1fr}section{padding:17px}.advanced-row{grid-template-columns:1fr}}
@@ -32,7 +33,7 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 <main class="shell">
   <div class="eyebrow">Amazon Operations Toolkit</div>
   <h1>亚马逊运营工具箱</h1>
-  <p>管理类目模板、父子 ASIN/SKU 对应关系，并批量生成商品信息修改表格。资料保存在当前浏览器。</p>
+  <p>管理类目模板、父子 ASIN/MSKU 对应关系，并批量生成商品信息修改表格。资料保存在当前浏览器。</p>
   <nav class="module-nav" aria-label="工具模块">
     <a href="./index.html">合并变体</a>
     <a href="./listing.html" class="active">Listing 修改</a>
@@ -56,12 +57,12 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
       <div class="field-grid">
         <div><label for="listingParentAsinSearch">搜索父 ASIN</label><input id="listingParentAsinSearch" placeholder="输入完整或部分父 ASIN" autocomplete="off"/></div>
         <div><label for="listingProductSelect">匹配到的父 ASIN</label><select id="listingProductSelect"><option value="">请选择父 ASIN</option></select></div>
-        <div><label for="listingChildSelect">快速选择单个子 ASIN（可选）</label><select id="listingChildSelect" disabled><option value="">请先选择父 ASIN</option></select></div>
+        <div><label for="listingChildSelect">快速选择单个子体（可选）</label><select id="listingChildSelect" disabled><option value="">请先选择父 ASIN</option></select></div>
         
       </div>
-      <div id="listingProductStatus" class="notice">搜索并选择父 ASIN 后，程序会匹配全部子 ASIN；SKU 在生成表格时自动匹配。</div>
+      <div id="listingProductStatus" class="notice">选择父 ASIN 后，程序列出对应子体。一个子 ASIN 有多个 MSKU 时，请选定本次使用的一个。</div>
       <div class="toolbar" style="margin-top:16px">
-        <span class="muted">选择清单显示 SKU，方便辨认；默认全选，可按需取消不需要修改的商品。</span>
+        <span class="muted">默认勾选全部子体。只有一个 MSKU 会自动选定；多个 MSKU 必须手动确认，生成表格只使用选中的一个。</span>
         <div><button id="selectAllChildren" type="button">全选</button> <button id="clearAllChildren" type="button">取消全选</button></div>
       </div>
       <div id="listingChildChecklist" class="child-list">请先搜索并选择父 ASIN。</div>
@@ -137,23 +138,24 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
         <div class="submodule-grid">
           <div class="submodule">
             <h3>方式 A｜手动添加</h3>
-            <p class="muted">适合新增或修改少量商品。每行填写一个子体，顺序为子 ASIN、SKU。</p>
+            <p class="muted">适合新增或修改少量商品。每行填写「子 ASIN、MSKU」，同一子 ASIN 的多个 MSKU 用英文逗号隔开。</p>
             <div style="margin-top:14px"><label for="productParentAsin">父 ASIN *</label><input id="productParentAsin" placeholder="输入 10 位父 ASIN" autocomplete="off"/></div>
-            <div style="margin-top:13px"><label for="productChildren">子 ASIN / SKU 清单 *</label><textarea id="productChildren" rows="7" placeholder="每行一个子体，Tab 分隔：&#10;B0XXXXXXXX&#9;your-child-sku&#10;B0YYYYYYYY&#9;your-child-sku-2"></textarea></div>
+            <div style="margin-top:13px"><label for="productChildren">子 ASIN / MSKU 清单 *</label><textarea id="productChildren" rows="7" placeholder="每行一个子体，用 Tab 分隔 ASIN 与 MSKU：&#10;B0XXXXXXXX&#9;MSKU-1, MSKU-2&#10;B0YYYYYYYY&#9;MSKU-3"></textarea></div>
             <div class="toolbar" style="margin-top:12px"><button id="saveProductGroup" class="primary" type="button">保存商品组</button><button id="resetProductForm" type="button">清空 / 新建</button></div>
             <div id="productFormStatus" class="notice">保存后，生成上传表时会根据子 ASIN 自动匹配 SKU。</div>
           </div>
           <div class="submodule">
             <h3>方式 B｜表格批量导入</h3>
-            <p class="muted">上传 Excel 或 CSV，表格至少包含「父 ASIN、子 ASIN、SKU」三列。程序会先识别并检查数据，再保存到商品库。</p>
+            <p class="muted">可直接导入领星导出的 Excel / CSV：父 ASIN、子 ASIN、MSKU 三列。同一单元格中以逗号分隔的多个 MSKU 会自动拆分。</p>
             <div style="margin-top:14px"><label for="productExcelFile">选择商品资料文件（.xlsx / .xls / .xlsm / .csv）</label><input id="productExcelFile" type="file" accept=".xlsx,.xls,.xlsm,.csv"/></div>
+            <div style="margin-top:12px"><label for="productImportMode">导入方式</label><select id="productImportMode"><option value="merge">追加/更新（保留未涉及的父 ASIN）</option><option value="replace">完全替换商品库（清除旧商品记录，不影响类目模板）</option></select><p class="muted">之前导错资料时，请选择「完全替换」。替换前建议先下载完整 ZIP 备份。</p></div>
             <div class="toolbar" style="margin-top:12px"><button id="previewProductExcel" type="button">识别文件并统计</button><button id="importExcelProducts" class="primary" type="button" disabled>确认导入并保存</button></div>
             <div id="importPreview" class="notice">先识别文件，确认父 ASIN、子 ASIN、SKU 数量无误后再导入。</div>
             <div id="importStatus" class="notice">导入数据保存在当前浏览器。</div>
             <details style="margin-top:14px">
               <summary style="font-weight:650;cursor:pointer">备用方式：粘贴表格内容</summary>
-              <p class="muted">复制 Excel 表格内容后粘贴，表头至少需要父 ASIN、子 ASIN、SKU。</p>
-              <textarea id="productImportText" rows="5" placeholder="父 ASIN&#9;子 ASIN&#9;SKU&#10;B0XXXXXXXX&#9;B0YYYYYYYY&#9;your-child-sku"></textarea>
+              <p class="muted">复制 Excel 表格内容后粘贴，表头至少需要父 ASIN、子 ASIN、MSKU。</p>
+              <textarea id="productImportText" rows="5" placeholder="父 ASIN&#9;子 ASIN&#9;MSKU&#10;B0XXXXXXXX&#9;B0YYYYYYYY&#9;MSKU-1,MSKU-2"></textarea>
               <div class="toolbar" style="margin-top:10px"><button id="importProducts" type="button">导入粘贴内容</button></div>
             </details>
           </div>
@@ -162,13 +164,13 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 
       <section>
         <h2>模块二｜已保存商品</h2>
-        <p class="muted">每页最多显示 5 个父 ASIN。可以搜索父 ASIN、编辑或删除商品组，也可以下载 CSV 用 Excel 查看商品对应关系。</p>
+        <p class="muted">每页最多显示 5 个父 ASIN。可查看各子 ASIN 对应的全部 MSKU，也可以搜索、编辑、删除或下载 CSV。</p>
         <div class="toolbar" style="margin:12px 0">
           <div style="max-width:380px;flex:1"><label for="productLibrarySearch">搜索父 ASIN</label><input id="productLibrarySearch" placeholder="输入完整或部分父 ASIN"/></div>
           <button id="exportProductCsv" class="primary" type="button">下载商品库 CSV</button>
         </div>
         <div id="productLibraryTable" class="table-wrap">正在读取商品库…</div>
-        <div id="productCsvStatus" class="notice" role="status">CSV 包含父 ASIN、子 ASIN、SKU 三列；完整 ZIP 备份还会包含所有类目模板。</div>
+        <div id="productCsvStatus" class="notice" role="status">CSV 包含父 ASIN、子 ASIN、MSKU 三列（多个 MSKU 用逗号分隔）；完整 ZIP 备份还会包含所有类目模板。</div>
       </section>
 
       <section>
