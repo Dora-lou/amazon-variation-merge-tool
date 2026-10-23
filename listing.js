@@ -39,7 +39,7 @@ async function refreshAll(){
  const saved=await getAll('products');
  state.products=saved.map(p=>({
   id:p.id||uid(),parentAsin:String(p.parentAsin||'').trim().toUpperCase(),
-  children:(p.children||[]).map(c=>({asin:String(c.asin||'').trim().toUpperCase(),sku:String(c.sku||'').trim()})),
+  children:(p.children||[]).map(normalizeChildRecord),
   createdAt:p.createdAt||new Date().toISOString(),updatedAt:p.updatedAt||p.createdAt||new Date().toISOString()
  })).sort((a,b)=>a.parentAsin.localeCompare(b.parentAsin));
  state.templates=(await getAll('templates')).sort((a,b)=>String(b.updatedAt||b.createdAt).localeCompare(String(a.updatedAt||a.createdAt)));
@@ -56,14 +56,39 @@ function parseDelimited(text){const lines=String(text||'').replace(/^\uFEFF/,'')
 function parseChildLines(text){
  const rows=[];
  for(const line of String(text||'').split(/\r?\n/).filter(x=>x.trim())){
-  const vals=line.includes('\t')?line.split('\t'):line.split(',');
-  const asin=normalizeAsin(vals[0]),sku=String(vals[1]||'').trim();
-  if(asin||sku)rows.push({asin,sku});
+  const tab=line.indexOf('\t'),comma=line.search(/[,，]/),pos=tab>=0?tab:comma;
+  const asin=normalizeAsin(pos>=0?line.slice(0,pos):line),mskus=splitMskus(pos>=0?line.slice(pos+1):'');
+  if(asin||mskus.length)rows.push(normalizeChildRecord({asin,mskus}));
  }
  return rows;
 }
 function normalizeAsin(v){return String(v??'').normalize('NFKC').replace(/[\u200B-\u200D\uFEFF\u00A0]/g,'').trim().replace(/^['’]/,'').toUpperCase()}
  function validateAsin(v){return /^[A-Z0-9]{10}$/.test(normalizeAsin(v))}
+function splitMskus(v){return [...new Set((Array.isArray(v)?v:[v]).flatMap(x=>String(x??'').split(/[,，;；\r\n]+/).map(y=>y.trim()).filter(Boolean)))]}
+function normalizeChildRecord(c){const mskus=splitMskus(Array.isArray(c?.mskus)?c.mskus:c?.sku);return{asin:normalizeAsin(c?.asin),mskus,sku:mskus[0]||''}}
+function validateProductGroups(groups){
+ const owners=new Map();
+ for(const p of groups){
+  if(!validateAsin(p.parentAsin))throw new Error('父 ASIN 无效：'+p.parentAsin);
+  const asinSeen=new Set(),mskuSeen=new Map();
+  if(!p.children?.length)throw new Error('父 ASIN '+p.parentAsin+' 缺少子体');
+  for(const raw of p.children){
+   const c=normalizeChildRecord(raw);
+   if(!validateAsin(c.asin)||!c.mskus.length)throw new Error('子 ASIN 或 MSKU 无效：'+c.asin);
+   if(asinSeen.has(c.asin))throw new Error('父 ASIN '+p.parentAsin+' 下子 ASIN 重复：'+c.asin);
+   asinSeen.add(c.asin);
+   const previousParent=owners.get(c.asin);
+   if(previousParent&&previousParent!==p.parentAsin)throw new Error('子 ASIN '+c.asin+' 同时属于两个父 ASIN：'+previousParent+' / '+p.parentAsin);
+   owners.set(c.asin,p.parentAsin);
+   for(const msku of c.mskus){
+    const prev=mskuSeen.get(msku);
+    if(prev&&prev!==c.asin)throw new Error('同一父 ASIN 下 MSKU '+msku+' 对应多个子 ASIN：'+prev+' / '+c.asin);
+    mskuSeen.set(msku,c.asin);
+   }
+  }
+ }
+}
+function replaceProducts(records){return new Promise((resolve,reject)=>{const tx=state.db.transaction('products','readwrite'),store=tx.objectStore('products');store.clear();for(const p of records)store.put(p);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)})}
 function assertNoCrossGroupConflicts(parentAsin,children,excludeId){
  const otherChildren=state.products.filter(p=>p.id!==excludeId&&p.parentAsin!==parentAsin).flatMap(p=>(p.children||[]).map(c=>({...c,parentAsin:p.parentAsin})));
  for(const child of children){
@@ -81,31 +106,26 @@ function resetProductForm(){
 function editProduct(id){
  const p=state.products.find(x=>x.id===id);if(!p)return;
  state.editingProductId=id;$('productParentAsin').value=p.parentAsin||'';
- $('productChildren').value=(p.children||[]).map(c=>[c.asin,c.sku].join('\t')).join('\n');
+ $('productChildren').value=(p.children||[]).map(c=>[c.asin,normalizeChildRecord(c).mskus.join(', ')].join('\t')).join('\n');
  $('saveProductGroup').textContent='保存修改';
- setStatus('productFormStatus','正在编辑父 ASIN：'+p.parentAsin);
- showPage('library');showLibraryTab('products');
- window.scrollTo({top:0,behavior:'smooth'});
+ setStatus('productFormStatus','正在编辑父 ASIN：'+p.parentAsin+'。多个 MSKU 用逗号隔开。');
+ showPage('library');showLibraryTab('products');window.scrollTo({top:0,behavior:'smooth'});
 }
 async function saveProductGroup(){
- const parentAsin=normalizeAsin($('productParentAsin').value);
- const children=parseChildLines($('productChildren').value);
+ const parentAsin=normalizeAsin($('productParentAsin').value),lines=parseChildLines($('productChildren').value);
  if(!validateAsin(parentAsin))throw new Error('父 ASIN 格式应为 10 位字母或数字');
- if(!children.length)throw new Error('请至少添加一个子 ASIN 和子 SKU');
- const seenAsin=new Set(),seenSku=new Set();
- for(let i=0;i<children.length;i++){
-  const c=children[i];
-  if(!validateAsin(c.asin))throw new Error('第 '+(i+1)+' 个子体 ASIN 格式不正确');
-  if(!c.sku)throw new Error('第 '+(i+1)+' 个子体缺少 SKU');
-  if(seenAsin.has(c.asin))throw new Error('子 ASIN 重复：'+c.asin);
-  if(seenSku.has(c.sku))throw new Error('子 SKU 重复：'+c.sku);
-  seenAsin.add(c.asin);seenSku.add(c.sku);
+ if(!lines.length)throw new Error('请至少填写一条子 ASIN / MSKU');
+ const group=new Map();
+ for(const [i,c] of lines.entries()){
+  if(!validateAsin(c.asin)||!c.mskus.length)throw new Error('第 '+(i+1)+' 行子 ASIN / MSKU 缺失或格式不正确');
+  group.set(c.asin,splitMskus([...(group.get(c.asin)||[]),...c.mskus]));
  }
+ const children=[...group].map(([asin,mskus])=>normalizeChildRecord({asin,mskus}));
  const old=state.products.find(p=>p.id===state.editingProductId)||state.products.find(p=>p.parentAsin===parentAsin);
- assertNoCrossGroupConflicts(parentAsin,children,old?.id);
- const record={id:old?old.id:uid(),parentAsin,children,createdAt:old?old.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+ const record={id:old?.id||uid(),parentAsin,children,createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
+ validateProductGroups([...state.products.filter(p=>p.id!==old?.id),record]);
  await put('products',record);await refreshAll();resetProductForm();
- setStatus('productFormStatus','商品组已保存。生成上传表时，程序会根据子 ASIN 自动匹配 SKU。');
+ setStatus('productFormStatus','保存成功：一个子 ASIN 下可保存多个 MSKU。');
 }
 function renderProducts(){
  const host=$('productLibraryTable'),query=String($('productLibrarySearch')?.value||'').trim().toUpperCase();
@@ -134,7 +154,7 @@ function renderProducts(){
  const next=document.createElement('button');next.type='button';next.textContent='下一页';next.disabled=state.productPage>=pageCount;next.addEventListener('click',()=>{state.productPage++;renderProducts()});
  controls.append(prev,page,next);pager.append(info,controls);host.appendChild(pager);
 }
-function importHeaderMap(row){const h=row.map(normalizeHeader),idx=names=>h.findIndex(x=>names.includes(x));const parentAsin=idx(['parentasin','父asin','父体asin','父级asin','父商品asin','父asin码']);let childAsin=idx(['childasin','子asin','子体asin','子级asin','子商品asin','子asin码']);if(childAsin<0)childAsin=idx(['asin','商品asin','亚马逊asin']);const childSku=idx(['childsku','childsellersku','childmerchantsku','子sku','子体sku','子级sku','sellersku','merchantsku','sku','卖家sku','商家sku','商品sku']);return{category:idx(['category','productcategory','itemcategory','商品分类','商品类目','类目','分类']),parentAsin,parentSku:idx(['parentsku','父sku','父体sku','父级sku']),childAsin,childSku,brand:idx(['brand','brandname','品牌','品牌名称']),title:idx(['childtitle','title','itemname','商品标题','标题','原标题','子体标题']),color:idx(['color','颜色']),size:idx(['size','尺寸','大小']),header:h}}
+function importHeaderMap(row){const h=row.map(normalizeHeader),idx=names=>h.findIndex(x=>names.includes(x));const parentAsin=idx(['parentasin','父asin','父体asin','父级asin','父商品asin','父asin码']);let childAsin=idx(['childasin','子asin','子体asin','子级asin','子商品asin','子asin码']);if(childAsin<0)childAsin=idx(['asin','商品asin','亚马逊asin']);const childSku=idx(['msku','子msku','卖家msku','商家msku','childmsku','childsku','childsellersku','childmerchantsku','子sku','子体sku','子级sku','sellersku','merchantsku','sku','卖家sku','商家sku','商品sku']);return{category:idx(['category','productcategory','itemcategory','商品分类','商品类目','类目','分类']),parentAsin,parentSku:idx(['parentsku','父sku','父体sku','父级sku']),childAsin,childSku,brand:idx(['brand','brandname','品牌','品牌名称']),title:idx(['childtitle','title','itemname','商品标题','标题','原标题','子体标题']),color:idx(['color','颜色']),size:idx(['size','尺寸','大小']),header:h}}
 function detectImportHeader(rows){let best=null;for(let r=0;r<Math.min(rows.length,30);r++){const map=importHeaderMap(rows[r]||[]);if(map.parentAsin>=0&&map.childAsin>=0&&map.childSku>=0){const score=4+(map.category>=0?1:0)+(map.brand>=0?1:0)+(map.parentSku>=0?1:0);if(!best||score>best.score)best={rowIndex:r,map,score}}}return best}
 function parseProductImportSheet(rows,defaultCategory,sheetName){
  const found=detectImportHeader(rows);if(!found)return null;
