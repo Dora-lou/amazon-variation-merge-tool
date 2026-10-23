@@ -67,7 +67,7 @@ function normalizeAsin(v){return String(v??'').normalize('NFKC').replace(/[\u200
 function splitMskus(v){return [...new Set((Array.isArray(v)?v:[v]).flatMap(x=>String(x??'').split(/[,，;；\r\n]+/).map(y=>y.trim()).filter(Boolean)))]}
 function normalizeChildRecord(c){const mskus=splitMskus(Array.isArray(c?.mskus)?c.mskus:c?.sku);return{asin:normalizeAsin(c?.asin),mskus,sku:mskus[0]||''}}
 function validateProductGroups(groups){
- const owners=new Map();
+ // 商品库允许历史记录里同一子 ASIN 归属多个父 ASIN；后续操作按父体筛选，不做跨父体唯一性限制。
  for(const p of groups){
   if(!validateAsin(p.parentAsin))throw new Error('父 ASIN 无效：'+p.parentAsin);
   const asinSeen=new Set(),mskuSeen=new Map();
@@ -77,9 +77,6 @@ function validateProductGroups(groups){
    if(!validateAsin(c.asin)||!c.mskus.length)throw new Error('子 ASIN 或 MSKU 无效：'+c.asin);
    if(asinSeen.has(c.asin))throw new Error('父 ASIN '+p.parentAsin+' 下子 ASIN 重复：'+c.asin);
    asinSeen.add(c.asin);
-   const previousParent=owners.get(c.asin);
-   if(previousParent&&previousParent!==p.parentAsin)throw new Error('子 ASIN '+c.asin+' 同时属于两个父 ASIN：'+previousParent+' / '+p.parentAsin);
-   owners.set(c.asin,p.parentAsin);
    for(const msku of c.mskus){
     const prev=mskuSeen.get(msku);
     if(prev&&prev!==c.asin)throw new Error('同一父 ASIN 下 MSKU '+msku+' 对应多个子 ASIN：'+prev+' / '+c.asin);
@@ -89,14 +86,6 @@ function validateProductGroups(groups){
  }
 }
 function replaceProducts(records){return new Promise((resolve,reject)=>{const tx=state.db.transaction('products','readwrite'),store=tx.objectStore('products');store.clear();for(const p of records)store.put(p);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)})}
-function assertNoCrossGroupConflicts(parentAsin,children,excludeId){
- const otherChildren=state.products.filter(p=>p.id!==excludeId&&p.parentAsin!==parentAsin).flatMap(p=>(p.children||[]).map(c=>({...c,parentAsin:p.parentAsin})));
- for(const child of children){
-  const sameAsin=otherChildren.find(c=>c.asin===child.asin);
-  if(sameAsin)throw new Error('子 ASIN '+child.asin+' 已在商品库中归属于父 ASIN '+sameAsin.parentAsin+'，请先核对重复关系');
-  // SKU 可以在不同父 ASIN 分组中重复；后续先筛选父 ASIN，再选择 SKU，因此不做跨父体 SKU 唯一性校验。
- }
-}
 function resetProductForm(){
  state.editingProductId=null;
  $('productParentAsin').value='';$('productChildren').value='';
