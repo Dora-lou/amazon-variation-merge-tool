@@ -158,91 +158,87 @@ function importHeaderMap(row){const h=row.map(normalizeHeader),idx=names=>h.find
 function detectImportHeader(rows){let best=null;for(let r=0;r<Math.min(rows.length,30);r++){const map=importHeaderMap(rows[r]||[]);if(map.parentAsin>=0&&map.childAsin>=0&&map.childSku>=0){const score=4+(map.category>=0?1:0)+(map.brand>=0?1:0)+(map.parentSku>=0?1:0);if(!best||score>best.score)best={rowIndex:r,map,score}}}return best}
 function parseProductImportSheet(rows,defaultCategory,sheetName){
  const found=detectImportHeader(rows);if(!found)return null;
- const ix=found.map,grouped=new Map(),errors=[],childToParent=new Map();
+ const ix=found.map,groups=new Map(),errors=[];
  let lastParent='',validRows=0;
  for(let r=found.rowIndex+1;r<rows.length;r++){
   const row=rows[r]||[],get=k=>ix[k]>=0?String(row[ix[k]]??'').trim():'';
-  const childRaw=get('childAsin'),sku=get('childSku');if(!childRaw&&!sku)continue;
-  const parentRaw=normalizeAsin(get('parentAsin'));if(parentRaw)lastParent=parentRaw;
-  const parentAsin=normalizeAsin(parentRaw||lastParent),childAsin=normalizeAsin(childRaw),lineNo=r+1;
-  if(!validateAsin(parentAsin)){const rawParent=ix.parentAsin>=0?String(row[ix.parentAsin]??''):'';errors.push('「'+sheetName+'」第 '+lineNo+' 行父 ASIN 缺失或格式不正确（读取值：'+JSON.stringify(rawParent)+'；识别列：'+String(rows[found.rowIndex][ix.parentAsin]??'父 ASIN')+'）');continue}
-  if(!validateAsin(childAsin)){const rawChild=ix.childAsin>=0?String(row[ix.childAsin]??''):'';errors.push('「'+sheetName+'」第 '+lineNo+' 行子 ASIN 缺失或格式不正确（读取值：'+JSON.stringify(rawChild)+'）');continue}
-  if(!sku){errors.push('「'+sheetName+'」第 '+lineNo+' 行缺少 SKU');continue}
-  const prevParent=childToParent.get(childAsin);
-  if(prevParent&&prevParent!==parentAsin){errors.push('子 ASIN '+childAsin+' 被分配给多个父 ASIN：'+prevParent+' / '+parentAsin);continue}
-  childToParent.set(childAsin,parentAsin);
-  let g=grouped.get(parentAsin);if(!g){g={parentAsin,children:[],sourceSheet:sheetName};grouped.set(parentAsin,g)}
-  const c={asin:childAsin,sku},prior=g.children.find(x=>x.asin===childAsin);
-  if(prior&&prior.sku!==sku)errors.push('同一子 ASIN '+childAsin+' 出现不同 SKU：'+prior.sku+' / '+sku);
-  else if(!prior)g.children.push(c);
+  const rawAsin=get('childAsin'),rawMsku=get('childSku');if(!rawAsin&&!rawMsku)continue;
+  const freshParent=normalizeAsin(get('parentAsin'));if(freshParent)lastParent=freshParent;
+  const parentAsin=freshParent||lastParent,asin=normalizeAsin(rawAsin),mskus=splitMskus(rawMsku),line=r+1;
+  if(!validateAsin(parentAsin)){errors.push('「'+sheetName+'」第 '+line+' 行父 ASIN 无效（读取值：'+JSON.stringify(get('parentAsin'))+'）');continue}
+  if(!validateAsin(asin)){errors.push('「'+sheetName+'」第 '+line+' 行子 ASIN 无效（读取值：'+JSON.stringify(rawAsin)+'）');continue}
+  if(!mskus.length){errors.push('「'+sheetName+'」第 '+line+' 行没有 MSKU');continue}
+  let g=groups.get(parentAsin);if(!g){g={parentAsin,children:[],sourceSheet:sheetName};groups.set(parentAsin,g)}
+  let child=g.children.find(x=>x.asin===asin);
+  if(!child){child=normalizeChildRecord({asin,mskus:[]});g.children.push(child)}
+  child.mskus=splitMskus([...child.mskus,...mskus]);child.sku=child.mskus[0]||'';
   validRows++;
  }
- return{groups:[...grouped.values()],errors,validRows,sheetName,headerRow:found.rowIndex+1,columns:{parentAsin:rows[found.rowIndex][ix.parentAsin],childAsin:rows[found.rowIndex][ix.childAsin],sku:rows[found.rowIndex][ix.childSku]}};
+ try{validateProductGroups([...groups.values()])}catch(err){errors.push(err.message)}
+ return{groups:[...groups.values()],errors,validRows,sheetName,headerRow:found.rowIndex+1,columns:{parentAsin:rows[found.rowIndex][ix.parentAsin],childAsin:rows[found.rowIndex][ix.childAsin],msku:rows[found.rowIndex][ix.childSku]}};
 }
 function mergeImportResults(parts){
- const groups=new Map(),errors=[],childToParent=new Map();let validRows=0;
+ const groups=new Map(),errors=[];let validRows=0;
  for(const part of parts){
   errors.push(...part.errors);validRows+=part.validRows;
   for(const g of part.groups){
    let target=groups.get(g.parentAsin);
-   if(!target){target={parentAsin:g.parentAsin,children:[],sourceSheets:[g.sourceSheet]};groups.set(g.parentAsin,target)}
-   else target.sourceSheets.push(g.sourceSheet);
-   for(const c of g.children){
-    const previousParent=childToParent.get(c.asin);
-    if(previousParent&&previousParent!==g.parentAsin){errors.push('子 ASIN '+c.asin+' 在多个父 ASIN 中出现：'+previousParent+' / '+g.parentAsin);continue}
-    childToParent.set(c.asin,g.parentAsin);
-    const same=target.children.find(x=>x.asin===c.asin);
-    if(same){if(same.sku!==c.sku)errors.push('子 ASIN '+c.asin+' 出现不同 SKU：'+same.sku+' / '+c.sku)}
-    else target.children.push({asin:c.asin,sku:c.sku});
+   if(!target){target={parentAsin:g.parentAsin,children:[],sourceSheets:[]};groups.set(g.parentAsin,target)}
+   target.sourceSheets.push(g.sourceSheet);
+   for(const raw of g.children){
+    const c=normalizeChildRecord(raw);let same=target.children.find(x=>x.asin===c.asin);
+    if(!same){same=normalizeChildRecord({asin:c.asin,mskus:[]});target.children.push(same)}
+    same.mskus=splitMskus([...same.mskus,...c.mskus]);same.sku=same.mskus[0]||'';
    }
   }
  }
+ try{validateProductGroups([...groups.values()])}catch(err){errors.push(err.message)}
  return{groups:[...groups.values()],errors,validRows,sheets:parts.map(p=>p.sheetName)};
 }
 async function previewProductExcel(){
- const file=$('productExcelFile').files[0];if(!file)throw new Error('请先选择商品资料 Excel 文件');
+ const file=$('productExcelFile').files[0];if(!file)throw new Error('请先选择商品资料文件');
  const parts=[];
  if(/\.csv$/i.test(file.name)){
   const parsed=parseProductImportSheet(parseDelimited(await file.text()),'',file.name);if(parsed)parts.push(parsed);
  }else{
-  if(!window.XLSX)throw new Error('Excel 解析组件未加载，请刷新页面后重试');
+  if(!window.XLSX)throw new Error('Excel 解析组件未加载，请刷新重试');
   const wb=XLSX.read(await file.arrayBuffer(),{type:'array',raw:false,cellDates:false});
   for(const name of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:false,blankrows:true});const parsed=parseProductImportSheet(rows,'',name);if(parsed&&parsed.groups.length)parts.push(parsed)}
  }
- if(!parts.length)throw new Error('没有识别到包含「父 ASIN、子 ASIN、SKU」的表头。请确认表头在前 30 行内，且列名清晰。');
+ if(!parts.length)throw new Error('没有找到「父 ASIN、子 ASIN、MSKU」三列表头，或没有有效商品记录');
  const result=mergeImportResults(parts);
- if(!result.groups.length)throw new Error('没有识别到有效商品记录。');
+ if(!result.groups.length)throw new Error('没有识别到有效商品记录');
  if(result.errors.length)throw new Error('发现资料冲突或缺失，暂未导入：'+result.errors.slice(0,8).join('；')+(result.errors.length>8?'；另有 '+(result.errors.length-8)+' 项问题':''));
- const childCount=result.groups.reduce((n,g)=>n+g.children.length,0);
- state.pendingProductImport={...result,fileName:file.name};
- $('importExcelProducts').disabled=false;
- setStatus('importPreview','识别成功：'+parts.length+' 个工作表，'+result.groups.length+' 个父 ASIN，'+childCount+' 个唯一子 ASIN，'+result.validRows+' 行有效记录。识别列：'+parts.map(p=>p.sheetName+'（父 ASIN：'+p.columns.parentAsin+'；子 ASIN：'+p.columns.childAsin+'；SKU：'+p.columns.sku+'）').join('；')+'。请确认无误后点击「确认导入并保存」。');
+ const childCount=result.groups.reduce((n,g)=>n+g.children.length,0),mskuCount=result.groups.reduce((n,g)=>n+g.children.reduce((a,c)=>a+c.mskus.length,0),0);
+ state.pendingProductImport={...result,fileName:file.name};$('importExcelProducts').disabled=false;
+ setStatus('importPreview','识别成功：'+result.groups.length+' 个父 ASIN、'+childCount+' 个子 ASIN、'+mskuCount+' 个 MSKU。已按逗号拆分多个 MSKU。请确认导入方式，再点击「确认导入并保存」。');
 }
 async function saveProductExcelImport(){
- const data=state.pendingProductImport;if(!data)throw new Error('请先识别并统计 Excel 文件');
+ const data=state.pendingProductImport;if(!data)throw new Error('请先识别并统计文件');
+ const mode=$('productImportMode').value;
+ if(mode==='replace'&&!confirm('确定【完全替换商品库】吗？这会删除所有原有商品记录，只保留本次导入的父 ASIN、子 ASIN 和 MSKU。类目模板不受影响。建议先下载完整 ZIP 备份。'))return;
+ const records=mode==='replace'?[]:state.products.map(p=>({...p,children:p.children.map(normalizeChildRecord)}));
  let importedChildren=0;
  for(const g of data.groups){
-  const old=state.products.find(p=>p.parentAsin===g.parentAsin),merged=old?(old.children||[]).map(c=>({asin:c.asin,sku:c.sku})):[];
-  for(const c of g.children){const at=merged.findIndex(x=>x.asin===c.asin);if(at>=0)merged[at]={asin:c.asin,sku:c.sku};else merged.push({asin:c.asin,sku:c.sku})}
-  const seenSku=new Map(),seenAsin=new Set();
-  for(const c of merged){
-   if(seenAsin.has(c.asin))throw new Error('保存前发现重复子 ASIN：'+c.asin);
-   seenAsin.add(c.asin);
-   if(seenSku.has(c.sku)&&seenSku.get(c.sku)!==c.asin)throw new Error('保存前发现重复 SKU：'+c.sku+'，请先核对商品库');
-   seenSku.set(c.sku,c.asin);
+  const old=records.find(p=>p.parentAsin===g.parentAsin),children=old?old.children.map(normalizeChildRecord):[];
+  for(const raw of g.children){
+   const c=normalizeChildRecord(raw),at=children.findIndex(x=>x.asin===c.asin);
+   if(at>=0)children[at]=c;else children.push(c);
+   importedChildren++;
   }
-  assertNoCrossGroupConflicts(g.parentAsin,merged,old?.id);
-  importedChildren+=g.children.length;
-  await put('products',{id:old?old.id:uid(),parentAsin:g.parentAsin,children:merged,createdAt:old?old.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+  const record={id:old?.id||uid(),parentAsin:g.parentAsin,children,createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
+  if(old)records.splice(records.indexOf(old),1,record);else records.push(record);
  }
- await refreshAll();
- setStatus('importStatus','导入完成：更新 '+data.groups.length+' 个父 ASIN、'+importedChildren+' 个子 ASIN。商品库已保存到当前浏览器。');
- setStatus('importPreview','最近一次导入：'+data.fileName+'；'+data.groups.length+' 个父体、'+importedChildren+' 个子体。再次导入同一父 ASIN 时，会更新匹配到的子体，并保留该组中未出现在文件里的旧子体。');
+ validateProductGroups(records);
+ await replaceProducts(records);await refreshAll();
+ const count=data.groups.reduce((n,g)=>n+g.children.reduce((a,c)=>a+c.mskus.length,0),0);
+ setStatus('importStatus',(mode==='replace'?'已完全替换':'已追加/更新')+'商品库：'+data.groups.length+' 个父 ASIN、'+importedChildren+' 个子 ASIN、'+count+' 个 MSKU。类目模板保持不变。');
+ setStatus('importPreview','已导入：'+data.fileName+'。'+(mode==='replace'?'旧商品记录已清除。':'相同子 ASIN 的 MSKU 列表已更新，未涉及的商品记录保留。'));
  state.pendingProductImport=null;$('importExcelProducts').disabled=true;
 }
 async function importProductRows(){
  const rows=parseDelimited($('productImportText').value),parsed=parseProductImportSheet(rows,'','粘贴内容');
- if(!parsed)throw new Error('没有识别到父 ASIN、子 ASIN 和 SKU 表头');
+ if(!parsed)throw new Error('没有识别到父 ASIN、子 ASIN 和 MSKU 表头');
  const result=mergeImportResults([parsed]);if(result.errors.length)throw new Error(result.errors.slice(0,8).join('；'));
  if(!result.groups.length)throw new Error('没有识别到有效商品行');
  state.pendingProductImport={...result,fileName:'粘贴内容'};await saveProductExcelImport();$('productImportText').value='';
