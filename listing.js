@@ -129,29 +129,28 @@ async function saveProductGroup(){
 }
 function renderProducts(){
  const host=$('productLibraryTable'),query=String($('productLibrarySearch')?.value||'').trim().toUpperCase();
- host.innerHTML='';
- const items=state.products.filter(p=>!query||p.parentAsin.includes(query));
+ host.innerHTML='';const items=state.products.filter(p=>!query||p.parentAsin.includes(query));
  const pageSize=5,pageCount=Math.max(1,Math.ceil(items.length/pageSize));
  state.productPage=Math.min(Math.max(1,state.productPage||1),pageCount);
- if(!items.length){host.textContent=state.products.length?'没有匹配的父 ASIN。':'暂无商品资料。请先在上方「模块一｜导入商品」中添加或导入。';return}
+ if(!items.length){host.textContent=state.products.length?'没有匹配的父 ASIN。':'暂无商品资料。请先在导入模块添加或上传。';return}
  const table=document.createElement('table');table.className='data-table';
- table.innerHTML='<thead><tr><th>父 ASIN</th><th>子体数量</th><th>子 ASIN / SKU 对应关系</th><th>操作</th></tr></thead><tbody></tbody>';
- const body=table.querySelector('tbody'),start=(state.productPage-1)*pageSize,pageItems=items.slice(start,start+pageSize);
- for(const p of pageItems){
+ table.innerHTML='<thead><tr><th>父 ASIN</th><th>子 ASIN 数量</th><th>子 ASIN / MSKU 对应关系</th><th>操作</th></tr></thead><tbody></tbody>';
+ const body=table.querySelector('tbody');
+ for(const p of items.slice((state.productPage-1)*pageSize,state.productPage*pageSize)){
   const tr=document.createElement('tr');
-  [p.parentAsin,String((p.children||[]).length),(p.children||[]).map(c=>c.asin+'　→　'+c.sku).join('\n')].forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===2)td.style.whiteSpace='pre-line';tr.appendChild(td)});
-  const actions=document.createElement('td'),edit=document.createElement('button'),del=document.createElement('button');
+  [p.parentAsin,String(p.children.length),p.children.map(c=>c.asin+' → '+normalizeChildRecord(c).mskus.join(' / ')).join('\n')].forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===2){td.style.whiteSpace='pre-line';td.style.overflowWrap='anywhere'}tr.appendChild(td)});
+  const cell=document.createElement('td'),edit=document.createElement('button'),del=document.createElement('button');
   edit.textContent='编辑';edit.addEventListener('click',()=>editProduct(p.id));
-  del.textContent='删除';del.className='danger';del.addEventListener('click',async()=>{if(!confirm('确定从商品库删除父 ASIN '+p.parentAsin+' 及其 SKU 对应关系？'))return;await remove('products',p.id);if(state.product?.id===p.id){state.product=null;renderChildChoices(null)}await refreshAll()});
-  actions.append(edit,del);tr.appendChild(actions);body.appendChild(tr);
+  del.textContent='删除';del.className='danger';del.addEventListener('click',async()=>{if(!confirm('确定删除父 ASIN '+p.parentAsin+' 及对应的 MSKU 吗？'))return;await remove('products',p.id);if(state.product?.id===p.id){state.product=null;renderChildChoices(null)}await refreshAll()});
+  cell.append(edit,del);tr.appendChild(cell);body.appendChild(tr);
  }
  host.appendChild(table);
  const pager=document.createElement('div');pager.className='pagination';
  const info=document.createElement('span');info.className='pagination-info';info.textContent='共 '+items.length+' 个父 ASIN，每页最多 5 行';
  const controls=document.createElement('div');controls.className='pagination-buttons';
- const prev=document.createElement('button');prev.type='button';prev.textContent='上一页';prev.disabled=state.productPage<=1;prev.addEventListener('click',()=>{state.productPage--;renderProducts()});
+ const prev=document.createElement('button');prev.textContent='上一页';prev.disabled=state.productPage<=1;prev.addEventListener('click',()=>{state.productPage--;renderProducts()});
  const page=document.createElement('span');page.className='page-number';page.textContent='第 '+state.productPage+' / '+pageCount+' 页';
- const next=document.createElement('button');next.type='button';next.textContent='下一页';next.disabled=state.productPage>=pageCount;next.addEventListener('click',()=>{state.productPage++;renderProducts()});
+ const next=document.createElement('button');next.textContent='下一页';next.disabled=state.productPage>=pageCount;next.addEventListener('click',()=>{state.productPage++;renderProducts()});
  controls.append(prev,page,next);pager.append(info,controls);host.appendChild(pager);
 }
 function importHeaderMap(row){const h=row.map(normalizeHeader),idx=names=>h.findIndex(x=>names.includes(x));const parentAsin=idx(['parentasin','父asin','父体asin','父级asin','父商品asin','父asin码']);let childAsin=idx(['childasin','子asin','子体asin','子级asin','子商品asin','子asin码']);if(childAsin<0)childAsin=idx(['asin','商品asin','亚马逊asin']);const childSku=idx(['msku','子msku','卖家msku','商家msku','childmsku','childsku','childsellersku','childmerchantsku','子sku','子体sku','子级sku','sellersku','merchantsku','sku','卖家sku','商家sku','商品sku']);return{category:idx(['category','productcategory','itemcategory','商品分类','商品类目','类目','分类']),parentAsin,parentSku:idx(['parentsku','父sku','父体sku','父级sku']),childAsin,childSku,brand:idx(['brand','brandname','品牌','品牌名称']),title:idx(['childtitle','title','itemname','商品标题','标题','原标题','子体标题']),color:idx(['color','颜色']),size:idx(['size','尺寸','大小']),header:h}}
@@ -267,16 +266,32 @@ function renderProductOptions(){
  if(visible.some(p=>p.id===prior))sel.value=prior;else sel.value='';
 }
 function renderChildChoices(product,onlyAsin){
- const sel=$('listingChildSelect'),host=$('listingChildChecklist');sel.innerHTML='';host.innerHTML='';
- if(!product){sel.disabled=true;addOption(sel,'','请先搜索父 ASIN');host.textContent='选择父 ASIN 后，程序会列出对应 SKU。';return}
- sel.disabled=false;addOption(sel,'__all__','全部 SKU（下方可勾选）');
- for(const c of product.children||[])addOption(sel,c.asin,c.sku||c.asin);
- sel.value=onlyAsin||'__all__';
+ const fast=$('listingChildSelect'),host=$('listingChildChecklist');fast.innerHTML='';host.innerHTML='';
+ if(!product){fast.disabled=true;addOption(fast,'','请先搜索父 ASIN');host.textContent='选择父 ASIN 后，会列出该父体的全部子体及可选 MSKU。';return}
+ fast.disabled=false;addOption(fast,'__all__','全部子体（下方可勾选）');
  for(const c of product.children||[]){
-  const label=document.createElement('label');label.className='child-choice';
+  const mskus=normalizeChildRecord(c).mskus;
+  addOption(fast,c.asin,mskus.length===1?mskus[0]:('多个 MSKU · '+c.asin));
+ }
+ fast.value=onlyAsin||'__all__';
+ for(const raw of product.children||[]){
+  const c=normalizeChildRecord(raw),one=c.mskus.length===1;
+  const item=document.createElement('div');item.className='child-choice';item.dataset.childAsin=c.asin;
   const box=document.createElement('input');box.type='checkbox';box.value=c.asin;box.checked=!onlyAsin||onlyAsin===c.asin;
-  const span=document.createElement('span');span.textContent=c.sku||c.asin;span.title='子 ASIN：'+c.asin;
-  label.append(box,span);host.appendChild(label);
+  const content=document.createElement('div');content.className='msku-content';
+  const title=document.createElement('div');title.className='msku-title';title.textContent=one?c.mskus[0]:'选择本次使用的 MSKU';
+  const sub=document.createElement('div');sub.className='msku-asin';sub.textContent='子 ASIN：'+c.asin;
+  content.append(title,sub);
+  if(!one){
+   const select=document.createElement('select');select.dataset.mskuSelect=c.asin;select.disabled=!box.checked;
+   addOption(select,'','请选择本次使用的 MSKU');
+   for(const msku of c.mskus)addOption(select,msku,msku);
+   const hint=document.createElement('div');hint.className='msku-required';hint.textContent='该子 ASIN 有 '+c.mskus.length+' 个 MSKU，必须选择一个';
+   select.addEventListener('change',()=>{hint.textContent=select.value?'已选择：'+select.value:'请先选择一个 MSKU'});
+   content.append(select,hint);
+   box.addEventListener('change',()=>{select.disabled=!box.checked});
+  }
+  item.append(box,content);host.appendChild(item);
  }
 }
 function searchParentAsin(){
@@ -322,7 +337,22 @@ function renderBulletInputs(values){const host=$('listingBulletFields');host.inn
 function readBulletValues(){return [...$('listingBulletFields').querySelectorAll('textarea[data-bullet-index]')].map(el=>el.value.trim())}
 function renderAdvancedOptions(){const sel=$('advancedFieldSelect');sel.innerHTML='';addOption(sel,'','选择一个额外字段');if(!state.template)return;const reserved=['contribution_sku','::record_action','product_id','parentage_level','child_parent_sku_relationship','variation_theme','item_name[','product_description[','bullet_point[','title_differentiation[','product_highlight[','product_highlights[','key_product_features['];for(const f of state.template.meta.field_options){if(reserved.some(x=>f.id.toLowerCase().includes(x)))continue;addOption(sel,f.id,(f.label||f.id)+' ['+f.id+']')}}
 function addAdvancedField(){const sel=$('advancedFieldSelect'),fieldId=sel.value;if(!fieldId)return;const existing=[...$('advancedFieldRows').querySelectorAll('[data-field-id]')].some(el=>el.dataset.fieldId===fieldId);if(existing){setStatus('listingResult','这个字段已经添加过了。','warn');return}const opt=sel.options[sel.selectedIndex],wrap=document.createElement('div');wrap.className='advanced-row';wrap.dataset.fieldId=fieldId;const label=document.createElement('label');label.textContent=opt.textContent;const input=document.createElement('textarea');input.rows=2;input.placeholder='填写需要更新的字段值';const del=document.createElement('button');del.type='button';del.className='quiet danger';del.textContent='移除';del.addEventListener('click',()=>wrap.remove());wrap.append(label,input,del);$('advancedFieldRows').appendChild(wrap)}
-function selectedChildren(){if(!state.product)return[];const checked=[...$('listingChildChecklist').querySelectorAll('input[type=checkbox]:checked')].map(x=>x.value);return (state.product.children||[]).filter(c=>checked.includes(c.asin))}
+function selectedChildren(){
+ if(!state.product)return[];
+ const output=[];
+ for(const item of $('listingChildChecklist').querySelectorAll('[data-child-asin]')){
+  const checked=item.querySelector('input[type="checkbox"]');
+  if(!checked?.checked)continue;
+  const c=state.product.children.find(x=>x.asin===checked.value);
+  if(!c)throw new Error('商品库中找不到子 ASIN：'+checked.value);
+  const mskus=normalizeChildRecord(c).mskus,select=item.querySelector('select[data-msku-select]');
+  const chosen=select?select.value:mskus[0];
+  if(!chosen)throw new Error('请先为子 ASIN '+c.asin+' 选择本次上传使用的一个 MSKU');
+  if(!mskus.includes(chosen))throw new Error('MSKU 不在商品库记录中，请重新选择：'+chosen);
+  output.push({asin:c.asin,sku:chosen});
+ }
+ return output;
+}
 function setDownload(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000)}
 async function generateListing(){
  if(!state.template||!state.templateRecord)throw new Error('请先选择已保存的类目模板');
@@ -435,7 +465,7 @@ function onProductChange(){
  const previous=state.product?.id||'';
  const id=$('listingProductSelect').value;state.product=state.products.find(p=>p.id===id)||null;
  renderChildChoices(state.product);
- if(state.product)setStatus('listingProductStatus','已匹配 '+state.product.children.length+' 个子体。下方按 SKU 显示并勾选；生成表格时会自动匹配对应 ASIN。');
+ if(state.product)setStatus('listingProductStatus','已匹配 '+state.product.children.length+' 个子 ASIN。只有一个 MSKU 的会自动选中；多个 MSKU 的请逐个确认。');
  else setStatus('listingProductStatus','搜索并选择父 ASIN 后，程序会列出对应 SKU。');
 }
 function syncEditPanels(){for(const [checkbox,panel] of [['editTitle','titleFields'],['editDescription','descriptionFields'],['editHighlights','highlightsFields'],['editBullets','bulletFieldsPanel']])$(panel).classList.toggle('hidden',!$(checkbox).checked)}
