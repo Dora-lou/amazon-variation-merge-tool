@@ -215,7 +215,7 @@ async function previewProductExcel(){
 async function saveProductExcelImport(){
  const data=state.pendingProductImport;if(!data)throw new Error('请先识别并统计文件');
  const mode=$('productImportMode').value;
- if(mode==='replace'&&!confirm('确定【完全替换商品库】吗？这会删除所有原有商品记录，只保留本次导入的父 ASIN、子 ASIN 和 MSKU。类目模板不受影响。建议先下载完整 ZIP 备份。'))return;
+ if(mode==='replace'&&!confirm('确定【完全替换商品库】吗？这会删除所有原有商品记录，只保留本次导入的父 ASIN、子 ASIN 和 MSKU。类目模板不受影响。建议先下载完整 ZIP 备份。')){$('importExcelProducts').disabled=false;setStatus('importStatus','已取消完全替换，当前商品库未改变。');return}
  const records=mode==='replace'?[]:state.products.map(p=>({...p,children:p.children.map(normalizeChildRecord)}));
  let importedChildren=0;
  for(const g of data.groups){
@@ -375,32 +375,28 @@ async function generateListing(){
  setStatus('listingResult','已生成 '+filename+'。本次更新 '+children.length+' 个子体；请先检查 Excel，再上传亚马逊并查看处理报告。'+(result.warnings.length?' 提示：'+result.warnings.join('；'):''));
 }
 function exportProductCsv(){
- if(!state.products.length)throw new Error('商品库目前没有记录，暂时无法导出。');
+ if(!state.products.length)throw new Error('商品库目前没有记录，无法导出');
  const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
- const rows=[['Parent ASIN','Child ASIN','SKU']];
- for(const p of state.products){
-  for(const c of p.children||[])rows.push([p.parentAsin,c.asin,c.sku]);
- }
+ const rows=[['Parent ASIN','Child ASIN','MSKU']];
+ for(const p of state.products)for(const c of p.children||[])rows.push([p.parentAsin,c.asin,normalizeChildRecord(c).mskus.join(', ')]);
  const csv='\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\r\n');
- const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
- setDownload(blob,'Amazon_Product_Library_'+new Date().toISOString().slice(0,10)+'.csv');
- setStatus('productCsvStatus','已导出 '+state.products.length+' 个父 ASIN、'+(rows.length-1)+' 条子 ASIN / SKU 对应记录。需要恢复时，请在「批量导入商品库」中选择该 CSV，先识别检查，再确认导入。');
+ setDownload(new Blob([csv],{type:'text/csv;charset=utf-8;'}),'Amazon_Product_Library_'+new Date().toISOString().slice(0,10)+'.csv');
+ setStatus('productCsvStatus','已导出 '+state.products.length+' 个父 ASIN，'+(rows.length-1)+' 条子 ASIN 记录，多个 MSKU 会在同一单元格用逗号分隔。');
 }
 async function exportBackup(){
- const zip=new JSZip(),manifest={schemaVersion:2,exportedAt:new Date().toISOString(),products:state.products,templates:[]};
+ const zip=new JSZip(),manifest={schemaVersion:3,exportedAt:new Date().toISOString(),products:state.products.map(p=>({...p,children:p.children.map(normalizeChildRecord)})),templates:[]};
  for(const t of state.templates){
   const path='templates/'+t.id+'_'+String(t.filename||'template.xlsx').replace(/[\\/:*?"<>|]/g,'_');
   zip.file(path,t.blob);
   manifest.templates.push({id:t.id,category:t.category,filename:t.filename,size:t.size,createdAt:t.createdAt,updatedAt:t.updatedAt,path});
  }
- const csvRows=[['Parent ASIN','Child ASIN','SKU']];
- for(const p of state.products)for(const c of p.children||[])csvRows.push([p.parentAsin,c.asin,c.sku]);
- const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+ const csvRows=[['Parent ASIN','Child ASIN','MSKU']],quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+ for(const p of state.products)for(const c of p.children||[])csvRows.push([p.parentAsin,c.asin,normalizeChildRecord(c).mskus.join(', ')]);
  zip.file('products.csv','\uFEFF'+csvRows.map(row=>row.map(quote).join(',')).join('\r\n'));
  zip.file('manifest.json',JSON.stringify(manifest,null,2));
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:5}});
  setDownload(blob,'Amazon_Ops_Toolkit_Full_Backup_'+new Date().toISOString().slice(0,10)+'.zip');
- setStatus('backupStatus','完整备份已下载：包含 '+state.products.length+' 个父 ASIN 商品组、'+state.templates.length+' 个类目模板，以及便于查看的 products.csv。');
+ setStatus('backupStatus','完整备份已下载：'+state.products.length+' 个父 ASIN 商品组、'+state.templates.length+' 个类目模板。MSKU 多选项已全部备份。');
 }
 function replaceAllLibrary(products,templates){
  return new Promise((resolve,reject)=>{
@@ -416,50 +412,36 @@ function replaceAllLibrary(products,templates){
 }
 async function importBackup(file){
  if(!file)throw new Error('请先选择完整备份 ZIP');
- const zip=await JSZip.loadAsync(await file.arrayBuffer()),manifestFile=zip.file('manifest.json');
- if(!manifestFile)throw new Error('备份文件中没有 manifest.json，不是有效的完整资料库备份');
- let manifest;
- try{manifest=JSON.parse(await manifestFile.async('string'))}catch(_){throw new Error('备份文件的索引内容无法读取')}
- if(!Array.isArray(manifest.products)||!Array.isArray(manifest.templates))throw new Error('备份不完整：必须同时包含商品库和类目模板清单');
- const products=[],templates=[],parentSet=new Set(),childOwners=new Map(),templateNames=new Set(),productIds=new Set(),templateIds=new Set();
+ const zip=await JSZip.loadAsync(await file.arrayBuffer()),fileManifest=zip.file('manifest.json');
+ if(!fileManifest)throw new Error('备份缺少 manifest.json，无法恢复');
+ let manifest;try{manifest=JSON.parse(await fileManifest.async('string'))}catch(_){throw new Error('备份索引无法读取')}
+ if(!Array.isArray(manifest.products)||!Array.isArray(manifest.templates))throw new Error('备份不完整：需要同时包含商品库和模板库');
+ const products=[],templates=[],parentSet=new Set(),productIds=new Set(),templateIds=new Set(),templateNames=new Set();
  for(const p of manifest.products){
   const parentAsin=normalizeAsin(p.parentAsin);
-  if(!validateAsin(parentAsin))throw new Error('备份中发现无效父 ASIN：'+(p.parentAsin||'空白'));
-  if(parentSet.has(parentAsin))throw new Error('备份中父 ASIN 重复：'+parentAsin);
+  if(!validateAsin(parentAsin)||parentSet.has(parentAsin))throw new Error('备份中父 ASIN 无效或重复：'+p.parentAsin);
   parentSet.add(parentAsin);
-  if(!Array.isArray(p.children)||!p.children.length)throw new Error('父 ASIN '+parentAsin+' 没有子 ASIN / SKU 记录');
-  const children=[],localAsins=new Set(),localSkus=new Set();
-  for(const c of p.children){
-   const asin=normalizeAsin(c.asin),sku=String(c.sku||'').trim();
-   if(!validateAsin(asin)||!sku)throw new Error('父 ASIN '+parentAsin+' 中存在无效的子 ASIN 或空 SKU');
-   if(localAsins.has(asin))throw new Error('父 ASIN '+parentAsin+' 中子 ASIN 重复：'+asin);
-   if(localSkus.has(sku))throw new Error('父 ASIN '+parentAsin+' 中 SKU 重复：'+sku);
-   if(childOwners.has(asin)&&childOwners.get(asin)!==parentAsin)throw new Error('子 ASIN '+asin+' 同时归属多个父 ASIN');
-   localAsins.add(asin);localSkus.add(sku);childOwners.set(asin,parentAsin);
-   children.push({asin,sku});
-  }
+  const children=(p.children||[]).map(normalizeChildRecord);
   const id=String(p.id||uid());
-  if(productIds.has(id))throw new Error('备份中商品记录 ID 重复');
+  if(productIds.has(id))throw new Error('备份中商品 ID 重复');
   productIds.add(id);
   products.push({id,parentAsin,children,createdAt:p.createdAt||new Date().toISOString(),updatedAt:p.updatedAt||p.createdAt||new Date().toISOString()});
  }
+ validateProductGroups(products);
  for(const t of manifest.templates){
-  const category=String(t.category||'').trim(),path=String(t.path||'').trim();
-  if(!category||!path)throw new Error('备份中存在缺少类目名称或模板文件路径的记录');
-  const norm=category.toLowerCase();
-  if(templateNames.has(norm))throw new Error('备份中类目名称重复：'+category);
-  templateNames.add(norm);
-  const entry=zip.file(path);
-  if(!entry)throw new Error('备份缺少类目模板文件：'+category+'（'+path+'）');
-  const blob=await entry.async('blob'),id=String(t.id||uid());
-  if(templateIds.has(id))throw new Error('备份中类目模板 ID 重复');
-  templateIds.add(id);
+  const category=String(t.category||'').trim(),path=String(t.path||'').trim(),id=String(t.id||uid());
+  if(!category||!path)throw new Error('备份中的类目模板缺少名称或文件路径');
+  if(templateNames.has(category.toLowerCase())||templateIds.has(id))throw new Error('备份中存在重复类目或模板 ID：'+category);
+  templateNames.add(category.toLowerCase());templateIds.add(id);
+  const entry=zip.file(path);if(!entry)throw new Error('备份缺少类目模板文件：'+category);
+  const blob=await entry.async('blob');
   templates.push({id,category,filename:String(t.filename||path.split('/').pop()),size:Number(t.size)||blob.size,createdAt:t.createdAt||new Date().toISOString(),updatedAt:t.updatedAt||t.createdAt||new Date().toISOString(),blob});
  }
  await replaceAllLibrary(products,templates);
+ state.product=null;state.template=null;state.templateRecord=null;state.productPage=1;
  await refreshAll();
- state.productPage=1;
- setStatus('backupStatus','完整恢复成功：已恢复 '+products.length+' 个父 ASIN 商品组和 '+templates.length+' 个类目模板。当前资料库已被备份内容整体替换。');
+ setStatus('listingTemplateStatus','恢复完成，请重新选择类目模板。');
+ setStatus('backupStatus','完整恢复成功：'+products.length+' 个父 ASIN 商品组、'+templates.length+' 个类目模板，多个 MSKU 也已恢复。');
 }
 function onProductChange(){
  const previous=state.product?.id||'';
