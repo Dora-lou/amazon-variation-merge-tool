@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>变体操作指南｜亚马逊运营工具箱</title>
+<style>
+:root{font:14px/1.65 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#293c4f;background:#f5f7fa}
+*{box-sizing:border-box}body{margin:0}a,button{font:inherit}button{cursor:pointer}
+.shell{max-width:1110px;margin:auto;padding:28px 22px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:42px}
+.brand{display:flex;gap:11px;align-items:center;font-weight:800}.brand-mark{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#e2f1e9;color:#28744e;font-size:19px}.brand small{display:block;color:#93a1ac;font-weight:500;font-size:11px}
+nav{display:flex;flex-wrap:wrap;gap:4px;background:#fff;border:1px solid #e3eaf0;padding:5px;border-radius:11px}
+nav a{color:#617587;font-size:12px;text-decoration:none;font-weight:750;border-radius:8px;padding:9px 12px}nav a.active{color:#26724c;background:#eaf4ed}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;color:#337d56}
+h1{font-size:30px;letter-spacing:-.04em;line-height:1.3;margin:8px 0 10px}
+.hero p{font-size:14px;color:#748597;max-width:720px;margin:0}
+.quick{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fff;border:1px solid #e4eaf0;border-radius:14px;padding:16px 20px;margin:25px 0}
+.quick strong{font-size:14px}.quick p{color:#8493a2;font-size:12px;margin:3px 0 0}.quick a{color:#fff;background:#287851;padding:10px 15px;border-radius:9px;font-size:12px;font-weight:750;text-decoration:none;white-space:nowrap}
+.columns{display:grid;grid-template-columns:290px minmax(0,1fr);gap:19px;align-items:start}
+.menu,.panel{background:#fff;border:1px solid #e4eaf0;border-radius:15px;padding:20px;box-shadow:0 3px 15px #28384b05}
+.menu h2{font-size:15px;margin:0 0 16px}.menu h3{font-size:11px;color:#98a6b2;margin:19px 0 7px;letter-spacing:.04em}
+.menu button{display:flex;align-items:center;justify-content:space-between;text-align:left;gap:8px;width:100%;border:1px solid transparent;background:#fff;padding:11px 12px;margin:3px 0;border-radius:9px;font-size:13px;color:#536777;font-weight:650}
+.menu button:hover{background:#f5f8fa}.menu button.active{background:#eaf5ee;border-color:#d5eadb;color:#256d47}
+.menu button span:last-child{color:#9eaab6}
+.panel{padding:26px 28px;min-height:490px}
+.method{font-size:12px;font-weight:750;color:#34845d;margin-bottom:7px}
+.panel h2{font-size:22px;letter-spacing:-.02em;line-height:1.35;margin:0 0 8px}
+.summary{color:#8291a1;font-size:13px;margin:0}
+hr{border:0;border-top:1px solid #ecf0f4;margin:22px 0}
+.section-heading{font-size:14px;font-weight:800;margin-bottom:17px}
+.step{display:flex;align-items:flex-start;gap:13px;margin:0 0 20px}
+.number{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;background:#eef3f6;border-radius:9px;color:#52697c;font-weight:800}
+.step strong{font-size:13px}.step p{font-size:12px;color:#708394;margin:4px 0 0;line-height:1.75}
+.note{background:#f7fafb;border:1px solid #e6ecf1;padding:14px 16px;border-radius:10px;margin-top:18px}
+.note strong{font-size:12px;color:#536b7b}.note p{color:#718292;font-size:12px;margin:5px 0 0}
+details{border:1px solid #e2eaf0;border-radius:11px;margin-top:20px;overflow:hidden}
+details[hidden]{display:none}
+summary{padding:13px 16px;background:#f9fbfc;cursor:pointer;font-weight:800;font-size:12px;color:#4b6476}
+.case-inner{padding:16px}
+.case-label{font-size:12px;color:#687d8c;font-weight:750;margin:9px 0}
+pre{font:12px/1.85 inherit;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;background:#f6f8fa;color:#344a5d;border-radius:9px}
+.copy{color:white;background:#287851;border:1px solid #287851;border-radius:8px;padding:9px 13px;font-weight:750}
+#copyStatus{color:#478061;font-size:12px;margin-left:10px}
+.sources{font-size:12px;color:#82919e;margin:23px 0 0}.sources a{color:#31734f}
+footer{text-align:center;color:#8c9dab;font-size:11px;margin:26px auto;line-height:1.9}
+@media(max-width:780px){.shell{padding:20px 13px 46px}header{flex-direction:column;align-items:flex-start;margin-bottom:24px}nav{width:100%}nav a{flex:1;text-align:center;padding:8px}h1{font-size:26px}.columns{grid-template-columns:1fr}.panel{min-height:0;padding:22px 18px}.menu{padding:16px}.menu-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.quick{flex-direction:column;align-items:flex-start}.quick a{align-self:flex-start}}
+@media(max-width:410px){.menu-list{grid-template-columns:1fr}nav a{font-size:11px;padding:8px 4px}}
+</style>
+</head>
+<body>
+<main class="shell">
+<header>
+  <div class="brand"><span class="brand-mark">V</span><span>亚马逊运营工具箱<small>Variation Operations Guide</small></span></div>
+  <nav aria-label="工具导航">
+    <a href="./index.html">合并变体</a>
+    <a href="./listing.html">Listing 修改与资料库</a>
+    <a class="active" href="./variation-guide.html" aria-current="page">变体操作指南</a>
+  </nav>
+</header>
+<div class="hero"><div class="eyebrow">QUICK HELP</div><h1>变体操作指南</h1><p>选中你遇到的情况，就能看到具体步骤。这里汇总的是不需要制作 Excel 表格的常见变体操作。</p></div>
+<div class="quick">
+  <div><strong>几个独立子体，想合并到一个全新的父体？</strong><p>这种情况继续使用我们的 Excel 变体合并工具。</p></div>
+  <a href="./index.html">打开变体合并工具</a>
+</div>
+<div class="columns">
+  <aside class="menu">
+    <h2>选择你要做的事</h2>
+    <h3>合并与调整</h3><div class="menu-list" id="mergeMenu"></div>
+    <h3>拆除与解散</h3><div class="menu-list" id="splitMenu"></div>
+  </aside>
+  <section class="panel" aria-live="polite">
+    <div class="method" id="method">直接在后台操作</div>
+    <h2 id="title">独立子体加入已有父体</h2>
+    <p class="summary" id="summary"></p>
+    <hr><div class="section-heading">操作步骤</div><div id="steps"></div>
+    <div class="note"><strong>操作前注意</strong><p id="warning"></p></div>
+    <details id="caseBox" hidden>
+      <summary>需要联系客服？展开复制 Case 文案</summary>
+      <div class="case-inner">
+        <div class="case-label">英文（复制到 Seller Support）</div><pre id="english"></pre>
+        <button id="copyCase" class="copy" type="button">复制英文 Case</button><span id="copyStatus" role="status"></span>
+        <div class="case-label" style="margin-top:20px">中文对照</div><pre id="chinese"></pre>
+        <p style="font-size:12px;color:#8b99a6">提交前请替换方括号中的 ASIN，核对后再发出。</p>
+      </div>
+    </details>
+  </section>
+</div>
+<p class="sources">亚马逊参考：<a href="https://sellercentral.amazon.com/gp/help/external/GEKYC26YEZX2VSHM" target="_blank" rel="noopener noreferrer">创建和管理变体</a> · <a href="https://sellercentral.amazon.com/help/hub/reference/external/GLQBFJDZ7ZDLXQW8" target="_blank" rel="noopener noreferrer">解除及调整变体关系</a></p>
+<footer>站点、类目和权限不同，按钮名称可能不同。是否完成变更，以亚马逊处理结果及实际商品关系为准。</footer>
+</main>
+<script>
+(function(){
+"use strict";
+const baseEn="Subject: Request to remove child ASIN(s) from a parent variation\n\nDear Seller Support,\n\nPlease assist in removing the following child ASIN(s) from their current parent-child variation relationship.\n\nCurrent parent ASIN: [OLD_PARENT_ASIN]\nChild ASIN(s): [CHILD_ASIN_LIST]\n\nWe are requesting only a change to the parent-child relationship. Please keep the existing child listings, SKUs, and offers intact. Please confirm when the relationship has been removed.\n\nBest regards";
+const baseZh="主题：请求解除子 ASIN 的父子变体关系\n\n尊敬的亚马逊卖家支持团队：\n\n请协助将以下子 ASIN 从当前父子变体关系中移出。\n\n当前父 ASIN：[OLD_PARENT_ASIN]\n子 ASIN 列表：[CHILD_ASIN_LIST]\n\n我们仅需要解除父子关系，请保留现有子体商品链接、SKU 和商品报价。请在处理后确认。\n\n此致敬礼";
+const entries=[
+{id:"existing",group:"merge",label:"独立子体加入已有父体",method:"直接在后台操作",summary:"已有目标父体，不必创建新父 SKU，也不需要制作 Excel。",steps:[
+["找到目标父体","卖家后台「管理所有库存」搜索目标父 ASIN，进入「编辑商品」。"],
+["添加独立子体","打开「变体」选项卡，在添加已有独立商品的位置填写现有 MSKU。"],
+["保存并确认","检查颜色、尺寸等变体属性，保存后确认该子 ASIN 是否正确加入父体。"]],
+warning:"如果子体仍属于其他父体，应先解除旧关系；若找不到添加入口或属性不兼容，请联系 Seller Support。"},
+{id:"transfer",group:"merge",label:"子体更换父体",method:"先联系客服，再在后台添加",summary:"把某个已有子 ASIN 从旧父体转到另一个已有父体。",steps:[
+["准备 ASIN","记录旧父 ASIN、目标父 ASIN、要转移的子 ASIN，以及需要保留的 MSKU。"],
+["申请解除旧关系","联系客服申请解除旧父体与子体的关联，明确要求保留原商品链接、MSKU 和报价。"],
+["加入目标父体","收到解除确认后，进入目标父体的「变体」选项卡，使用原 MSKU 添加。"]],
+warning:"不要为了转移变体而直接删除子体 Listing。客服可能会核对品牌、图片、类目及变体主题。",
+en:baseEn+"\n\nIntended new parent ASIN: [NEW_PARENT_ASIN]",zh:baseZh+"\n\n计划加入的新父 ASIN：[NEW_PARENT_ASIN]"},
+{id:"families",group:"merge",label:"两个变体家庭合并",method:"先拆除一组，再加入另一组",summary:"保留一个父体，把另一组的子体转移进来。",steps:[
+["决定保留的父体","记下要保留的父 ASIN，以及另一父体全部要迁移的子 ASIN。"],
+["拆出待迁移子体","联系客服解除另一父体下相关子体的旧变体关系，保留原 Listing 和 MSKU。"],
+["加入保留的父体","在保留父体的「变体」中添加原 MSKU；全部核对完成后，再处理空父体。"]],
+warning:"不能直接把两个父 ASIN 互相合并。应确保品牌、类目及变体主题符合要求；子体尚未转移完时不要删除原家庭。",
+en:baseEn+"\n\nParent ASIN to retain: [PARENT_ASIN_TO_KEEP]",zh:baseZh+"\n\n计划保留的父 ASIN：[PARENT_ASIN_TO_KEEP]"},
+{id:"one",group:"split",label:"拆出一个子体",method:"联系客服处理",summary:"只解除一个子 ASIN 的父子关联，不影响其他子体。",steps:[
+["记录父子 ASIN","准备当前父 ASIN 和需要拆出的子 ASIN。"],
+["提交客服工单","明确请求解除该子体的变体关系，而不是删除子体 Listing。"],
+["检查处理结果","确认子体独立后，检查 MSKU、库存、报价和商品详情页。"]],
+warning:"Case 要明确保留子体商品链接和 MSKU。",
+en:baseEn.replace("[CHILD_ASIN_LIST]","[CHILD_ASIN]"),zh:baseZh.replace("[CHILD_ASIN_LIST]","[CHILD_ASIN]")},
+{id:"many",group:"split",label:"一次拆出多个子体",method:"联系客服处理",summary:"同一个父体下，想同时移出多个子 ASIN。",steps:[
+["整理待拆清单","列出当前父 ASIN，以及全部需要拆出的子 ASIN。"],
+["在一个 Case 中提交","一次说明需移出的全部子 ASIN，强调只解除关系、保留原商品链接。"],
+["逐个核查","检查每个子体是否独立，以及其他子体是否未被误操作。"]],
+warning:"跨多个父体的情况，请按父 ASIN 分组写明，避免混淆。",
+en:baseEn,zh:baseZh},
+{id:"dissolve",group:"split",label:"解散整个变体家庭",method:"后台处理，必要时联系客服",summary:"不再保留父体，但需要保留每个子体 Listing。",steps:[
+["确认保留子体","先整理当前父 ASIN 下所有子 ASIN、MSKU 和库存情况。"],
+["核对删除操作的影响","如果后台提示删除父体会同时影响子体，先停止操作，联系客服申请解除变体关系。"],
+["安全处理父体","确认全部子体已独立保留后，再处理不需要的父体记录，并核对库存与链接。"]],
+warning:"这一操作风险较高。不能认为删除父体一定只会删除父体；在子体仍关联时谨慎使用删除功能。",
+en:"Subject: Request to safely dissolve a variation family\n\nDear Seller Support,\n\nWe would like to dissolve the variation family under parent ASIN [PARENT_ASIN].\n\nChild ASIN(s): [CHILD_ASIN_LIST]\n\nOur goal is to remove the variation relationship while keeping all child listings, existing SKUs, and offers intact. Please advise on the safest process and assist if necessary.\n\nBest regards",
+zh:"主题：请求安全解散整个变体家庭\n\n尊敬的亚马逊卖家支持团队：\n\n我们需要解除父 ASIN [PARENT_ASIN] 下的整个变体关系。\n\n子 ASIN 列表：[CHILD_ASIN_LIST]\n\n请帮助我们在保留所有子体链接、原 SKU 和报价的前提下解除变体关系。烦请告知安全的操作方式，必要时协助处理。\n\n此致敬礼"}
+];
+const $=id=>document.getElementById(id);
+let current=entries[0];
+function buildMenu(container,group){
+ for(const item of entries.filter(e=>e.group===group)){
+  const b=document.createElement("button");b.type="button";b.dataset.id=item.id;
+  const name=document.createElement("span");name.textContent=item.label;
+  const arrow=document.createElement("span");arrow.textContent="›";
+  b.append(name,arrow);b.addEventListener("click",()=>render(item.id));$(container).append(b);
+ }
+}
+function render(id){
+ current=entries.find(e=>e.id===id)||entries[0];
+ document.querySelectorAll(".menu button").forEach(b=>{const active=b.dataset.id===current.id;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))});
+ $("method").textContent=current.method;$("title").textContent=current.label;$("summary").textContent=current.summary;$("warning").textContent=current.warning;
+ $("steps").replaceChildren();
+ current.steps.forEach((step,i)=>{
+  const wrap=document.createElement("div");wrap.className="step";
+  const num=document.createElement("div");num.className="number";num.textContent=i+1;
+  const body=document.createElement("div"),title=document.createElement("strong"),desc=document.createElement("p");
+  title.textContent=step[0];desc.textContent=step[1];body.append(title,desc);wrap.append(num,body);$("steps").append(wrap);
+ });
+ $("caseBox").hidden=!current.en;$("caseBox").open=false;
+ $("english").textContent=current.en||"";$("chinese").textContent=current.zh||"";$("copyStatus").textContent="";
+}
+buildMenu("mergeMenu","merge");buildMenu("splitMenu","split");render("existing");
+$("copyCase").addEventListener("click",async()=>{
+ if(!current.en)return;
+ try{await navigator.clipboard.writeText(current.en);$("copyStatus").textContent="已复制，请替换 ASIN 占位符";}
+ catch(e){$("copyStatus").textContent="复制失败，请手动选取英文文案。";}
+});
+})();
+</script>
+</body>
+</html>
