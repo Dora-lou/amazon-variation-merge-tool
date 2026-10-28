@@ -40,7 +40,14 @@ hr{border:0;border-top:1px solid #ecf0f4;margin:22px 0}
 .section-heading{font-size:14px;font-weight:800;margin-bottom:17px}
 .step{display:flex;align-items:flex-start;gap:13px;margin:0 0 20px}
 .number{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;background:#eef3f6;border-radius:9px;color:#52697c;font-weight:800}
+.step-content{flex:1;min-width:0}
 .step strong{font-size:13px}.step p{font-size:12px;color:#708394;margin:4px 0 0;line-height:1.75}
+.step-image{display:block;width:fit-content;max-width:100%;margin-top:11px;border-radius:9px;border:1px solid #e5ebf1;background:#fff;overflow:hidden}
+.step-image img{display:block;height:auto;max-width:100%}
+.step-image.menu-shot{width:257px}
+.step-image.steps-shot{width:550px}
+.step-image:focus-visible{outline:3px solid #97c8ad}
+.step-image:hover{border-color:#a3cbb1}
 .note{background:#f7fafb;border:1px solid #e6ecf1;padding:14px 16px;border-radius:10px;margin-top:18px}
 .note strong{font-size:12px;color:#536b7b}.note p{color:#718292;font-size:12px;margin:5px 0 0}
 details{border:1px solid #e2eaf0;border-radius:11px;margin-top:20px;overflow:hidden}
@@ -110,11 +117,13 @@ const entries=[
 ["填写新父体和子体","填写新的父体 SKU、变体主题与文案；每个子体保留原 SKU、子 ASIN，并填写颜色、尺寸等属性。"],
 ["生成并上传","检查并下载 Excel，上传亚马逊卖家后台，查看处理报告和前台变体关系。"]],
 warning:"新父体 SKU 不应与店铺已有 SKU 冲突。子体必须符合同一合法变体关系，且不要创建重复的子体商品。",tool:true},
-{id:"existing",group:"merge",label:"独立子体加入已有父体",method:"直接在后台操作",summary:"已有目标父体，不必创建新父 SKU，也不需要制作 Excel。",steps:[
-["找到目标父体","卖家后台「管理所有库存」搜索目标父 ASIN，进入「编辑商品」。"],
-["添加独立子体","打开「变体」选项卡，在添加已有独立商品的位置填写现有 MSKU。"],
-["保存并确认","检查颜色、尺寸等变体属性，保存后确认该子 ASIN 是否正确加入父体。"]],
-warning:"如果子体仍属于其他父体，应先解除旧关系；若找不到添加入口或属性不兼容，请联系 Seller Support。"},
+{id:"existing",group:"merge",label:"独立子体加入已有父体",method:"亚马逊后台操作",summary:"",steps:[
+["选择要加入的父体 → 编辑商品信息",""],
+["进入「变种」页面",""],
+["输入要加入的子体 SKU → Add",""],
+["找到对应 SKU → 填入 ASIN → 保存并完成",""]],
+images:{0:{src:"./assets/variation-edit-parent.png",alt:"选择父体后的编辑商品信息菜单",css:"menu-shot"},3:{src:"./assets/variation-add-child-compact.png",alt:"变种页面、添加子体 SKU、填写对应 ASIN 的操作截图",css:"steps-shot"}},
+warning:"客服表示合并后的变体约需 6 小时审核，评论才会显示。"},
 {id:"transfer",group:"merge",label:"子体更换父体",method:"先联系客服，再在后台添加",summary:"把某个已有子 ASIN 从旧父体转到另一个已有父体。",steps:[
 ["准备 ASIN","记录旧父 ASIN、目标父 ASIN、要转移的子 ASIN，以及需要保留的 MSKU。"],
 ["申请解除旧关系","联系客服申请解除旧父体与子体的关联，明确要求保留原商品链接、MSKU 和报价。"],
@@ -181,14 +190,26 @@ function render(id){
  });
  $("method").textContent=current.method;
  $("title").textContent=current.label;
- $("summary").textContent=current.summary;
+ $("summary").textContent=current.summary;$("summary").hidden=!current.summary;
  $("warning").textContent=current.warning;
  $("steps").replaceChildren();
  current.steps.forEach((step,i)=>{
   const wrap=document.createElement("div");wrap.className="step";
   const num=document.createElement("div");num.className="number";num.textContent=i+1;
-  const body=document.createElement("div"),title=document.createElement("strong"),desc=document.createElement("p");
-  title.textContent=step[0];desc.textContent=step[1];body.append(title,desc);wrap.append(num,body);$("steps").append(wrap);
+  const body=document.createElement("div"),title=document.createElement("strong");
+  body.className="step-content";
+  title.textContent=step[0];body.append(title);
+  if(step[1]){
+    const desc=document.createElement("p");desc.textContent=step[1];body.append(desc);
+  }
+  const picture=current.images?.[i];
+  if(picture){
+    const link=document.createElement("a");link.href=picture.src;link.target="_blank";link.rel="noopener noreferrer";
+    link.className="step-image "+picture.css;link.title="点击查看大图";
+    const img=document.createElement("img");img.src=picture.src;img.alt=picture.alt;img.loading="lazy";img.decoding="async";
+    link.append(img);body.append(link);
+  }
+  wrap.append(num,body);$("steps").append(wrap);
  });
  $("caseBox").hidden=!current.en;$("caseBox").open=false;
  $("english").textContent=current.en||"";$("chinese").textContent=current.zh||"";$("copyStatus").textContent="";
