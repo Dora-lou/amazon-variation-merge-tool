@@ -16,11 +16,26 @@ h1{font-size:30px;letter-spacing:-.04em;line-height:1.3;margin:8px 0 10px}
 .hero p{font-size:14px;color:#748597;max-width:720px;margin:0}
 .quick{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fff;border:1px solid #e4eaf0;border-radius:14px;padding:16px 20px;margin:25px 0}
 .quick strong{font-size:14px}.quick p{color:#8493a2;font-size:12px;margin:3px 0 0}.quick a{color:#fff;background:#287851;padding:10px 15px;border-radius:9px;font-size:12px;font-weight:750;text-decoration:none;white-space:nowrap}
+.categories{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:25px 0 22px}
+.cat-tab{display:flex;align-items:center;gap:12px;min-width:0;text-align:left;padding:17px 18px;background:#fff;border:1px solid #e3eaf0;border-radius:14px;color:#344b5d;transition:background .15s,border-color .15s,box-shadow .15s}
+.cat-tab:hover{background:#f9fcfa;border-color:#bcdccc}
+.cat-tab.active{border-color:#8fc9a7;background:#eff8f1;box-shadow:0 0 0 1px #b4ddc2}
+.cat-num{flex:0 0 37px;display:grid;place-items:center;width:37px;height:37px;border-radius:11px;background:#eef2f6;color:#60758a;font-size:12px;font-weight:800}
+.cat-tab.active .cat-num{background:#d6efdd;color:#27724c}
+.cat-main{font-size:15px;font-weight:800;line-height:1.4}
+.cat-sub{font-size:11px;color:#8998a7;font-weight:500;margin-top:3px;line-height:1.5}
+.cat-tab.active .cat-sub{color:#5e8d73}
 .columns{display:grid;grid-template-columns:290px minmax(0,1fr);gap:19px;align-items:start}
 .menu,.panel{background:#fff;border:1px solid #e4eaf0;border-radius:15px;padding:20px;box-shadow:0 3px 15px #28384b05}
-.menu h2{font-size:15px;margin:0 0 16px}.menu h3{font-size:11px;color:#98a6b2;margin:19px 0 7px;letter-spacing:.04em}
+.menu-kicker{font-size:10px;letter-spacing:.08em;color:#97a6b2;font-weight:800;margin-bottom:5px}
+.menu h2{font-size:15px;margin:0 0 16px;color:#334a5d}
+.menu .scenario-count{font-size:12px;color:#8d9caa;margin:-8px 0 13px}
+.menu h3{font-size:11px;color:#98a6b2;margin:19px 0 7px;letter-spacing:.04em}
 .menu button{display:flex;align-items:center;justify-content:space-between;text-align:left;gap:8px;width:100%;border:1px solid transparent;background:#fff;padding:11px 12px;margin:3px 0;border-radius:9px;font-size:13px;color:#536777;font-weight:650}
 .menu button:hover{background:#f5f8fa}.menu button.active{background:#eaf5ee;border-color:#d5eadb;color:#256d47}
+.menu button .scenario-num{font-size:11px;color:#92a4b2;font-weight:800;min-width:17px}
+.menu button.active .scenario-num{color:#438765}
+.menu button .scenario-label{flex:1}
 .menu button span:last-child{color:#9eaab6}
 .panel{padding:26px 28px;min-height:490px}
 .method{font-size:12px;font-weight:750;color:#34845d;margin-bottom:7px}
@@ -31,6 +46,8 @@ hr{border:0;border-top:1px solid #ecf0f4;margin:22px 0}
 .step{display:flex;align-items:flex-start;gap:13px;margin:0 0 20px}
 .number{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;background:#eef3f6;border-radius:9px;color:#52697c;font-weight:800}
 .step strong{font-size:13px}.step p{font-size:12px;color:#708394;margin:4px 0 0;line-height:1.75}
+.tool-entry{display:block;margin-top:20px;padding:12px 16px;border-radius:10px;background:#287851;color:white;text-decoration:none;text-align:center;font-weight:800;font-size:13px}
+.tool-entry:hover{background:#1e6240}
 .note{background:#f7fafb;border:1px solid #e6ecf1;padding:14px 16px;border-radius:10px;margin-top:18px}
 .note strong{font-size:12px;color:#536b7b}.note p{color:#718292;font-size:12px;margin:5px 0 0}
 details{border:1px solid #e2eaf0;border-radius:11px;margin-top:20px;overflow:hidden}
@@ -43,7 +60,7 @@ pre{font-family:inherit;font-size:12px;line-height:1.85;white-space:pre-wrap;ove
 #copyStatus{color:#478061;font-size:12px;margin-left:10px}
 .sources{font-size:12px;color:#82919e;margin:23px 0 0}.sources a{color:#31734f}
 footer{text-align:center;color:#8c9dab;font-size:11px;margin:26px auto;line-height:1.9}
-@media(max-width:780px){.shell{padding:20px 13px 46px}header{flex-direction:column;align-items:flex-start;margin-bottom:24px}nav{width:100%}nav a{flex:1;text-align:center;padding:8px}h1{font-size:26px}.columns{grid-template-columns:1fr}.panel{min-height:0;padding:22px 18px}.menu{padding:16px}.menu-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.quick{flex-direction:column;align-items:flex-start}.quick a{align-self:flex-start}}
+@media(max-width:780px){.shell{padding:20px 13px 46px}header{flex-direction:column;align-items:flex-start;margin-bottom:24px}nav{width:100%}nav a{flex:1;text-align:center;padding:8px}h1{font-size:26px}.categories{grid-template-columns:1fr;gap:9px}.cat-tab{padding:12px 14px}.columns{grid-template-columns:1fr}.panel{min-height:0;padding:22px 18px}.menu{padding:16px}.menu-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.quick{flex-direction:column;align-items:flex-start}.quick a{align-self:flex-start}}
 @media(max-width:410px){.menu-list{grid-template-columns:1fr}nav a{font-size:11px;padding:8px 4px}}
 </style>
 </head>
@@ -57,16 +74,24 @@ footer{text-align:center;color:#8c9dab;font-size:11px;margin:26px auto;line-heig
     <a class="active" href="./variation-guide.html" aria-current="page">变体操作指南</a>
   </nav>
 </header>
-<div class="hero"><div class="eyebrow">QUICK HELP</div><h1>变体操作指南</h1><p>选中你遇到的情况，就能看到具体步骤。这里汇总的是不需要制作 Excel 表格的常见变体操作。</p></div>
-<div class="quick">
-  <div><strong>几个独立子体，想合并到一个全新的父体？</strong><p>这种情况继续使用我们的 Excel 变体合并工具。</p></div>
-  <a href="./index.html">打开变体合并工具</a>
+<div class="hero"><div class="eyebrow">VARIATION GUIDE</div><h1>变体操作指南</h1><p>先选你要进行的操作，再选择具体情况。每种情况只展示对应的操作步骤，不用在所有问题中逐个寻找。</p></div>
+<div class="categories" id="categoryTabs" role="tablist" aria-label="选择变体操作分类">
+  <button class="cat-tab active" type="button" data-category="merge" role="tab" aria-selected="true">
+    <span class="cat-num">01</span><span><span class="cat-main">合并变体</span><span class="cat-sub" style="display:block">建立或调整父子关系 · 4 种情况</span></span>
+  </button>
+  <button class="cat-tab" type="button" data-category="split" role="tab" aria-selected="false">
+    <span class="cat-num">02</span><span><span class="cat-main">拆分子体</span><span class="cat-sub" style="display:block">单个或批量解除关联 · 2 种情况</span></span>
+  </button>
+  <button class="cat-tab" type="button" data-category="dissolve" role="tab" aria-selected="false">
+    <span class="cat-num">03</span><span><span class="cat-main">解散父体</span><span class="cat-sub" style="display:block">取消整个变体家庭 · 1 种情况</span></span>
+  </button>
 </div>
 <div class="columns">
   <aside class="menu">
-    <h2>选择你要做的事</h2>
-    <h3>合并与调整</h3><div class="menu-list" id="mergeMenu"></div>
-    <h3>拆除与解散</h3><div class="menu-list" id="splitMenu"></div>
+    <div class="menu-kicker">选择具体情况</div>
+    <h2 id="menuTitle">合并变体</h2>
+    <p class="scenario-count" id="scenarioCount">共 4 种情况</p>
+    <div class="menu-list" id="scenarioMenu"></div>
   </aside>
   <section class="panel" aria-live="polite">
     <div class="method" id="method">直接在后台操作</div>
@@ -74,6 +99,7 @@ footer{text-align:center;color:#8c9dab;font-size:11px;margin:26px auto;line-heig
     <p class="summary" id="summary"></p>
     <hr><div class="section-heading">操作步骤</div><div id="steps"></div>
     <div class="note"><strong>操作前注意</strong><p id="warning"></p></div>
+    <a id="toolEntry" class="tool-entry" href="./index.html" hidden>进入 Excel 变体合并工具</a>
     <details id="caseBox" hidden>
       <summary>需要联系客服？展开复制 Case 文案</summary>
       <div class="case-inner">
@@ -94,6 +120,11 @@ footer{text-align:center;color:#8c9dab;font-size:11px;margin:26px auto;line-heig
 const baseEn="Subject: Request to remove child ASIN(s) from a parent variation\n\nDear Seller Support,\n\nPlease assist in removing the following child ASIN(s) from their current parent-child variation relationship.\n\nCurrent parent ASIN: [OLD_PARENT_ASIN]\nChild ASIN(s): [CHILD_ASIN_LIST]\n\nWe are requesting only a change to the parent-child relationship. Please keep the existing child listings, SKUs, and offers intact. Please confirm when the relationship has been removed.\n\nBest regards";
 const baseZh="主题：请求解除子 ASIN 的父子变体关系\n\n尊敬的亚马逊卖家支持团队：\n\n请协助将以下子 ASIN 从当前父子变体关系中移出。\n\n当前父 ASIN：[OLD_PARENT_ASIN]\n子 ASIN 列表：[CHILD_ASIN_LIST]\n\n我们仅需要解除父子关系，请保留现有子体商品链接、SKU 和商品报价。请在处理后确认。\n\n此致敬礼";
 const entries=[
+{id:"new",group:"merge",label:"独立子体合并到新父体",method:"需要 Excel 表格",summary:"多个原本独立上架的子体，合并到一个全新创建的父体下。",steps:[
+["选择类目模板","选择模板库里保存的对应类目模板；没有的话可以上传亚马逊空白模板。"],
+["填写父体和子体","创建新的父体 SKU，填写标题、变体主题和文案，再填写每个独立子体的原 SKU、原 ASIN 和变体属性。"],
+["下载并上传","用「合并变体」工具生成 Excel，上传亚马逊并核对处理报告及前台父子关系。"]],
+warning:"这一类才需要使用我们的 Excel 工具。请保留所有子体原来的 SKU 和 ASIN，不要为了合并重新创建重复商品。",tool:true},
 {id:"existing",group:"merge",label:"独立子体加入已有父体",method:"直接在后台操作",summary:"已有目标父体，不必创建新父 SKU，也不需要制作 Excel。",steps:[
 ["找到目标父体","卖家后台「管理所有库存」搜索目标父 ASIN，进入「编辑商品」。"],
 ["添加独立子体","打开「变体」选项卡，在添加已有独立商品的位置填写现有 MSKU。"],
@@ -123,7 +154,7 @@ en:baseEn.replace("[CHILD_ASIN_LIST]","[CHILD_ASIN]"),zh:baseZh.replace("[CHILD_
 ["逐个核查","检查每个子体是否独立，以及其他子体是否未被误操作。"]],
 warning:"跨多个父体的情况，请按父 ASIN 分组写明，避免混淆。",
 en:baseEn,zh:baseZh},
-{id:"dissolve",group:"split",label:"解散整个变体家庭",method:"后台处理，必要时联系客服",summary:"不再保留父体，但需要保留每个子体 Listing。",steps:[
+{id:"dissolve",group:"dissolve",label:"解散整个变体家庭",method:"后台处理，必要时联系客服",summary:"不再保留父体，但需要保留每个子体 Listing。",steps:[
 ["确认保留子体","先整理当前父 ASIN 下所有子 ASIN、MSKU 和库存情况。"],
 ["核对删除操作的影响","如果后台提示删除父体会同时影响子体，先停止操作，联系客服申请解除变体关系。"],
 ["安全处理父体","确认全部子体已独立保留后，再处理不需要的父体记录，并核对库存与链接。"]],
@@ -132,30 +163,58 @@ en:"Subject: Request to safely dissolve a variation family\n\nDear Seller Suppor
 zh:"主题：请求安全解散整个变体家庭\n\n尊敬的亚马逊卖家支持团队：\n\n我们需要解除父 ASIN [PARENT_ASIN] 下的整个变体关系。\n\n子 ASIN 列表：[CHILD_ASIN_LIST]\n\n请帮助我们在保留所有子体链接、原 SKU 和报价的前提下解除变体关系。烦请告知安全的操作方式，必要时协助处理。\n\n此致敬礼"}
 ];
 const $=id=>document.getElementById(id);
+let currentCategory="merge";
 let current=entries[0];
-function buildMenu(container,group){
- for(const item of entries.filter(e=>e.group===group)){
+const categoryNames={merge:"合并变体",split:"拆分子体",dissolve:"解散父体"};
+function showCategory(category){
+ if(!categoryNames[category])return;
+ currentCategory=category;
+ document.querySelectorAll("#categoryTabs button").forEach(b=>{
+  const active=b.dataset.category===category;
+  b.classList.toggle("active",active);
+  b.setAttribute("aria-selected",String(active));
+ });
+ const filtered=entries.filter(x=>x.group===category);
+ $("menuTitle").textContent=categoryNames[category];
+ $("scenarioCount").textContent="共 "+filtered.length+" 种情况";
+ $("scenarioMenu").replaceChildren();
+ filtered.forEach((item,i)=>{
   const b=document.createElement("button");b.type="button";b.dataset.id=item.id;
-  const name=document.createElement("span");name.textContent=item.label;
+  const n=document.createElement("span");n.className="scenario-num";n.textContent=String(i+1).padStart(2,"0");
+  const name=document.createElement("span");name.className="scenario-label";name.textContent=item.label;
   const arrow=document.createElement("span");arrow.textContent="›";
-  b.append(name,arrow);b.addEventListener("click",()=>render(item.id));$(container).append(b);
- }
+  b.append(n,name,arrow);b.addEventListener("click",()=>render(item.id));
+  $("scenarioMenu").append(b);
+ });
+ render(filtered[0].id);
 }
 function render(id){
- current=entries.find(e=>e.id===id)||entries[0];
- document.querySelectorAll(".menu button").forEach(b=>{const active=b.dataset.id===current.id;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))});
- $("method").textContent=current.method;$("title").textContent=current.label;$("summary").textContent=current.summary;$("warning").textContent=current.warning;
+ const item=entries.find(e=>e.id===id);
+ if(!item)return;
+ if(item.group!==currentCategory){showCategory(item.group);return;}
+ current=item;
+ document.querySelectorAll("#scenarioMenu button").forEach(b=>{
+  const active=b.dataset.id===current.id;
+  b.classList.toggle("active",active);
+  b.setAttribute("aria-pressed",String(active));
+ });
+ $("method").textContent=current.method;
+ $("title").textContent=current.label;
+ $("summary").textContent=current.summary;
+ $("warning").textContent=current.warning;
  $("steps").replaceChildren();
  current.steps.forEach((step,i)=>{
-  const wrap=document.createElement("div");wrap.className="step";
-  const num=document.createElement("div");num.className="number";num.textContent=i+1;
+  const row=document.createElement("div");row.className="step";
+  const number=document.createElement("div");number.className="number";number.textContent=String(i+1);
   const body=document.createElement("div"),title=document.createElement("strong"),desc=document.createElement("p");
-  title.textContent=step[0];desc.textContent=step[1];body.append(title,desc);wrap.append(num,body);$("steps").append(wrap);
+  title.textContent=step[0];desc.textContent=step[1];body.append(title,desc);row.append(number,body);$("steps").append(row);
  });
  $("caseBox").hidden=!current.en;$("caseBox").open=false;
  $("english").textContent=current.en||"";$("chinese").textContent=current.zh||"";$("copyStatus").textContent="";
+ $("toolEntry").hidden=!current.tool;
 }
-buildMenu("mergeMenu","merge");buildMenu("splitMenu","split");render("existing");
+document.querySelectorAll("#categoryTabs button").forEach(b=>b.addEventListener("click",()=>showCategory(b.dataset.category)));
+showCategory("merge");
 $("copyCase").addEventListener("click",async()=>{
  if(!current.en)return;
  try{await navigator.clipboard.writeText(current.en);$("copyStatus").textContent="已复制，请替换 ASIN 占位符";}
