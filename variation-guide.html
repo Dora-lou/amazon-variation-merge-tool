@@ -136,17 +136,17 @@ en:baseEn+"\n\nIntended new parent ASIN: [NEW_PARENT_ASIN]",zh:baseZh+"\n\n计�
 ["加入保留的父体","在保留父体的「变体」中添加原 MSKU；全部核对完成后，再处理空父体。"]],
 warning:"不能直接把两个父 ASIN 互相合并。应确保品牌、类目及变体主题符合要求；子体尚未转移完时不要删除原家庭。",
 en:baseEn+"\n\nParent ASIN to retain: [PARENT_ASIN_TO_KEEP]",zh:baseZh+"\n\n计划保留的父 ASIN：[PARENT_ASIN_TO_KEEP]"},
-{id:"child",group:"split",label:"指定子体从父体拆出",method:"联系客服解除指定关系",summary:"一个或者多个子 ASIN 从原父体拆出，未指定的其他子体继续保留原变体关系。",steps:[
-["整理需要拆出的子体","准备当前父 ASIN 以及本次要拆出的子 ASIN 清单；一个或多个都按同一种方法处理。"],
-["提交 Seller Support Case","请求客服只解除指定子 ASIN 的父子关联，并明确保留子体 Listing、MSKU 和商品报价。"],
-["核对变更结果","逐个核对拆出的子体、原父体剩余子体、商品链接及库存是否正常。"]],
-warning:"不要删除子体 Listing。多个子 ASIN 可放在同一个 Case 中；不同父 ASIN 的清单要分开注明。",
+{id:"child",group:"split",label:"指定子体从父体拆出",method:"后台操作（必要时联系客服）",summary:"拆出一个或多个指定子商品信息，其他子体继续保留在原系列中。",steps:[
+["找到子商品信息","在「管理所有库存」找到要拆出的子商品信息。"],
+["打开三点菜单","点击该子商品信息旁边的三点菜单。"],
+["从系列中分离","选择「从系列中分离」，按页面提示完成。多个子体可逐个操作。"]],
+warning:"操作后确认子体已从系列中分离，其他子体未受影响。如果没有该选项或操作未生效，可以联系亚马逊客服。",
 en:baseEn,zh:baseZh},
-{id:"dissolve",group:"split",label:"拆分整个父体（全部子体）",method:"后台处理，必要时联系客服",summary:"不再保留父体，但需要保留每个子体 Listing。",steps:[
-["确认保留子体","先整理当前父 ASIN 下所有子 ASIN、MSKU 和库存情况。"],
-["核对删除操作的影响","如果后台提示删除父体会同时影响子体，先停止操作，联系客服申请解除变体关系。"],
-["安全处理父体","确认全部子体已独立保留后，再处理不需要的父体记录，并核对库存与链接。"]],
-warning:"这一操作风险较高。不能认为删除父体一定只会删除父体；在子体仍关联时谨慎使用删除功能。",
+{id:"dissolve",group:"split",label:"拆分整个父体（全部子体）",method:"亚马逊后台操作",summary:"取消整个变体系列的分组。",steps:[
+["找到父商品信息","在「管理所有库存」找到该系列的父商品信息。"],
+["打开三点菜单","点击父商品信息旁边的三点菜单。"],
+["取消变体系列分组","选择「取消变体系列分组」，按页面提示完成。"]],
+warning:"这是取消整个系列的分组，不是删除商品信息。完成后检查子商品信息是否保留；如果后台没有该选项，可联系客服。",
 en:"Subject: Request to safely dissolve a variation family\n\nDear Seller Support,\n\nWe would like to dissolve the variation family under parent ASIN [PARENT_ASIN].\n\nChild ASIN(s): [CHILD_ASIN_LIST]\n\nOur goal is to remove the variation relationship while keeping all child listings, existing SKUs, and offers intact. Please advise on the safest process and assist if necessary.\n\nBest regards",
 zh:"主题：请求安全解散整个变体家庭\n\n尊敬的亚马逊卖家支持团队：\n\n我们需要解除父 ASIN [PARENT_ASIN] 下的整个变体关系。\n\n子 ASIN 列表：[CHILD_ASIN_LIST]\n\n请帮助我们在保留所有子体链接、原 SKU 和报价的前提下解除变体关系。烦请告知安全的操作方式，必要时协助处理。\n\n此致敬礼"}
 ];
