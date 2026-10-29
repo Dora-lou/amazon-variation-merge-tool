@@ -200,6 +200,8 @@ if(new URLSearchParams(window.location.search).get('view')==='library'){
   document.getElementById('pageEyebrow').textContent='PRODUCT LIBRARY';
   document.getElementById('pageTitle').textContent='商品库';
   document.getElementById('pageDescription').textContent='统一维护商品资料、类目模板，并在这里完成完整备份与恢复。表格自动生成工具会从这里读取对应资料。';
+  document.getElementById('navLibrary').classList.add('active');
+  document.getElementById('navTools').classList.remove('active');
 }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>

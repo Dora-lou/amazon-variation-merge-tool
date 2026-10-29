@@ -14,7 +14,7 @@ function showPage(which){
  $('libraryWorkspace').classList.toggle('hidden',which!=='library');
  $('openListingTab').classList.toggle('active',which==='listing');
  $('openLibraryTab').classList.toggle('active',which==='library');
- if(which==='library')showLibraryTab('templates');
+ if(which==='library')showLibraryTab('products');
 }
 function showLibraryTab(which){
  $('templateLibraryPane').classList.toggle('hidden',which!=='templates');
