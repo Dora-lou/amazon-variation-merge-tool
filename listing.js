@@ -442,7 +442,7 @@ function onProductChange(){
 function syncEditPanels(){for(const [checkbox,panel] of [['editTitle','titleFields'],['editDescription','descriptionFields'],['editHighlights','highlightsFields'],['editBullets','bulletFieldsPanel']])$(panel).classList.toggle('hidden',!$(checkbox).checked)}
 function initEvents(){
  $('openListingTab').addEventListener('click',()=>showPage('listing'));
- $('openLibraryTab').addEventListener('click',()=>showPage('library'));
+ $('openLibraryTab').addEventListener('click',()=>{window.location.href='./listing.html?view=library'});
  $('openTemplateLibraryTab').addEventListener('click',()=>showLibraryTab('templates'));
  $('openProductLibraryTab').addEventListener('click',()=>showLibraryTab('products'));
  $('listingTemplateFile').addEventListener('change',()=>{if($('listingTemplateFile').files[0])setStatus('templateLibraryStatus','已选择模板文件。请确认类目名称后保存。')});
@@ -489,6 +489,12 @@ $('restoreBackup').addEventListener('click',async()=>{
 function start(){
  openDB().then(async db=>{
   state.db=db;await refreshAll();initEvents();renderBulletInputs();
+  if(new URLSearchParams(window.location.search).get('view')==='library'){
+   showPage('library');
+   $('navLibrary').classList.add('active');$('navTools').classList.remove('active');
+  }else{
+   $('navTools').classList.add('active');$('navLibrary').classList.remove('active');
+  }
   if(state.products.length){$('listingProductSelect').value='';state.product=null}
   setStatus('listingTemplateStatus','请选择已保存的类目模板。');
   setStatus('templateLibraryStatus',state.templates.length?'已加载 '+state.templates.length+' 个类目模板。':'尚未保存模板。');

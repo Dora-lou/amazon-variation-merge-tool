@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>表格自动生成工具｜亚马逊运营工具箱</title>
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#243447;background:#f4f7fb;font-size:14px;line-height:1.6}
+*{box-sizing:border-box}body{margin:0}a{color:inherit;text-decoration:none}
+.shell{max-width:1180px;margin:0 auto;padding:28px 26px 55px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:22px;margin-bottom:38px}
+.brand{display:flex;align-items:center;gap:12px}.brand-mark{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#dff1e6;color:#23734b;font-size:20px;font-weight:850}.brand-name{font-size:14px;font-weight:800}.brand-caption{font-size:11px;color:#8796a5;margin-top:2px}
+.module-nav{display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding:5px;border:1px solid #e2e8ef;background:#fff;border-radius:12px}.module-nav a{padding:9px 13px;border-radius:8px;color:#627386;font-weight:700;font-size:12px;white-space:nowrap}.module-nav a:hover{background:#f3f7f5;color:#2d6d4d}.module-nav a.active{background:#e7f3eb;color:#216b44}
+.hero{padding:32px 35px;border-radius:21px;background:linear-gradient(125deg,#203b52,#2e5b78);color:#fff;position:relative;overflow:hidden}.hero:after{content:"";position:absolute;width:260px;height:260px;right:-80px;top:-110px;border:1px solid #ffffff20;border-radius:50%;box-shadow:0 0 0 35px #ffffff08,0 0 0 70px #ffffff05}
+.eyebrow{font-size:10px;letter-spacing:.16em;font-weight:850;color:#c9e0f4;margin-bottom:11px}h1{font-size:32px;line-height:1.25;letter-spacing:-.04em;margin:0;position:relative;z-index:1}.hero p{max-width:720px;color:#d7e4ed;font-size:13px;line-height:1.9;margin:12px 0 0;position:relative;z-index:1}
+.section-heading{margin:28px 0 14px}.section-heading h2{font-size:18px;margin:0;color:#293e51}.section-heading p{font-size:12px;color:#8291a0;margin:4px 0 0}
+.tool-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+.tool-card{background:#fff;border:1px solid #e1e8ef;border-radius:17px;padding:24px;min-height:270px;display:flex;flex-direction:column;box-shadow:0 5px 18px #26394c05;transition:transform .16s,border-color .16s,box-shadow .16s}
+.tool-card:hover{transform:translateY(-3px);border-color:#c5d9ce;box-shadow:0 12px 28px #26394c0c}
+.tool-top{display:flex;align-items:center;justify-content:space-between;gap:12px}.tool-icon{display:grid;place-items:center;width:47px;height:47px;border-radius:14px;background:#e7f3eb;color:#2b7650}.tool-card.listing .tool-icon{background:#e8effb;color:#3867a5}
+.tool-label{font-size:10px;font-weight:850;letter-spacing:.12em;color:#9ba8b4}.tool-card h3{font-size:19px;margin:20px 0 7px;letter-spacing:-.025em}.tool-card p{font-size:12px;color:#78899a;line-height:1.85;margin:0}.tool-points{display:grid;gap:8px;margin-top:17px}.tool-point{display:flex;align-items:center;gap:8px;color:#53697b;font-size:12px}.dot{width:6px;height:6px;border-radius:50%;background:#8bb99a}.listing .dot{background:#8eacd8}
+.tool-foot{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:22px;font-size:12px;font-weight:800;color:#334d60}.arrow{display:grid;place-items:center;width:29px;height:29px;border:1px solid #e3e9ee;border-radius:9px;color:#5f7485}
+.notice{display:flex;gap:12px;padding:15px 17px;margin-top:19px;background:#edf4f1;border:1px solid #dceae2;border-radius:13px}.notice strong{display:block;font-size:12px;color:#365a47}.notice p{font-size:12px;color:#698575;line-height:1.75;margin:3px 0 0}
+.footer{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;font-size:11px;color:#8b99a6;margin-top:27px}
+@media(max-width:850px){.topbar{flex-direction:column;align-items:flex-start}.tool-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.shell{padding:18px 13px 35px}.module-nav{width:100%;gap:3px}.module-nav a{flex:1;text-align:center;padding:9px 5px;font-size:11px}.hero{padding:25px 22px;border-radius:17px}h1{font-size:28px}.tool-card{padding:20px;min-height:0}.footer{display:block}.footer span{display:block;margin-top:5px}}
+</style>
+</head>
+<body><main class="shell">
+<header class="topbar">
+<a class="brand" href="./index.html"><span class="brand-mark">O</span><span><span class="brand-name">亚马逊运营工具箱</span><span class="brand-caption" style="display:block">Amazon Operations Workspace</span></span></a>
+<nav class="module-nav" aria-label="工具模块">
+      <a href="./index.html">首页</a>
+      <a href="./variation-guide.html">知识库</a>
+      <a href="./tools.html" class="active" aria-current="page" id="navTools">表格自动生成工具</a>
+      <a href="./listing.html?view=library" id="navLibrary">商品库</a>
+    </nav>
+</header>
+<section class="hero"><div class="eyebrow">SPREADSHEET GENERATORS</div><h1>表格自动生成工具</h1><p>按任务选择对应工具。程序会读取你选择的亚马逊类目模板，按要求生成 Excel 上传文件；商品资料和类目模板统一在「商品库」维护。</p></section>
+<div class="section-heading"><h2>选择要处理的任务</h2><p>先选功能，再按页面步骤填写，不需要在一个页面里切换不同任务。</p></div>
+<section class="tool-grid" aria-label="表格工具列表">
+<a class="tool-card" href="./merge.html">
+<div class="tool-top"><span class="tool-icon"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18M15 9v12"/></svg></span><span class="tool-label">TOOL 01</span></div>
+<h3>合并变体</h3><p>将多个已经独立上架的子体合并到一个新的父体下，生成对应的亚马逊 Excel 上传表格。</p>
+<div class="tool-points"><span class="tool-point"><i class="dot"></i>上传或选择类目空白模板</span><span class="tool-point"><i class="dot"></i>填写父体、子体与变体属性</span><span class="tool-point"><i class="dot"></i>检查并下载上传表格</span></div>
+<div class="tool-foot"><span>打开合并变体工具</span><span class="arrow">→</span></div>
+</a>
+<a class="tool-card listing" href="./listing.html">
+<div class="tool-top"><span class="tool-icon"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h4"/></svg></span><span class="tool-label">TOOL 02</span></div>
+<h3>修改 Listing</h3><p>批量修改已有商品的标题、五点、描述、亮点、价格等字段，只生成你勾选的内容。</p>
+<div class="tool-points"><span class="tool-point"><i class="dot"></i>选择类目模板</span><span class="tool-point"><i class="dot"></i>按父 ASIN 选择商品并确认 MSKU</span><span class="tool-point"><i class="dot"></i>填写字段并生成上传表格</span></div>
+<div class="tool-foot"><span>打开 Listing 修改工具</span><span class="arrow">→</span></div>
+</a>
+</section>
+<div class="notice"><span style="font-size:17px;color:#46805d">i</span><div><strong>使用提醒</strong><p>表格工具只负责生成文件，不会自动上传到亚马逊。生成前请核对 SKU、ASIN、MSKU 和商品内容；上传后查看亚马逊处理报告。</p></div></div>
+<footer class="footer"><span>亚马逊运营工具箱 · 表格自动生成工具</span><span><a href="./使用说明.txt" download="亚马逊运营工具箱-新手使用说明.txt">新手使用说明（TXT）</a></span></footer>
+</main></body></html>

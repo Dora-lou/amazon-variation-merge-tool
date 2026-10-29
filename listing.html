@@ -3,10 +3,15 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<script>if(new URLSearchParams(window.location.search).get('view')==='library'){document.documentElement.classList.add('library-mode');document.title='商品库｜亚马逊运营工具箱';}</script>
 <title>亚马逊运营工具箱｜Listing 修改</title>
 <style>
 :root{font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:#213042;background:#f5f7fb;font-size:14px}
 *{box-sizing:border-box}body{margin:0}.shell{max-width:1120px;margin:0 auto;padding:32px 22px 70px}
+html.library-mode #listingWorkspace{display:none!important}
+html.library-mode #libraryWorkspace{display:block!important}
+html.library-mode .page-tabs:not(.library-tabs){display:none!important}
+html.library-mode .page-tabs.library-tabs{margin-top:18px}
 .eyebrow{font-size:12px;font-weight:750;letter-spacing:.1em;color:#38745c;text-transform:uppercase;margin-bottom:11px}
 h1{font-size:30px;letter-spacing:-.05em;margin:0 0 9px}h2{font-size:18px;margin:0 0 14px}h3{font-size:15px;margin:0 0 12px}
 p{color:#69798a;line-height:1.6;margin:7px 0 0}section{background:#fff;border-radius:16px;border:1px solid #e1e7ef;padding:24px;margin-top:17px;box-shadow:0 4px 18px rgba(31,47,67,.025)}
@@ -31,24 +36,25 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 </head>
 <body>
 <main class="shell">
-  <div class="eyebrow">Amazon Operations Toolkit</div>
-  <h1>亚马逊运营工具箱</h1>
-  <p>管理类目模板、父子 ASIN/MSKU 对应关系，并批量生成商品信息修改表格。资料保存在当前浏览器。</p>
+  <div class="eyebrow" id="pageEyebrow">LISTING EDITOR</div>
+  <h1 id="pageTitle">修改 Listing</h1>
+  <p id="pageDescription">选择类目模板和商品，勾选要修改的字段，再生成上传表格。商品资料和类目模板在「商品库」统一维护。</p>
   <nav class="module-nav" aria-label="工具模块">
-    <a href="./index.html">合并变体</a>
-    <a href="./listing.html" class="active">Listing 修改</a>
-    <a href="./variation-guide.html">变体操作指南</a>
-  </nav>
+    <a href="./index.html">首页</a>
+    <a href="./variation-guide.html">知识库</a>
+    <a href="./tools.html" class="active" aria-current="page" id="navTools">表格自动生成工具</a>
+    <a href="./listing.html?view=library" id="navLibrary">商品库</a>
+    </nav>
   <div class="page-tabs">
     <button id="openListingTab" class="active" type="button">修改商品信息</button>
-    <button id="openLibraryTab" type="button">资料库</button>
+    <button id="openLibraryTab" type="button">打开商品库</button>
   </div>
 
   <div id="listingWorkspace">
     <section>
       <h2>第 1 步｜选择类目模板</h2>
       <div class="field-grid">
-        <div><label for="listingTemplateSelect">已保存的类目模板</label><select id="listingTemplateSelect"><option value="">请选择模板</option></select><p class="muted">模板在「资料库 → 类目模板库」中添加和维护。</p></div>
+        <div><label for="listingTemplateSelect">已保存的类目模板</label><select id="listingTemplateSelect"><option value="">请选择模板</option></select><p class="muted">模板在「商品库 → 类目模板库」中添加和维护。</p></div>
       </div>
       <div id="listingTemplateStatus" class="notice" role="status">请选择已保存的类目模板。</div>
     </section>
@@ -111,7 +117,7 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
   <div id="libraryWorkspace" class="hidden">
     <div class="page-tabs library-tabs">
       <button id="openTemplateLibraryTab" class="active" type="button">类目模板库</button>
-      <button id="openProductLibraryTab" type="button">商品库</button>
+      <button id="openProductLibraryTab" type="button">商品资料与备份</button>
     </div>
 
     <div id="templateLibraryPane">
@@ -134,7 +140,7 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 
     <div id="productLibraryPane" class="hidden">
       <section>
-        <h2>模块一｜导入商品</h2>
+        <h2>导入商品资料</h2>
         <p class="muted">选择适合你的方式维护商品库：手动添加单个父 ASIN，或上传表格批量导入。</p>
         <div class="submodule-grid">
           <div class="submodule">
@@ -164,7 +170,7 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
       </section>
 
       <section>
-        <h2>模块二｜已保存商品</h2>
+        <h2>已保存商品</h2>
         <p class="muted">每页最多显示 5 个父 ASIN。可查看各子 ASIN 对应的全部 MSKU，也可以搜索、编辑、删除或下载 CSV。</p>
         <div class="toolbar" style="margin:12px 0">
           <div style="max-width:380px;flex:1"><label for="productLibrarySearch">搜索父 ASIN</label><input id="productLibrarySearch" placeholder="输入完整或部分父 ASIN"/></div>
@@ -175,7 +181,7 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
       </section>
 
       <section>
-        <h2>模块三｜资料库备份与恢复（可选）</h2>
+        <h2>资料库备份与恢复</h2>
         <p class="muted">一键下载全部资料，包含商品库记录和所有已保存的类目模板文件。更换电脑、清理浏览器数据前建议先备份。</p>
         <div class="toolbar" style="margin-top:14px">
           <button id="exportBackup" class="primary" type="button">一键下载全部资料（ZIP）</button>
@@ -189,6 +195,13 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
   </div>
   <p class="footer"><a href="./使用说明.txt" download="亚马逊运营工具箱-新手使用说明.txt">下载新手使用说明（TXT）</a><br/>Excel 在浏览器本地处理；不登录亚马逊、不连接卖家后台、不向网站服务器上传文件。资料库保存在当前浏览器，可通过 ZIP 备份迁移。</p>
 </main>
+<script>
+if(new URLSearchParams(window.location.search).get('view')==='library'){
+  document.getElementById('pageEyebrow').textContent='PRODUCT LIBRARY';
+  document.getElementById('pageTitle').textContent='商品库';
+  document.getElementById('pageDescription').textContent='统一维护商品资料、类目模板，并在这里完成完整备份与恢复。表格自动生成工具会从这里读取对应资料。';
+}
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="./engine.js"></script>
