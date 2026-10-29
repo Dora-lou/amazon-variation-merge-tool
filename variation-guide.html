@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>变体操作指南｜亚马逊运营工具箱</title>
+<title>运营知识库｜亚马逊运营工具箱</title>
 <style>
 :root{font:14px/1.65 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#293c4f;background:#f5f7fa}
 *{box-sizing:border-box}body{margin:0}a,button{font:inherit}button{cursor:pointer}
@@ -14,7 +14,7 @@ nav a{color:#617587;font-size:12px;text-decoration:none;font-weight:750;border-r
 .eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;color:#337d56}
 h1{font-size:30px;letter-spacing:-.04em;line-height:1.3;margin:8px 0 10px}
 .hero p{font-size:14px;color:#748597;max-width:720px;margin:0}
-.categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:25px 0 20px}
+.categories{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:25px 0 20px}
 .category{display:flex;align-items:center;gap:14px;text-align:left;background:#fff;color:#3b5162;border:1px solid #e1e8ef;border-radius:14px;padding:17px 20px;min-width:0}
 .category:hover{background:#fafdfe;border-color:#bfdac9}
 .category.active{background:#edf7f0;color:#256b48;border-color:#a4d6b7;box-shadow:0 0 0 1px #b5dfc3}
@@ -80,10 +80,11 @@ footer{text-align:center;color:#8c9dab;font-size:11px;margin:26px auto;line-heig
     <a href="./listing.html?view=library">商品库</a>
   </nav>
 </header>
-<div class="hero"><div class="eyebrow">VARIATION GUIDE</div><h1>变体操作指南</h1><p>先选择「合并」或「拆分」，再选择具体情况。这里只展示当前需要的操作步骤。</p></div>
-<div class="categories" role="tablist" aria-label="选择变体操作分类" id="categoryTabs">
+<div class="hero"><div class="eyebrow">OPERATIONS KNOWLEDGE BASE</div><h1>运营知识库</h1><p>按业务场景查找操作方法。先选择知识分类，再选择具体事项，查看清晰的步骤与注意事项。</p></div>
+<div class="categories" role="tablist" aria-label="选择知识分类" id="categoryTabs">
   <button type="button" class="category active" data-group="merge" role="tab" aria-selected="true"><span class="category-icon">＋</span><span><span class="category-title">合并变体</span><span class="category-description">新父体 / 已有父体 · 2 种情况</span></span></button>
   <button type="button" class="category" data-group="split" role="tab" aria-selected="false"><span class="category-icon">−</span><span><span class="category-title">拆分变体</span><span class="category-description">拆出指定子体 / 拆分整个父体 · 2 种情况</span></span></button>
+  <button type="button" class="category" data-group="fba" role="tab" aria-selected="false"><span class="category-icon">F</span><span><span class="category-title">FBA 发货</span><span class="category-description">建货件、选择入仓与运输 · 5 个步骤</span></span></button>
 </div>
 <div class="columns">
   <aside class="menu">
@@ -146,11 +147,42 @@ zh:"主题：请求将子 ASIN 从当前变体家族移除\n\n父 ASIN：[填写
 ["打开三点菜单","点击父商品信息旁边的三点菜单。"],
 ["取消变体系列分组","选择「取消变体系列分组」，按页面提示完成。"]],
 warning:"这是取消整个系列的分组，不是删除商品信息。完成后检查子商品信息是否保留；如果后台没有该选项，可联系客服。"}
+
+,{id:"fba-product",group:"fba",label:"选择产品与装箱模板",method:"FBA 发货 SOP",summary:"先选择要发货的产品，再根据是否首次发货决定创建或复用装箱模板。",steps:[
+["选择产品","选择需要发货的产品，然后点击「发货/补货」。"],
+["首次发货时创建模板","新品首次发货需要创建新的装箱模板，模板名称填写 SKU。"],
+["正常发货时选择已有模板","只有第一次发货的产品需要创建装箱模板；正常情况下直接选择已有模板即可。"],
+["查询模板数据","装箱模板中的相关数据可在产品管理中查询。"]
+],warning:"创建模板前先确认该产品是否已有装箱模板，避免重复创建。"},
+{id:"fba-inbound",group:"fba",label:"填写箱数与选择入仓方式",method:"FBA 发货 SOP",summary:"填写发货箱数，再根据 Send 与非 Send 的情况选择入仓方式，并判断分仓或合仓。",steps:[
+["填写发货箱数","填写本次要发货的箱数，然后点击「确定」。"],
+["区分 FBA 与 AWD Send","左边是 FBA，右边是 AWD Send；Send 属于左侧 FBA。"],
+["选择入仓方式","正常情况下，Send 选择 Send；不是 Send 的普通情况选择右侧。"],
+["选择分仓或合仓","左边为分仓，右边为合仓。分仓不收费；合仓会根据仓点收取不同费用。正常选择分仓，除非利润可以覆盖合仓费用。"]
+],warning:"原 SOP 注明：数量少于 5 时不能分仓。"},
+{id:"fba-shipping",group:"fba",label:"选择运输与报价方案",method:"FBA 发货 SOP",summary:"根据 Send 或非 Send 货件选择运输方式，再按报价和产品部门的询价结果选择承运方案。",steps:[
+["选择运输方式","Send 货件按 SOP 原图选择，下面选择「海运拼箱」；非 Send 货件选择普通海运。"],
+["选择发货时间","Send 的时间选择正常发货时间，后续选项按原 SOP 标注选择。"],
+["获取报价并选择承运商","获取报价后选择承运商。根据实际情况选择普船或快船、卡派或快递派等；具体由产品部门询价后告知。"]
+],warning:"运输方式和承运商应按本次货件情况及产品部门询价结果选择。"},
+{id:"fba-details",group:"fba",label:"填写发货信息并确认",method:"FBA 发货 SOP",summary:"按 SOP 填写发货人信息、起运地和产品描述，确认后提交发货。",steps:[
+["填写编号","点击「选择」后，编号填写：0123456789。"],
+["填写公司信息","公司名填写：宁波至拓进出口有限公司；英文名填写：ningbozhituo。"],
+["选择最后两项信息与起运地","在「添加」中选择第一项并保存。"],
+["填写产品描述","根据页面旁边的提示填写对应描述；只能填写英文，并注意字符长度限制。"],
+["确认发货","填写并确认后，点击「接受费用并确认发货」。"]
+],warning:"产品描述必须为英文，并遵守页面提示的字符长度限制。"},
+{id:"fba-labels",group:"fba",label:"货件命名、标签下载与领星同步",method:"FBA 发货 SOP",summary:"货件创建完成后，统一命名、下载箱子标签，并在领星同步货件信息。",steps:[
+["修改货件名称","修改每个货件名称，方便后续查看。命名格式：日期 + 产品名称 + 箱数 + 仓点。示例：20260917 麦穗加热垫 CTNS。"],
+["下载箱子标签","下载每个货件的箱子标签，交给产品部门。"],
+["同步到领星","在领星中同步这几个货件，并输入货件号。货件号以 FBA 开头，上一页的货件编码就是该货件号。"]
+],warning:"请逐个货件核对名称、标签和货件号，避免多个货件之间混淆。"}
+
 ];
 const $=id=>document.getElementById(id);
 let current=entries[0];
 let activeGroup="merge";
-const names={merge:"合并变体",split:"拆分变体"};
+const names={merge:"合并变体",split:"拆分变体",fba:"FBA 发货"};
 function setGroup(group){
  if(!names[group])return;
  activeGroup=group;
