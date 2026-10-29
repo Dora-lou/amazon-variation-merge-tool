@@ -124,18 +124,6 @@ warning:"新父体 SKU 不应与店铺已有 SKU 冲突。子体必须符合同�
 ["找到对应 SKU → 填入 ASIN → 保存并完成",""]],
 images:{0:{src:"./assets/variation-edit-parent.png",alt:"选择父体后的编辑商品信息菜单",css:"menu-shot"},3:{src:"./assets/variation-add-child-compact.png",alt:"变种页面、添加子体 SKU、填写对应 ASIN 的操作截图",css:"steps-shot"}},
 warning:"客服表示合并后的变体约需 6 小时审核，评论才会显示。"},
-{id:"transfer",group:"merge",label:"子体更换父体",method:"先联系客服，再在后台添加",summary:"把某个已有子 ASIN 从旧父体转到另一个已有父体。",steps:[
-["准备 ASIN","记录旧父 ASIN、目标父 ASIN、要转移的子 ASIN，以及需要保留的 MSKU。"],
-["申请解除旧关系","联系客服申请解除旧父体与子体的关联，明确要求保留原商品链接、MSKU 和报价。"],
-["加入目标父体","收到解除确认后，进入目标父体的「变体」选项卡，使用原 MSKU 添加。"]],
-warning:"不要为了转移变体而直接删除子体 Listing。客服可能会核对品牌、图片、类目及变体主题。",
-en:baseEn+"\n\nIntended new parent ASIN: [NEW_PARENT_ASIN]",zh:baseZh+"\n\n计划加入的新父 ASIN：[NEW_PARENT_ASIN]"},
-{id:"families",group:"merge",label:"两个变体家庭合并",method:"先拆除一组，再加入另一组",summary:"保留一个父体，把另一组的子体转移进来。",steps:[
-["决定保留的父体","记下要保留的父 ASIN，以及另一父体全部要迁移的子 ASIN。"],
-["拆出待迁移子体","联系客服解除另一父体下相关子体的旧变体关系，保留原 Listing 和 MSKU。"],
-["加入保留的父体","在保留父体的「变体」中添加原 MSKU；全部核对完成后，再处理空父体。"]],
-warning:"不能直接把两个父 ASIN 互相合并。应确保品牌、类目及变体主题符合要求；子体尚未转移完时不要删除原家庭。",
-en:baseEn+"\n\nParent ASIN to retain: [PARENT_ASIN_TO_KEEP]",zh:baseZh+"\n\n计划保留的父 ASIN：[PARENT_ASIN_TO_KEEP]"},
 {id:"child",group:"split",label:"指定子体从父体拆出",method:"后台操作（必要时联系客服）",summary:"拆出一个或多个指定子商品信息，其他子体继续保留在原系列中。",steps:[
 ["找到子商品信息","在「管理所有库存」找到要拆出的子商品信息。"],
 ["打开三点菜单","点击该子商品信息旁边的三点菜单。"],
