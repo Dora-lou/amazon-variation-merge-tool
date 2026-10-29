@@ -38,6 +38,11 @@ h1{font-size:30px;letter-spacing:-.04em;line-height:1.3;margin:8px 0 10px}
 .summary{color:#8291a1;font-size:13px;margin:0}
 hr{border:0;border-top:1px solid #ecf0f4;margin:22px 0}
 .section-heading{font-size:14px;font-weight:800;margin-bottom:17px}
+.method-options{display:grid;gap:14px}
+.method-option{border:1px solid #e3ebef;border-radius:12px;padding:15px 16px;background:#fff}
+.method-option h3{font-size:14px;margin:0 0 7px;color:#244f3b}
+.method-option>p{font-size:12px;color:#708394;margin:0 0 13px;line-height:1.75}
+.method-option .step:last-child{margin-bottom:0}
 .step{display:flex;align-items:flex-start;gap:13px;margin:0 0 20px}
 .number{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;background:#eef3f6;border-radius:9px;color:#52697c;font-weight:800}
 .step-content{flex:1;min-width:0}
@@ -89,7 +94,7 @@ footer{text-align:center;color:#8c9dab;font-size:11px;margin:26px auto;line-heig
     <div class="method" id="method">直接在后台操作</div>
     <h2 id="title">独立子体加入已有父体</h2>
     <p class="summary" id="summary"></p>
-    <hr><div class="section-heading">操作步骤</div><div id="steps"></div>
+    <hr><div class="section-heading" id="sectionHeading">操作步骤</div><div id="steps"></div>
     <div class="note"><strong>操作前注意</strong><p id="warning"></p></div>
     <a class="tool-entry" id="toolEntry" href="./index.html" hidden>打开 Excel 变体合并工具</a>
     <details id="caseBox" hidden>
@@ -124,13 +129,17 @@ warning:"新父体 SKU 不应与店铺已有 SKU 冲突。子体必须符合同�
 ["找到对应 SKU → 填入 ASIN → 保存并完成",""]],
 images:{0:{src:"./assets/variation-edit-parent.png",alt:"选择父体后的编辑商品信息菜单",css:"menu-shot"},3:{src:"./assets/variation-add-child-compact.png",alt:"变种页面、添加子体 SKU、填写对应 ASIN 的操作截图",css:"steps-shot"}},
 warning:"客服表示合并后的变体约需 6 小时审核，评论才会显示。"},
-{id:"child",group:"split",label:"指定子体从父体拆出",method:"后台操作（必要时联系客服）",summary:"拆出一个或多个指定子商品信息，其他子体继续保留在原系列中。",steps:[
+{id:"child",group:"split",label:"指定子体从父体拆出",method:"两种方法可选",summary:"根据需要拆出的子体数量，选择后台操作或联系客服。",methods:[
+{title:"方法一：后台直接操作",description:"适合拆出一个子体，或少量子体。",steps:[
 ["找到子商品信息","在「管理所有库存」找到要拆出的子商品信息。"],
 ["打开三点菜单","点击该子商品信息旁边的三点菜单。"],
-["从系列中分离","选择「从系列中分离」，按页面提示完成。多个子体可逐个操作。"]],
-warning:"操作后确认子体已从系列中分离，其他子体未受影响。如果没有该选项或操作未生效，可以联系亚马逊客服。",
-en:"We would like to remove the following child ASIN(s) from the current variation family.\n\nParent ASIN: [填写父 ASIN]\n\nChild ASIN(s): [填写子 ASIN]\n\nPlease help us remove these child ASINs from the parent-child relationship without deleting their listings or affecting other child ASINs.",
-zh:"主题：请求将子 ASIN 从当前变体家族移除\n\n父 ASIN：[填写父 ASIN]\n\n子 ASIN：[填写子 ASIN]\n\n请协助我们解除这些子 ASIN 与父体之间的变体关系，同时不要删除其商品链接，也不要影响其他子体。"},
+["从系列中分离","选择「从系列中分离」，按页面提示完成。"]
+]},
+{title:"方法二：联系客服",description:"如果需要拆除 2 个或以上子体，联系客服会更加方便。展开下方 Case 文案，填写父 ASIN 和所有需要拆除的子 ASIN 后提交。"}
+],
+warning:"无论采用哪种方法，完成后都要确认指定子体已从系列中分离，其他子体未受影响。",
+en:"We would like to remove the following child ASIN(s) from the current variation family.\\n\\nParent ASIN: [填写父 ASIN]\\n\\nChild ASIN(s): [填写子 ASIN]\\n\\nPlease help us remove these child ASINs from the parent-child relationship without deleting their listings or affecting other child ASINs.",
+zh:"主题：请求将子 ASIN 从当前变体家族移除\\n\\n父 ASIN：[填写父 ASIN]\\n\\n子 ASIN：[填写子 ASIN]\\n\\n请协助我们解除这些子 ASIN 与父体之间的变体关系，同时不要删除其商品链接，也不要影响其他子体。"},
 {id:"dissolve",group:"split",label:"拆分整个父体（全部子体）",method:"亚马逊后台操作",summary:"取消整个变体系列的分组。",steps:[
 ["找到父商品信息","在「管理所有库存」找到该系列的父商品信息。"],
 ["打开三点菜单","点击父商品信息旁边的三点菜单。"],
@@ -180,7 +189,7 @@ function render(id){
  $("summary").textContent=current.summary;$("summary").hidden=!current.summary;
  $("warning").textContent=current.warning;
  $("steps").replaceChildren();
- current.steps.forEach((step,i)=>{
+ const renderStep=(step,i,images)=>{
   const wrap=document.createElement("div");wrap.className="step";
   const num=document.createElement("div");num.className="number";num.textContent=i+1;
   const body=document.createElement("div"),title=document.createElement("strong");
@@ -189,15 +198,30 @@ function render(id){
   if(step[1]){
     const desc=document.createElement("p");desc.textContent=step[1];body.append(desc);
   }
-  const picture=current.images?.[i];
+  const picture=images?.[i];
   if(picture){
     const link=document.createElement("a");link.href=picture.src;link.target="_blank";link.rel="noopener noreferrer";
     link.className="step-image "+picture.css;link.title="点击查看大图";
     const img=document.createElement("img");img.src=picture.src;img.alt=picture.alt;img.loading="lazy";img.decoding="async";
     link.append(img);body.append(link);
   }
-  wrap.append(num,body);$("steps").append(wrap);
- });
+  wrap.append(num,body);return wrap;
+ };
+ if(current.methods){
+  $("steps").className="method-options";
+  $("sectionHeading").textContent="操作方法";
+  current.methods.forEach(method=>{
+    const card=document.createElement("div");card.className="method-option";
+    const heading=document.createElement("h3");heading.textContent=method.title;card.append(heading);
+    if(method.description){const desc=document.createElement("p");desc.textContent=method.description;card.append(desc);}
+    (method.steps||[]).forEach((step,i)=>card.append(renderStep(step,i,method.images)));
+    $("steps").append(card);
+  });
+ }else{
+  $("steps").className="";
+  $("sectionHeading").textContent="操作步骤";
+  (current.steps||[]).forEach((step,i)=>$("steps").append(renderStep(step,i,current.images)));
+ }
  $("caseBox").hidden=!current.en;$("caseBox").open=false;
  $("english").textContent=current.en||"";$("chinese").textContent=current.zh||"";$("copyStatus").textContent="";
  $("toolEntry").hidden=!current.tool;
