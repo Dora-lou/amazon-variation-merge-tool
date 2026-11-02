@@ -1,0 +1,13 @@
+# Never commit local credentials or business exports
+.env
+.env.*
+*.token
+*.secret
+*.log
+__pycache__/
+.venv/
+venv/
+workspaces/
+reports/
+exports/
+secrets/
