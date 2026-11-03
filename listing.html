@@ -42,7 +42,7 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
   <nav class="module-nav" aria-label="工具模块">
     <a href="./index.html">首页</a>
     <a href="./variation-guide.html">知识库</a>
-    <a href="./tools.html" class="active" aria-current="page" id="navTools">表格自动生成工具</a>
+    <a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
     <a href="./listing.html?view=library" id="navLibrary">商品库</a>
     <a href="./agent.html">AI Agent</a>
     </nav>
@@ -200,7 +200,7 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 if(new URLSearchParams(window.location.search).get('view')==='library'){
   document.getElementById('pageEyebrow').textContent='PRODUCT LIBRARY';
   document.getElementById('pageTitle').textContent='商品库';
-  document.getElementById('pageDescription').textContent='统一维护商品资料、类目模板，并在这里完成完整备份与恢复。表格自动生成工具会从这里读取对应资料。';
+  document.getElementById('pageDescription').textContent='统一维护商品资料、类目模板，并在这里完成完整备份与恢复。运营工具中心会从这里读取对应资料。';
   document.getElementById('navLibrary').classList.add('active');
   document.getElementById('navTools').classList.remove('active');
 }
