@@ -149,11 +149,29 @@ def make_prompt(params: dict) -> str:
 """
 
 
+def resolve_codex_bin() -> str | None:
+    """Locate Codex CLI, including versioned Windows Codex desktop bundles."""
+    configured = os.getenv("CODEX_BIN", "").strip().strip('"')
+    if configured:
+        return shutil.which(configured) or (configured if Path(configured).is_file() else None)
+    installed = shutil.which("codex")
+    if installed:
+        return installed
+    local = os.getenv("LOCALAPPDATA")
+    if not local:
+        return None
+    try:
+        files = [p for p in (Path(local) / "OpenAI" / "Codex" / "bin").glob("*/codex.exe") if p.is_file()]
+        return str(max(files, key=lambda p: p.stat().st_mtime)) if files else None
+    except OSError:
+        return None
+
+
 def check_ready() -> dict:
     skill = Path.home() / ".codex" / "skills" / "feishu-amazon-sales-plan" / "SKILL.md"
     return {
         "mode": "preview_only",
-        "codex_found": bool(os.getenv("CODEX_BIN") or shutil.which("codex")),
+        "codex_found": bool(resolve_codex_bin()),
         "lark_cli_found": bool(shutil.which("lark-cli")),
         "sales_plan_skill_found": skill.is_file(),
         "timestamp": utc_now(),
@@ -251,7 +269,7 @@ def validate_generated_preview(result: dict, params: dict) -> dict:
 
 
 def run_codex_preview(params: dict) -> dict:
-    codex_bin = os.getenv("CODEX_BIN") or shutil.which("codex")
+    codex_bin = resolve_codex_bin()
     if not codex_bin:
         raise RuntimeError("Codex CLI not found")
     with tempfile.TemporaryDirectory(prefix="amazon-sales-preview-") as temp:
