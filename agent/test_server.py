@@ -89,12 +89,32 @@ class ValidationTests(unittest.TestCase):
             self.assertIn('--sandbox',cmd)
             self.assertEqual(cmd[cmd.index('--sandbox')+1],'read-only')
             self.assertEqual(cmd[cmd.index('--ask-for-approval')+1],'never')
+            self.assertLess(cmd.index('--ask-for-approval'),cmd.index('exec'))
             output=Path(cmd[cmd.index('--output-last-message')+1])
             output.write_text(json.dumps(SAMPLE_RESULT),encoding='utf-8')
             self.assertEqual(kwargs['input'].count('禁止对任何外部系统执行写入'),1)
             return SimpleNamespace(returncode=0)
         with patch.object(server.shutil,'which',return_value='codex'),patch.object(server.subprocess,'run',side_effect=fake_run):
             self.assertEqual(server.run_codex_preview(EXAMPLE)['status'],'needs_review')
+
+    def test_codex_bad_flags_are_reported_without_exposing_stderr(self):
+        with patch.object(server.shutil,'which',return_value='codex'), \
+             patch.object(server.subprocess,'run',
+                          return_value=SimpleNamespace(returncode=2,stderr='secret-token=DO_NOT_LEAK')):
+            with self.assertRaises(server.AgentPreviewError) as caught:
+                server.run_codex_preview(EXAMPLE)
+            self.assertIn('退出码 2',str(caught.exception))
+            self.assertNotIn('DO_NOT_LEAK',str(caught.exception))
+
+    def test_codex_timeout_has_safe_error(self):
+        def simulate_timeout(*args,**kwargs):
+            raise server.subprocess.TimeoutExpired(cmd=['codex'],timeout=1)
+        with patch.object(server.shutil,'which',return_value='codex'), \
+             patch.object(server.subprocess,'run',side_effect=simulate_timeout):
+            with self.assertRaises(server.AgentPreviewError) as caught:
+                server.run_codex_preview(EXAMPLE)
+            self.assertIn('超时',str(caught.exception))
+
 
 
 class HttpTests(unittest.TestCase):
