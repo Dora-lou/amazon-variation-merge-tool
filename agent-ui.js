@@ -96,7 +96,10 @@
     }
     table.append(body);$('monthly').replaceChildren(table);
     addTextList($('skuNotes'),[result.inventory_basis,result.historical_basis,...(result.sku_notes||[])].filter(Boolean),'没有额外说明');
-    addTextList($('warnings'),result.warnings||[],'未列出异常；仍需人工核对');
+    const sourceLabels={lingxing:'领星',feishu:'飞书'};
+    const statusLabels={ok:'读取成功',partial:'部分读取',missing:'未找到匹配数据',error:'读取失败'};
+    const sourceStates=Object.entries(result.source_status||{}).map(([name,status])=>(sourceLabels[name]||name)+'：'+(statusLabels[status]||status));
+    addTextList($('warnings'),[...sourceStates,...(result.warnings||[])],'未列出异常；仍需人工核对');
     addTextList($('sources'),[...(result.data_sources||[]),result.feishu_target&&('飞书目标：'+result.feishu_target)].filter(Boolean),'未取得来源，请检查授权');
   }
   function setJobStatus(text,kind=''){

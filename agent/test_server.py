@@ -28,6 +28,11 @@ SAMPLE_RESULT = {
     'sku_notes': [], 'warnings': ['in-transit deduplication needed'],
     'data_sources': [], 'feishu_target': '', 'summary': 'Do not write',
 }
+TRUSTED_DATA = {
+    'schema_version':'1.0','collected_at':'2026-11-03T00:00:00+00:00','overall_status':'partial',
+    'sources':{'lingxing':{'status':'ok','error':''},'feishu':{'status':'missing','error':'未找到匹配表格'}},
+    'sku_map':[],'warnings':['feishu: 未找到匹配表格'],'rules':{},
+}
 
 
 class ValidationTests(unittest.TestCase):
@@ -47,11 +52,11 @@ class ValidationTests(unittest.TestCase):
             server.valid_request({**EXAMPLE,'notes':'x'*1001})
 
     def test_prompt_contains_no_write_boundary(self):
-        prompt=server.make_prompt(EXAMPLE)
+        prompt=server.make_prompt(EXAMPLE,TRUSTED_DATA)
         self.assertIn('禁止',prompt)
         self.assertIn('SKILL.md',prompt)
-        self.assertIn('yb-lingxing',prompt)
-        self.assertIn('lark-sheets',prompt)
+        self.assertIn('可信采集快照',prompt)
+        self.assertIn('不得调用 MCP、lark-cli',prompt)
 
     def test_guard_rejects_unsupported_inventory(self):
         result={**SAMPLE_RESULT,'status':'ready','monthly_plan':[
@@ -59,6 +64,20 @@ class ValidationTests(unittest.TestCase):
         ]}
         result=server.validate_generated_preview(result,EXAMPLE)
         self.assertEqual(result['status'],'needs_review')
+
+    def test_blocked_collection_clears_model_numbers(self):
+        result={**SAMPLE_RESULT,'status':'ready','inventory_total':100,'inventory_basis':'simulated',
+                'data_sources':['model supplied'],'monthly_plan':[
+                    {'month':m,'target_units':20,'note':''} for m in ['2026-11','2026-12','2027-01','2027-02']
+                ]}
+        blocked={**TRUSTED_DATA,'overall_status':'blocked','sources':{
+            'lingxing':{'status':'error','error':'不可用'},'feishu':{'status':'error','error':'不可用'}},
+            'warnings':['lingxing: 不可用','feishu: 不可用']}
+        checked=server.validate_generated_preview(result,EXAMPLE,blocked)
+        self.assertEqual(checked['status'],'blocked')
+        self.assertIsNone(checked['inventory_total'])
+        self.assertTrue(all(row['target_units'] is None for row in checked['monthly_plan']))
+        self.assertEqual(checked['data_sources'],[])
 
     def test_resolve_desktop_codex_without_path(self):
         with tempfile.TemporaryDirectory() as root:
@@ -90,19 +109,21 @@ class ValidationTests(unittest.TestCase):
             self.assertEqual(cmd[cmd.index('--sandbox')+1],'read-only')
             self.assertEqual(cmd[cmd.index('--ask-for-approval')+1],'never')
             self.assertLess(cmd.index('--ask-for-approval'),cmd.index('exec'))
+            self.assertIn('--ephemeral',cmd)
+            self.assertIn('--ignore-user-config',cmd)
             output=Path(cmd[cmd.index('--output-last-message')+1])
             output.write_text(json.dumps(SAMPLE_RESULT),encoding='utf-8')
             self.assertEqual(kwargs['input'].count('禁止对任何外部系统执行写入'),1)
             return SimpleNamespace(returncode=0)
         with patch.object(server.shutil,'which',return_value='codex'),patch.object(server.subprocess,'run',side_effect=fake_run):
-            self.assertEqual(server.run_codex_preview(EXAMPLE)['status'],'needs_review')
+            self.assertEqual(server.run_codex_preview(EXAMPLE,TRUSTED_DATA)['status'],'needs_review')
 
     def test_codex_bad_flags_are_reported_without_exposing_stderr(self):
         with patch.object(server.shutil,'which',return_value='codex'), \
              patch.object(server.subprocess,'run',
                           return_value=SimpleNamespace(returncode=2,stderr='secret-token=DO_NOT_LEAK')):
             with self.assertRaises(server.AgentPreviewError) as caught:
-                server.run_codex_preview(EXAMPLE)
+                server.run_codex_preview(EXAMPLE,TRUSTED_DATA)
             self.assertIn('退出码 2',str(caught.exception))
             self.assertNotIn('DO_NOT_LEAK',str(caught.exception))
 
@@ -112,7 +133,7 @@ class ValidationTests(unittest.TestCase):
         with patch.object(server.shutil,'which',return_value='codex'), \
              patch.object(server.subprocess,'run',side_effect=simulate_timeout):
             with self.assertRaises(server.AgentPreviewError) as caught:
-                server.run_codex_preview(EXAMPLE)
+                server.run_codex_preview(EXAMPLE,TRUSTED_DATA)
             self.assertIn('超时',str(caught.exception))
 
 
@@ -157,7 +178,8 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(status,404)
 
     def test_preview_works_mocked(self):
-        with patch.object(server,'run_codex_preview',return_value=SAMPLE_RESULT):
+        with patch.object(server,'collect_trusted_data',return_value=TRUSTED_DATA), \
+             patch.object(server,'run_codex_preview',return_value=SAMPLE_RESULT):
             code,data=self.query('POST','/api/jobs/preview',EXAMPLE)
             self.assertEqual(code,202)
             job_id=data['id']
