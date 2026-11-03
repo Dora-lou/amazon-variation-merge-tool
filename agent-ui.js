@@ -106,11 +106,14 @@
     if(!running)return;
     try{
       const job=await request('/api/jobs/'+jobId);
-      setJobStatus(labels[job.status]||job.status,job.status==='completed'?'good':'warn');
       if(job.status==='completed'){
-        renderResult(job.result||{});
+        const result=job.result||{};
+        const outcome=result.status;
+        setJobStatus(outcome==='ready'?'预览已生成':outcome==='needs_review'?'数据待核对':outcome==='blocked'?'数据不足，无法生成计划':'预览结果异常',outcome==='ready'?'good':'warn');
+        renderResult(result);
         running=false;$('startBtn').disabled=!connected;return;
       }
+      setJobStatus(labels[job.status]||job.status,'warn');
       if(job.status==='failed'){
         $('resultSummary').textContent=job.error||'执行失败';
         running=false;$('startBtn').disabled=!connected;return;
