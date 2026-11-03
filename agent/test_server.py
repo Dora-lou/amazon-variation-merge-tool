@@ -2,8 +2,10 @@
 """Run with: python -m unittest discover -s agent -p 'test_*.py'"""
 import http.client
 import json
+import os
 import sys
 import threading
+import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -57,6 +59,30 @@ class ValidationTests(unittest.TestCase):
         ]}
         result=server.validate_generated_preview(result,EXAMPLE)
         self.assertEqual(result['status'],'needs_review')
+
+    def test_resolve_desktop_codex_without_path(self):
+        with tempfile.TemporaryDirectory() as root:
+            base = Path(root) / 'OpenAI' / 'Codex' / 'bin'
+            old = base / 'old' / 'codex.exe'
+            new = base / 'new' / 'codex.exe'
+            old.parent.mkdir(parents=True)
+            new.parent.mkdir(parents=True)
+            old.write_bytes(b'old')
+            new.write_bytes(b'new')
+            os.utime(old, (1, 1))
+            os.utime(new, (2, 2))
+            with patch.dict(os.environ, {'LOCALAPPDATA': root, 'CODEX_BIN': ''}), \
+                 patch.object(server.shutil, 'which', return_value=None):
+                self.assertEqual(server.resolve_codex_bin(), str(new))
+                self.assertTrue(server.check_ready()['codex_found'])
+
+    def test_explicit_codex_bin_override(self):
+        with tempfile.TemporaryDirectory() as root:
+            exe = Path(root) / 'codex.exe'
+            exe.write_bytes(b'codex')
+            with patch.dict(os.environ, {'CODEX_BIN': str(exe)}):
+                self.assertEqual(server.resolve_codex_bin(), str(exe))
+
 
     def test_codex_execution_requires_read_only(self):
         def fake_run(cmd,**kwargs):
