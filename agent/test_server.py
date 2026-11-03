@@ -128,26 +128,101 @@ class ValidationTests(unittest.TestCase):
             output.write_text(json.dumps(SAMPLE_RESULT),encoding='utf-8')
             self.assertEqual(kwargs['input'].count('禁止对任何外部系统执行写入'),1)
             return SimpleNamespace(returncode=0)
-        with patch.object(server.shutil,'which',return_value='codex'),patch.object(server.subprocess,'run',side_effect=fake_run):
+        with patch.object(server.shutil,'which',return_value='codex'), \
+             patch.object(server,'probe_codex_runtime',return_value={'version':'test','authenticated':True}), \
+             patch.object(server.subprocess,'run',side_effect=fake_run):
             self.assertEqual(server.run_codex_preview(EXAMPLE,TRUSTED_DATA)['status'],'needs_review')
 
     def test_codex_bad_flags_are_reported_without_exposing_stderr(self):
         with patch.object(server.shutil,'which',return_value='codex'), \
+             patch.object(server,'probe_codex_runtime',return_value={'version':'test','authenticated':True}), \
              patch.object(server.subprocess,'run',
-                          return_value=SimpleNamespace(returncode=2,stderr='secret-token=DO_NOT_LEAK')):
+                          return_value=SimpleNamespace(returncode=2,stdout='',stderr='secret-token=DO_NOT_LEAK')):
             with self.assertRaises(server.AgentPreviewError) as caught:
                 server.run_codex_preview(EXAMPLE,TRUSTED_DATA)
             self.assertIn('退出码 2',str(caught.exception))
+            self.assertIn('CODEX_CLI_ARGUMENTS',str(caught.exception))
             self.assertNotIn('DO_NOT_LEAK',str(caught.exception))
 
     def test_codex_timeout_has_safe_error(self):
         def simulate_timeout(*args,**kwargs):
             raise server.subprocess.TimeoutExpired(cmd=['codex'],timeout=1)
         with patch.object(server.shutil,'which',return_value='codex'), \
+             patch.object(server,'probe_codex_runtime',return_value={'version':'test','authenticated':True}), \
              patch.object(server.subprocess,'run',side_effect=simulate_timeout):
             with self.assertRaises(server.AgentPreviewError) as caught:
                 server.run_codex_preview(EXAMPLE,TRUSTED_DATA)
-            self.assertIn('超时',str(caught.exception))
+            self.assertIn('CODEX_SERVICE',str(caught.exception))
+
+    def test_failure_classification_is_fixed_and_redacted(self):
+        cases = [
+            (1, '', 'not logged in token=DO_NOT_LEAK', 'authentication'),
+            (1, '', 'invalid output schema secret=DO_NOT_LEAK', 'output_schema'),
+            (1, '', 'input is too large secret=DO_NOT_LEAK', 'input_size'),
+            (1, '', 'model_not_found secret=DO_NOT_LEAK', 'model_call'),
+            (2, '', 'unexpected argument secret=DO_NOT_LEAK', 'cli_arguments'),
+        ]
+        for code, stdout, stderr, expected in cases:
+            category = server.classify_codex_failure(code, stdout, stderr)
+            self.assertEqual(category, expected)
+            message = str(server._codex_error(category, code))
+            self.assertNotIn('DO_NOT_LEAK', message)
+
+    def test_probe_checks_flags_and_login_without_leaking_output(self):
+        def fake_probe(cmd, **kwargs):
+            if cmd[-1] == '--version':
+                return SimpleNamespace(returncode=0, stdout='codex-cli 0.162.0-alpha.2', stderr='')
+            if cmd[-2:] == ['exec', '--help']:
+                flags = ' '.join(server.REQUIRED_CODEX_EXEC_FLAGS)
+                return SimpleNamespace(returncode=0, stdout=flags, stderr='')
+            if cmd[-2:] == ['login', 'status']:
+                return SimpleNamespace(returncode=0, stdout='Logged in using ChatGPT', stderr='')
+            self.fail(f'unexpected probe command: {cmd}')
+        with patch.object(server.subprocess, 'run', side_effect=fake_probe):
+            result = server.probe_codex_runtime('codex')
+        self.assertEqual(result['version'], '0.162.0-alpha.2')
+        self.assertTrue(result['authenticated'])
+
+    def test_probe_reports_auth_category_without_raw_stderr(self):
+        def fake_probe(cmd, **kwargs):
+            if cmd[-1] == '--version':
+                return SimpleNamespace(returncode=0, stdout='codex-cli 0.162.0', stderr='')
+            if cmd[-2:] == ['exec', '--help']:
+                return SimpleNamespace(returncode=0, stdout=' '.join(server.REQUIRED_CODEX_EXEC_FLAGS), stderr='')
+            return SimpleNamespace(returncode=1, stdout='', stderr='token=DO_NOT_LEAK')
+        with patch.object(server.subprocess, 'run', side_effect=fake_probe):
+            with self.assertRaises(server.AgentPreviewError) as caught:
+                server.probe_codex_runtime('codex')
+        self.assertIn('CODEX_AUTHENTICATION', str(caught.exception))
+        self.assertNotIn('DO_NOT_LEAK', str(caught.exception))
+
+    def test_large_snapshot_is_bounded_and_marked_partial(self):
+        oversized = json.loads(json.dumps(TRUSTED_DATA))
+        oversized['overall_status'] = 'ok'
+        oversized['sources']['lingxing']['queries'] = {
+            'inventory_snapshot': {'status':'field_missing','field_quality':{'awd_available':'field_missing'}}
+        }
+        oversized['sources']['lingxing']['records'] = {
+            'inventory': [{'sku': f'SKU-{i}', 'value': 'x' * 5000} for i in range(300)]
+        }
+        compacted = server.prepare_codex_snapshot(oversized)
+        prompt = server.make_prompt(EXAMPLE, compacted)
+        self.assertLessEqual(len(prompt.encode('utf-8')), server.MAX_CODEX_PROMPT_BYTES)
+        self.assertEqual(compacted['overall_status'], 'partial')
+        self.assertTrue(compacted['analysis_input']['truncated'])
+        self.assertEqual(compacted['sources']['lingxing']['queries']['inventory_snapshot']['status'],
+                         'field_missing')
+        self.assertIn('不得视为 0', '\n'.join(compacted['warnings']))
+
+    def test_reference_sheet_values_are_removed_before_codex(self):
+        snapshot = json.loads(json.dumps(TRUSTED_DATA))
+        snapshot['sources']['feishu']['documents'] = [{
+            'title':'other product plan','match_type':'reference','table':{'profit':12345}
+        }]
+        compacted = server.prepare_codex_snapshot(snapshot)
+        table = compacted['sources']['feishu']['documents'][0]['table']
+        self.assertTrue(table['omitted'])
+        self.assertNotIn('profit', table)
 
 
 

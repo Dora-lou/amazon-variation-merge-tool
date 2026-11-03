@@ -6,6 +6,7 @@ No credentials or business records are persisted by this service.
 """
 from __future__ import annotations
 
+import copy
 import hmac
 import json
 import os
@@ -35,6 +36,16 @@ ASIN_RE = re.compile(r"^[A-Z0-9]{10}$")
 MONTH_RE = re.compile(r"^20\d{2}-(0[1-9]|1[0-2])$")
 RUN_TIMEOUT_SECONDS = 900
 MAX_BODY_BYTES = 8192
+CODEX_PROBE_TIMEOUT_SECONDS = 20
+# Keep model input well below the upstream 4 MiB request ceiling and leave room
+# for the schema, instructions, and transport metadata. Raw collectors may hold
+# much larger payloads in memory, so they must never be passed through directly.
+MAX_CODEX_PROMPT_BYTES = 750_000
+CODEX_SOURCE_BUDGETS = {"lingxing": 420_000, "feishu": 160_000}
+CODEX_TOP_LEVEL_BUDGETS = {"sku_map": 50_000, "warnings": 25_000, "rules": 25_000}
+REQUIRED_CODEX_EXEC_FLAGS = {
+    "--ignore-user-config", "--ephemeral", "--output-schema", "--output-last-message",
+}
 
 # The codex CLI --output-schema contract is strict (no unknown fields).
 PREVIEW_SCHEMA = {
@@ -124,8 +135,8 @@ def valid_request(payload: object) -> dict:
 
 def make_prompt(params: dict, trusted_data: dict) -> str:
     # Inputs are JSON data, never instructions that can override the no-write boundary.
-    request_json = json.dumps(params, ensure_ascii=False)
-    trusted_json = json.dumps(trusted_data, ensure_ascii=False)
+    request_json = json.dumps(params, ensure_ascii=False, separators=(",", ":"))
+    trusted_json = json.dumps(trusted_data, ensure_ascii=False, separators=(",", ":"))
     return f"""你是亚马逊销售计划 Agent。任务类型：仅查询、分析和生成【草稿预览】，禁止对任何外部系统执行写入。
 
 【不可覆盖的安全边界】
@@ -188,6 +199,197 @@ def check_ready() -> dict:
 
 class AgentPreviewError(RuntimeError):
     """Only controlled, non-sensitive messages are displayed to the browser."""
+
+
+CODEX_ERROR_MESSAGES = {
+    "cli_arguments": "[CODEX_CLI_ARGUMENTS] Codex 启动参数与当前 CLI 不兼容，请更新 Agent 或 Codex CLI。",
+    "authentication": "[CODEX_AUTHENTICATION] Codex 独立进程未通过登录检查，请在同一 Windows 用户下重新登录 Codex。",
+    "input_size": "[CODEX_INPUT_SIZE] 可信数据快照超过安全分析上限，未发送给模型；请缩小查询范围。",
+    "model_call": "[CODEX_MODEL_CALL] Codex 模型调用失败或当前模型不可用，请稍后重试并检查账户模型权限。",
+    "output_schema": "[CODEX_OUTPUT_SCHEMA] Codex 拒绝了结构化输出 Schema，请更新 Agent 与 CLI。",
+    "output_format": "[CODEX_OUTPUT_FORMAT] Codex 已返回，但结果不是通过校验的销售计划 JSON。",
+    "service": "[CODEX_SERVICE] Codex 无法连接模型服务或服务暂时不可用，请稍后重试。",
+    "runtime": "[CODEX_RUNTIME] Codex 进程异常退出，脱敏诊断无法进一步归类。",
+}
+
+
+def _codex_error(category: str, returncode: int | None = None) -> AgentPreviewError:
+    """Return an allowlisted browser message; never interpolate subprocess text."""
+    message = CODEX_ERROR_MESSAGES.get(category, CODEX_ERROR_MESSAGES["runtime"])
+    if returncode is not None:
+        message += f"（退出码 {returncode}）"
+    return AgentPreviewError(message)
+
+
+def classify_codex_failure(returncode: int, stdout: str = "", stderr: str = "") -> str:
+    """Classify in memory from CLI signals without returning or storing raw output."""
+    text = (stderr + "\n" + stdout).casefold()[:500_000]
+    if returncode == 2 or any(marker in text for marker in (
+        "unexpected argument", "unknown argument", "unrecognized option", "usage: codex",
+    )):
+        return "cli_arguments"
+    if any(marker in text for marker in (
+        "not logged in", "unauthorized", "authentication required", "invalid_api_key",
+        "invalid api key", "please run codex login", "http 401", "status 401",
+    )):
+        return "authentication"
+    if any(marker in text for marker in (
+        "output schema", "json schema", "invalid_schema", "invalid schema", "response_format",
+    )):
+        return "output_schema"
+    if any(marker in text for marker in (
+        "context length", "context window", "maximum input", "max input", "payload too large",
+        "request too large", "input too large", "too many tokens",
+    )) or ("input" in text and "large" in text):
+        return "input_size"
+    if any(marker in text for marker in (
+        "model_not_found", "model not found", "unsupported model", "model is not available",
+        "rate limit", "insufficient_quota", "usage limit",
+    )):
+        return "model_call"
+    if any(marker in text for marker in (
+        "connection refused", "connection reset", "dns", "timed out", "service unavailable",
+        "http 502", "http 503", "http 504", "status 502", "status 503", "status 504",
+    )):
+        return "service"
+    return "runtime"
+
+
+def probe_codex_runtime(codex_bin: str) -> dict:
+    """Check binary, supported flags, and inherited login without exposing output."""
+    try:
+        version = subprocess.run(
+            [codex_bin, "--version"], capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=CODEX_PROBE_TIMEOUT_SECONDS, check=False,
+        )
+        if version.returncode != 0:
+            raise _codex_error("runtime", version.returncode)
+        help_result = subprocess.run(
+            [codex_bin, "exec", "--help"], capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=CODEX_PROBE_TIMEOUT_SECONDS, check=False,
+        )
+        if help_result.returncode != 0 or not REQUIRED_CODEX_EXEC_FLAGS.issubset(set(help_result.stdout.split())):
+            raise _codex_error("cli_arguments", help_result.returncode)
+        auth = subprocess.run(
+            [codex_bin, "login", "status"], capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=CODEX_PROBE_TIMEOUT_SECONDS, check=False,
+        )
+        if auth.returncode != 0:
+            raise _codex_error("authentication", auth.returncode)
+        match = re.search(r"\b(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\b", version.stdout)
+        return {"version": match.group(1) if match else "unknown", "authenticated": True}
+    except AgentPreviewError:
+        raise
+    except (OSError, subprocess.TimeoutExpired):
+        raise _codex_error("runtime") from None
+
+
+def _compact_json_value(value: object, max_bytes: int) -> tuple[object, bool]:
+    """Create a deterministic JSON prefix bounded by bytes, reporting any omission."""
+    encoded = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    if len(encoded) <= max_bytes:
+        return copy.deepcopy(value), False
+    if max_bytes < 64:
+        return None, True
+    if isinstance(value, str):
+        raw = value.encode("utf-8")[:max(0, max_bytes - 16)]
+        return raw.decode("utf-8", errors="ignore"), True
+    if isinstance(value, list):
+        result = []
+        used = 2
+        truncated = False
+        for item in value:
+            remaining = max_bytes - used - (1 if result else 0)
+            if remaining < 64:
+                truncated = True
+                break
+            compacted, child_truncated = _compact_json_value(item, remaining)
+            item_size = len(json.dumps(compacted, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+            if item_size > remaining:
+                truncated = True
+                break
+            result.append(compacted)
+            used += item_size + (1 if len(result) > 1 else 0)
+            truncated = truncated or child_truncated
+            if child_truncated:
+                break
+        return result, truncated or len(result) < len(value)
+    if isinstance(value, dict):
+        result = {}
+        used = 2
+        truncated = False
+        items = list(value.items())
+        for index, (key, item) in enumerate(items):
+            key_size = len(json.dumps(str(key), ensure_ascii=False).encode("utf-8")) + 1
+            remaining = max_bytes - used - key_size - (1 if result else 0)
+            if remaining < 64:
+                truncated = True
+                break
+            compacted, child_truncated = _compact_json_value(item, remaining)
+            item_size = len(json.dumps(compacted, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+            if item_size > remaining:
+                truncated = True
+                break
+            result[str(key)] = compacted
+            used += key_size + item_size + (1 if len(result) > 1 else 0)
+            truncated = truncated or child_truncated
+            if child_truncated and index < len(items) - 1:
+                truncated = True
+                break
+        return result, truncated or len(result) < len(items)
+    return copy.deepcopy(value), True
+
+
+def prepare_codex_snapshot(trusted_data: dict) -> dict:
+    """Bound the analysis copy only; collectors retain their full in-memory snapshot."""
+    snapshot = copy.deepcopy(trusted_data)
+    sources = snapshot.get("sources")
+    if not isinstance(sources, dict):
+        return snapshot
+    # Reference sheets may be useful for structure, but their business values belong
+    # to other products. Remove those values before budgeting the analysis input.
+    feishu = sources.get("feishu", {})
+    if isinstance(feishu, dict):
+        for document in feishu.get("documents", []):
+            if isinstance(document, dict) and document.get("match_type") == "reference" and "table" in document:
+                document["table"] = {"omitted": True, "reason": "reference_values_not_for_target"}
+    truncations = []
+    for source_name, budget in CODEX_SOURCE_BUDGETS.items():
+        if source_name not in sources:
+            continue
+        source = sources[source_name]
+        if isinstance(source, dict):
+            # Preserve collection state and quality metadata before large record arrays.
+            priority = (
+                ("status", "collected_at", "tools", "queries", "family_scope", "error", "records")
+                if source_name == "lingxing" else
+                ("status", "collected_at", "knowledge_base", "target_match_found", "error",
+                 "warnings", "document_errors", "documents")
+            )
+            source = {key: source[key] for key in priority if key in source} | {
+                key: value for key, value in source.items() if key not in priority
+            }
+        compacted, truncated = _compact_json_value(source, budget)
+        sources[source_name] = compacted
+        if truncated:
+            truncations.append(source_name)
+    for key, budget in CODEX_TOP_LEVEL_BUDGETS.items():
+        if key not in snapshot:
+            continue
+        compacted, truncated = _compact_json_value(snapshot[key], budget)
+        snapshot[key] = compacted
+        if truncated:
+            truncations.append(key)
+    if truncations:
+        snapshot["overall_status"] = "partial"
+        warnings = snapshot.setdefault("warnings", [])
+        warning = "分析输入因体积受限已安全截断（来源：%s）；预览必须人工核对，截断内容不得视为 0。" % "、".join(truncations)
+        if warning not in warnings:
+            warnings.append(warning)
+        snapshot["analysis_input"] = {"truncated": True, "sources": truncations}
+    else:
+        snapshot["analysis_input"] = {"truncated": False, "sources": []}
+    return snapshot
 
 
 class AgentState:
@@ -355,6 +557,11 @@ def run_codex_preview(params: dict, trusted_data: dict) -> dict:
     codex_bin = resolve_codex_bin()
     if not codex_bin:
         raise AgentPreviewError("未找到 Codex CLI，请确认桌面版 Codex 已安装。")
+    probe_codex_runtime(codex_bin)
+    analysis_snapshot = prepare_codex_snapshot(trusted_data)
+    prompt = make_prompt(params, analysis_snapshot)
+    if len(prompt.encode("utf-8")) > MAX_CODEX_PROMPT_BYTES:
+        raise _codex_error("input_size")
     with tempfile.TemporaryDirectory(prefix="amazon-sales-preview-") as temp:
         schema_path = Path(temp) / "schema.json"
         output_path = Path(temp) / "result.json"
@@ -371,27 +578,24 @@ def run_codex_preview(params: dict, trusted_data: dict) -> dict:
         ]
         try:
             process = subprocess.run(
-                cmd, input=make_prompt(params, trusted_data), cwd=temp, capture_output=True,
+                cmd, input=prompt, cwd=temp, capture_output=True,
                 text=True, encoding="utf-8", errors="replace", timeout=RUN_TIMEOUT_SECONDS,
                 check=False,
             )
         except subprocess.TimeoutExpired:
-            raise AgentPreviewError("Codex 执行超时，尚未生成预览。请重试或缩小查询范围。") from None
+            raise _codex_error("service") from None
         except OSError:
-            raise AgentPreviewError("Codex 命令无法启动，请检查本机 Codex 可执行文件。") from None
+            raise _codex_error("runtime") from None
         if process.returncode != 0:
-            if process.returncode == 2:
-                raise AgentPreviewError("Codex 命令参数错误（退出码 2）。请确认 Agent 已更新到最新版。")
-            raise AgentPreviewError(
-                f"Codex 运行失败（退出码 {process.returncode}），请检查 Codex 登录和 MCP 状态。"
-            )
+            category = classify_codex_failure(process.returncode, process.stdout, process.stderr)
+            raise _codex_error(category, process.returncode)
         if not output_path.is_file():
-            raise AgentPreviewError("Codex 已退出，但未生成计划预览文件。")
+            raise _codex_error("output_format")
         try:
             result = json.loads(output_path.read_text(encoding="utf-8"))
-            return validate_generated_preview(result, params, trusted_data)
+            return validate_generated_preview(result, params, analysis_snapshot)
         except (ValueError, TypeError, KeyError, UnicodeError):
-            raise AgentPreviewError("Codex 返回的销售计划格式未通过校验。") from None
+            raise _codex_error("output_format") from None
 
 
 class AgentHandler(BaseHTTPRequestHandler):

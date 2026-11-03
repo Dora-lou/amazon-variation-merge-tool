@@ -44,6 +44,8 @@ lark-cli --version
 - 配对码仅保存在当前浏览器标签页会话存储中，关闭后可清除；每次重启 Agent 会更换配对码。
 - 后台不保存业务数据、Token、MCP 密钥或执行日志；只在内存保留最近几次预览任务。重启本地服务后记录消失。
 - `codex exec` 保留 `--sandbox read-only`、`--ask-for-approval never` 和 `--ephemeral`，并用本次进程级 `--ignore-user-config` 隔离全局 MCP 配置（不会修改本机配置；Codex 登录仍复用）。它只分析已经采集并校验的 JSON，不接触 MCP 或 lark-cli。此版本未提供飞书写入的 HTTP 入口。
+- 每次分析前会以独立进程检查 CLI 版本、`exec --help` 中的必需参数和 `codex login status`。网页只显示固定诊断码：`CODEX_CLI_ARGUMENTS`、`CODEX_AUTHENTICATION`、`CODEX_INPUT_SIZE`、`CODEX_MODEL_CALL`、`CODEX_OUTPUT_SCHEMA`、`CODEX_OUTPUT_FORMAT`、`CODEX_SERVICE` 或 `CODEX_RUNTIME`；原始 stdout/stderr、请求头和凭证不会返回网页。
+- 宿主采集层可以暂存较大的完整响应，但传给模型前会生成有体积上限的分析副本。发生截断时来源状态强制改为 `partial`，页面提示人工核对，任何被省略内容都不能当作 0；其他产品的 `reference` 表格数值在送模前直接移除。
 - 不要在公共 GitHub 仓库上传公司 ASIN、库存、利润、客户数据、私钥、OAuth 凭证或 Codex 的个人登录文件。离职后只迁移有权保留的通用代码与个人资料；公司数据连接需依法停用。
 
 ## 迁移到另一台电脑
