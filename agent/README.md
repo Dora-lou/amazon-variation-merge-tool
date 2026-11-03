@@ -7,7 +7,7 @@
 ## Windows 首次安装
 
 1. 从你控制的 GitHub 仓库下载完整项目代码（`git clone` 或 `Code → Download ZIP`）。不要只保存网页文件。
-2. 安装 Python 3.10+、Codex CLI 和飞书 `lark-cli`，确认在当前 Windows 用户中能运行 `codex`、`lark-cli`，并登录 Codex、飞书 `user` 身份。
+2. 安装 Python 3.10+ 和飞书 `lark-cli`，在当前 Windows 用户中登录 Codex 与飞书 `user` 身份。**支持自动发现 Windows Codex 桌面版** `%LOCALAPPDATA%\OpenAI\Codex\bin\*\codex.exe`，无需将带版本号的目录添加到 PATH；也支持独立安装的 Codex CLI。
 3. 在 Codex 中注册并验证 `yb-lingxing` MCP；确认自己的 `~/.codex/skills/feishu-amazon-sales-plan/SKILL.md` 可读取。首次迁移可执行 `powershell -ExecutionPolicy Bypass -File .\agent\install-skill.ps1` 安装项目中附带的通用 Skill；脚本发现同名 Skill 时不会覆盖，请先核对版本。
 4. 双击项目里的 `agent/start-agent.bat`。如果电脑没有安装 Python Launcher，也可以在项目根目录执行 `python agent/server.py`。
 5. 终端会显示一段随机**本机配对码**，只粘贴到你自己打开的 [销售计划 Agent 网页](https://dora-lou.github.io/amazon-variation-merge-tool/agent.html) 中，点击「连接 Agent」。
@@ -16,9 +16,10 @@
 在 Windows PowerShell 验证环境（不要粘贴任何令牌或密钥）：
 
 ```powershell
-codex --version
-lark-cli --version
 python --version
+lark-cli --version
+# Codex 桌面版不在 PATH 时，启动 Agent 后用网页连接状态确认发现成功。
+# 可选：使用 CODEX_BIN 环境变量指定 Codex CLI 可执行文件的完整路径。
 ```
 
 如果浏览器提示「允许访问本地网络」，需要允许自己打开的受信任网站访问 `127.0.0.1`；如果被企业设备策略禁止，需要在获授权的个人设备上测试。不要为了绕过限制将 Agent 绑定到 `0.0.0.0` 或开放公网端口。
