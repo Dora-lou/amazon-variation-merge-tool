@@ -178,6 +178,10 @@ def check_ready() -> dict:
     }
 
 
+class AgentPreviewError(RuntimeError):
+    """Only controlled, non-sensitive messages are displayed to the browser."""
+
+
 class AgentState:
     def __init__(self):
         self.pair_key = secrets.token_urlsafe(24)
@@ -214,11 +218,13 @@ class AgentState:
             with self.lock:
                 self.jobs[job_id]["status"] = "completed"
                 self.jobs[job_id]["result"] = result
-        except Exception:
-            # Do NOT leak stdout/stderr or exception strings; these could contain credentials.
+        except Exception as exc:
+            # Never expose subprocess stdout/stderr or arbitrary exceptions to the browser.
+            safe_error = (str(exc) if isinstance(exc, AgentPreviewError)
+                          else "Agent 发生未分类错误，请检查本地环境或联系维护者。")
             with self.lock:
                 self.jobs[job_id]["status"] = "failed"
-                self.jobs[job_id]["error"] = "Agent 执行失败，请在本机检查 Codex、MCP 和飞书授权状态。"
+                self.jobs[job_id]["error"] = safe_error
         finally:
             with self.lock:
                 if self.active_job_id == job_id:
@@ -271,27 +277,44 @@ def validate_generated_preview(result: dict, params: dict) -> dict:
 def run_codex_preview(params: dict) -> dict:
     codex_bin = resolve_codex_bin()
     if not codex_bin:
-        raise RuntimeError("Codex CLI not found")
+        raise AgentPreviewError("未找到 Codex CLI，请确认桌面版 Codex 已安装。")
     with tempfile.TemporaryDirectory(prefix="amazon-sales-preview-") as temp:
         schema_path = Path(temp) / "schema.json"
         output_path = Path(temp) / "result.json"
         schema_path.write_text(json.dumps(PREVIEW_SCHEMA, ensure_ascii=False), encoding="utf-8")
         # --sandbox read-only applies to local shell/file operations. MCP tool write scopes
         # must ALSO be restricted by their own permission configuration in production.
+        # --ask-for-approval is a GLOBAL Codex flag and must precede "exec".
+        # Keep local commands read-only; never reveal raw subprocess output.
         cmd = [
-            codex_bin, "exec", "--skip-git-repo-check", "--sandbox", "read-only",
-            "--ask-for-approval", "never", "--output-schema", str(schema_path),
+            codex_bin, "--ask-for-approval", "never", "exec",
+            "--skip-git-repo-check", "--sandbox", "read-only",
+            "--output-schema", str(schema_path),
             "--output-last-message", str(output_path), "-",
         ]
-        process = subprocess.run(
-            cmd, input=make_prompt(params), cwd=temp, capture_output=True,
-            text=True, encoding="utf-8", errors="replace", timeout=RUN_TIMEOUT_SECONDS,
-            check=False,
-        )
-        if process.returncode != 0 or not output_path.is_file():
-            raise RuntimeError("Codex did not generate a preview")
-        result = json.loads(output_path.read_text(encoding="utf-8"))
-        return validate_generated_preview(result, params)
+        try:
+            process = subprocess.run(
+                cmd, input=make_prompt(params), cwd=temp, capture_output=True,
+                text=True, encoding="utf-8", errors="replace", timeout=RUN_TIMEOUT_SECONDS,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            raise AgentPreviewError("Codex 执行超时，尚未生成预览。请重试或缩小查询范围。") from None
+        except OSError:
+            raise AgentPreviewError("Codex 命令无法启动，请检查本机 Codex 可执行文件。") from None
+        if process.returncode != 0:
+            if process.returncode == 2:
+                raise AgentPreviewError("Codex 命令参数错误（退出码 2）。请确认 Agent 已更新到最新版。")
+            raise AgentPreviewError(
+                f"Codex 运行失败（退出码 {process.returncode}），请检查 Codex 登录和 MCP 状态。"
+            )
+        if not output_path.is_file():
+            raise AgentPreviewError("Codex 已退出，但未生成计划预览文件。")
+        try:
+            result = json.loads(output_path.read_text(encoding="utf-8"))
+            return validate_generated_preview(result, params)
+        except (ValueError, TypeError, KeyError, UnicodeError):
+            raise AgentPreviewError("Codex 返回的销售计划格式未通过校验。") from None
 
 
 class AgentHandler(BaseHTTPRequestHandler):
