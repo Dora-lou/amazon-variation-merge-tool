@@ -79,6 +79,19 @@ class ValidationTests(unittest.TestCase):
         self.assertTrue(all(row['target_units'] is None for row in checked['monthly_plan']))
         self.assertEqual(checked['data_sources'],[])
 
+    def test_query_failures_and_reported_zero_are_rendered_differently(self):
+        trusted={**TRUSTED_DATA,'sources':{
+            'lingxing':{'status':'partial','error':'','queries':{
+                'inventory_snapshot':{'status':'field_missing','field_quality':{
+                    'fba_available':'reported_zero','awd_available':'field_missing'}}},
+                'family_scope':{'mapping_status':'needs_review'},'tools':[]},
+            'feishu':{'status':'missing','error':'未找到','documents':[]}},'sku_map':[],'warnings':[]}
+        checked=server.validate_generated_preview({**SAMPLE_RESULT,'warnings':[],'sku_notes':[]},EXAMPLE,trusted)
+        joined='\n'.join(checked['warnings'])
+        self.assertIn('已有记录明确返回 0',joined)
+        self.assertIn('未返回该字段',joined)
+        self.assertIn('不得按 0 处理',joined)
+
     def test_resolve_desktop_codex_without_path(self):
         with tempfile.TemporaryDirectory() as root:
             base = Path(root) / 'OpenAI' / 'Codex' / 'bin'

@@ -8,9 +8,14 @@
 
 - 领星固定走 `help → search → action`。只有 help 与 search 同时返回 `toolType=read`、参数通过 Schema 校验且工具 ID 在代码白名单内时才允许 action。目前白名单为：`erp_listing`、`get_fba_stock_list`、`query_fba_valid_list`、`query_product_performance_asin_lists`。
 - 飞书只允许 `auth status`、`wiki +space-list`、`wiki +node-list`、`sheets +workbook-info`、`sheets +table-get`，并对每条命令的 flags 再做固定白名单检查。命令通过参数数组执行，不经过 shell，也不接受网页或模型提供的命令文本。
+- `+table-get` 遇到重复表头的 validation/exit 2 时，自动使用只读 `--no-header` 位置列模式重试并标记待核对；单个表格失败不会再抹掉其他已成功读取的表格。CLI 固定在用户主目录运行，并关闭更新/Skill 通知，确保 stdout 只用于 JSON。
+- 飞书标题能匹配当前 ASIN/产品名时标记为 `target`；只命中其他“销售计划/库存/利润”表时标记为 `reference`，仅可参考结构，禁止把其他产品数值用于当前计划。
 - 利润数据只从已授权的现有飞书销售计划/利润表读取；当前不会用一个缺少产品筛选条件的领星利润接口批量拉取数据。
 - 采集快照只保存在当前任务内存中。MCP HTTP 头、飞书授权信息、Cookie、API Key 和资源 token 不进入模型提示、浏览器响应或日志。
 - 任一来源缺失或失败时，页面显示来源状态；两边均不可用时会把计划标记为 blocked，并清空库存和月目标，禁止模型补数。
+- 领星先按请求 ASIN 查询 Listing，再按识别到的父 ASIN（或把请求值作为父 ASIN候选）分页展开全部子体；库存和自然月产品表现随后按完整父体范围查询。每个查询分别标记 `ok`、`empty_response`、`interface_failed`、`field_missing` 或 `possibly_truncated`。
+- 数字 `0` 只有在已有记录明确返回对应字段时才标记 `reported_zero`；空响应、接口错误和字段缺失绝不转换成 0。库存仍按销售计划 Skill 逐 SKU 核对 FBA/AWD/在途字段，字段不全或批次无法去重时保持待核对。
+- 历史销量使用产品表现接口的自然月维度，并机械检查是否覆盖每个规划月份对应的去年同期月份；缺任一自然月会标记 `period_incomplete`，不会用 Listing 的近 7/14/30 天字段替代。
 
 ## Windows 首次安装
 
