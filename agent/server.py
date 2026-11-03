@@ -287,7 +287,7 @@ def run_codex_preview(params: dict) -> dict:
         # --ask-for-approval is a GLOBAL Codex flag and must precede "exec".
         # Keep local commands read-only; never reveal raw subprocess output.
         cmd = [
-            codex_bin, "--ask-for-approval", "never", "exec",
+            codex_bin, "--ask-for-approval", "never", "exec", "--ephemeral",
             "--skip-git-repo-check", "--sandbox", "read-only",
             "--output-schema", str(schema_path),
             "--output-last-message", str(output_path), "-",
