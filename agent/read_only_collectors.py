@@ -18,6 +18,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sales_data_mapping import (
+    FIELD_ALIASES, IDENTITY_ALIASES, REQUIRED_CANONICAL_FIELDS,
+    build_scope_from_mapping, canonical_field_quality, canonicalize_records, mapping_conflicts,
+)
+
 COLLECTION_TIMEOUT = 90
 MAX_LARK_OUTPUT = 2_000_000
 MAX_MCP_OUTPUT = 3_000_000
@@ -30,6 +35,7 @@ LINGXING_READ_ALLOWLIST = {
     "query_fba_valid_list": "replenishment_inventory",
     "query_product_performance_asin_lists": "historical_sales",
 }
+MAX_LARK_SHEET_CANDIDATES = 12
 
 LARK_READ_COMMANDS = frozenset({
     ("auth", "status"),
@@ -293,16 +299,20 @@ def _lingxing_params(tool_id: str, request: dict, scope: dict | None = None) -> 
     if tool_id == "query_product_performance_asin_lists":
         start_year, start_month = map(int, request["start_month"].split("-"))
         today = datetime.now().date()
-        historical_year = min(start_year - 2, today.year - 2)
-        historical_month = start_month if historical_year == start_year - 2 else today.month
-        end_date = today.isoformat()
+        # Include the full prior-year planning window and up to two years of trend.
+        prior_start_index = start_year * 12 + start_month - 1 - 12
+        trend_start_index = today.year * 12 + today.month - 1 - 24
+        query_start_index = min(prior_start_index, trend_start_index)
+        query_start = f"{query_start_index // 12:04d}-{query_start_index % 12 + 1:02d}-01"
         return {
-            "offset": 0, "length": 500, "start_date": f"{historical_year:04d}-{historical_month:02d}-01",
-            "end_date": end_date, "date_type": "purchase", "date_view_type": "month",
+            "offset": 0, "length": 500, "start_date": query_start,
+            "end_date": today.isoformat(), "date_type": "purchase", "date_view_type": "month",
             "date_view_order_type": 1, "summary_field": "sku", "summary_field_level1": "sku",
             "search_field": "parent_asin" if scope.get("parent_asin") else "asin",
             "search_value": [scope.get("parent_asin") or asin], "turn_on_summary": 1,
-            "query_order_profit": True,
+            # Profit is sourced separately from the target Feishu plan. Including it here
+            # inflates the response and is not needed for natural-month unit history.
+            "query_order_profit": False,
         }
     if tool_id == "query_fba_valid_list":
         if scope.get("parent_asin"):
@@ -314,44 +324,8 @@ def _lingxing_params(tool_id: str, request: dict, scope: dict | None = None) -> 
     raise CollectionError("领星工具不在本地只读白名单")
 
 
-QUALITY_FIELD_GROUPS = {
-    "listing_and_sku_mapping": {
-        "asin": ("asin", "ASIN"), "parent_asin": ("parent_asin", "parentAsin"),
-        "sku": ("sku", "local_sku", "localSku"), "msku": ("msku", "seller_sku", "sellerSku"),
-        "fnsku": ("fnsku", "FNSKU"),
-    },
-    "inventory_snapshot": {
-        "fba_available": ("afn_fulfillable_quantity", "fba_available_quantity", "available_quantity"),
-        "fba_transfer_pending": ("pending_transfer_quantity", "transfer_quantity",
-                                 "reserved_fc_transfers", "afn_reserved_fc_transfers"),
-        "fba_inbound": ("inbound_quantity", "inbound_working_quantity", "inbound_shipped_quantity",
-                        "inbound_receiving_quantity", "afn_inbound_working_quantity",
-                        "afn_inbound_shipped_quantity", "afn_inbound_receiving_quantity"),
-        "actual_transit": ("real_transit_quantity", "actual_transit_quantity"),
-        "planned_inbound": ("stock_up_num", "planned_inbound_quantity"),
-        "awd_available": ("awd_available_quantity", "awd_available", "awd_available_inventory",
-                          "awd_usable_quantity"),
-        "awd_standard_transit": ("awd_standard_transit_quantity", "awd_standard_transit",
-                                 "awd_inbound_quantity", "awd_to_fba_quantity"),
-    },
-    "replenishment_inventory": {
-        "actual_transit": ("real_transit_quantity", "actualTransitQuantity"),
-        "planned_inbound": ("stock_up_num", "stockUpNum"),
-        "available": ("available_quantity", "availableQuantity", "afn_fulfillable_quantity"),
-    },
-    "historical_sales": {
-        "period": ("date", "month", "date_time", "dateTime"),
-        "sales_units": ("volume", "sales_quantity", "salesQuantity", "totalSalesQuantity"),
-        "sales_amount": ("sales_amount", "salesAmount", "totalSalesAmount"),
-    },
-}
-REQUIRED_QUALITY_FIELDS = {
-    "listing_and_sku_mapping": {"asin", "parent_asin", "sku"},
-    "inventory_snapshot": {"fba_available", "fba_transfer_pending", "fba_inbound",
-                           "awd_available", "awd_standard_transit"},
-    "replenishment_inventory": {"actual_transit", "planned_inbound"},
-    "historical_sales": {"period", "sales_units"},
-}
+QUALITY_FIELD_GROUPS = FIELD_ALIASES
+REQUIRED_QUALITY_FIELDS = REQUIRED_CANONICAL_FIELDS
 
 
 def _business_records(payload: Any) -> list[dict]:
@@ -400,9 +374,15 @@ def _query_summary(payload: Any, purpose: str) -> dict:
     rows = _business_records(payload)
     if not rows:
         return {"status": "empty_response", "record_count": 0, "field_quality": {}}
-    quality = _field_quality(rows, QUALITY_FIELD_GROUPS.get(purpose, {}))
+    canonical, _ = canonicalize_records(payload, purpose)
+    quality = canonical_field_quality(canonical, purpose)
     required = REQUIRED_QUALITY_FIELDS.get(purpose, set())
-    status = "field_missing" if any(quality.get(name) == "field_missing" for name in required) else "ok"
+    missing_required = any(quality.get(name) == "field_missing" for name in required)
+    if purpose == "inventory_snapshot":
+        inbound = ("fba_inbound_total", "fba_inbound_working", "fba_inbound_shipped",
+                   "fba_inbound_receiving")
+        missing_required = missing_required or all(quality.get(name) == "field_missing" for name in inbound)
+    status = "field_missing" if missing_required else "ok"
     return {"status": status, "record_count": len(rows), "field_quality": quality}
 
 
@@ -416,6 +396,13 @@ def _values(payload: Any, aliases: tuple[str, ...]) -> set[str]:
     return values
 
 
+def _observed_fields(payload: Any) -> list[str]:
+    """Return field names only, never values, for safe mapping diagnostics."""
+    fields = {str(key) for item in _walk(payload) for key in item
+              if not any(part in str(key).casefold() for part in SENSITIVE_KEY_PARTS)}
+    return sorted(fields)[:200]
+
+
 def _historical_coverage(payload: Any, request: dict) -> dict:
     start_year, start_month = map(int, request["start_month"].split("-"))
     end_year, end_month = map(int, request["end_month"].split("-"))
@@ -426,7 +413,7 @@ def _historical_coverage(payload: Any, request: dict) -> dict:
         required.append(f"{prior // 12:04d}-{prior % 12 + 1:02d}")
     observed = set()
     for item in _walk(payload):
-        for key in QUALITY_FIELD_GROUPS["historical_sales"]["period"]:
+        for key in FIELD_ALIASES["historical_sales"]["period"]:
             value = str(item.get(key) or "")
             match = re.search(r"20\d{2}-(?:0[1-9]|1[0-2])", value)
             if match:
@@ -442,7 +429,7 @@ def _historical_coverage(payload: Any, request: dict) -> dict:
 
 def collect_lingxing(request: dict, codex_bin: str) -> dict:
     source = {"status": "error", "collected_at": utc_now(), "records": {}, "tools": [],
-              "queries": {}, "family_scope": {}, "error": ""}
+              "queries": {}, "family_scope": {}, "field_mapping_version": "2.0", "error": ""}
     try:
         client = StreamableHttpMcpClient.from_codex_config(codex_bin)
         client.initialize()
@@ -566,43 +553,83 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
             # Do not assert that the requested ASIN is a parent when expansion returned no rows.
             if not parents:
                 parent_asin = None
-        listing_records = {"requested_asin": requested_listing}
-        if family_listing is not None:
-            listing_records["parent_family"] = family_listing
-        source["records"]["listing_and_sku_mapping"] = listing_records
-        asins = _values(listing_records, ("asin", "ASIN"))
-        asins.add(request["asin"])
+        mapping_rows, mapping_rejected = canonicalize_records(
+            requested_listing, "listing_and_sku_mapping",
+            {"parent_asin": parent_asin, "asins": [request["asin"]]},
+        )
+        # A parent expansion is allowed to add child ASINs even though they were not in
+        # the initial request. Filter it by exact parent separately, then merge.
+        family_rows, family_rejected = canonicalize_records(
+            family_listing, "listing_and_sku_mapping", {"parent_asin": parent_asin}
+        ) if family_listing is not None else ([], 0)
+        fingerprints = {(row.get("asin"), row.get("sku"), row.get("msku"), row.get("fnsku"))
+                        for row in mapping_rows}
+        for row in family_rows:
+            fingerprint = (row.get("asin"), row.get("sku"), row.get("msku"), row.get("fnsku"))
+            if fingerprint not in fingerprints:
+                mapping_rows.append(row)
+                fingerprints.add(fingerprint)
+        source["records"]["listing_and_sku_mapping"] = mapping_rows
+        scope = build_scope_from_mapping(mapping_rows, request["asin"], parent_asin)
+        conflicts = mapping_conflicts(mapping_rows)
+        identifiers_complete = bool(mapping_rows) and all(
+            row.get("asin") and any(row.get(key) for key in ("sku", "msku", "fnsku"))
+            for row in mapping_rows
+        )
         source["family_scope"] = {
             "parent_asin": parent_asin,
-            "child_asins": sorted(asins),
+            "child_asins": scope["asins"], "skus": scope["skus"],
+            "mskus": scope["mskus"], "fnskus": scope["fnskus"],
             "mapping_status": "complete_candidate" if parent_asin and family_listing and
-            source["queries"].get("listing_parent_family", {}).get("pagination_complete") is True
-            else "needs_review",
+            source["queries"].get("listing_parent_family", {}).get("pagination_complete") is True and
+            identifiers_complete and not conflicts else "needs_review",
+            "mapping_conflicts": conflicts,
+            "out_of_scope_records": mapping_rejected + family_rejected,
         }
-        scope = {"parent_asin": parent_asin, "asins": sorted(asins)}
         for tool_id, purpose in LINGXING_READ_ALLOWLIST.items():
             if tool_id == "erp_listing":
                 continue
             payload = execute_paginated(tool_id, purpose, _lingxing_params(tool_id, request, scope), purpose)
             if payload is not None:
-                source["records"][purpose] = payload
+                canonical, rejected = canonicalize_records(payload, purpose, scope)
+                query = source["queries"][purpose]
+                query["raw_record_count"] = query.get("record_count", 0)
+                query["record_count"] = len(canonical)
+                query["out_of_scope_record_count"] = rejected
+                query["observed_fields"] = _observed_fields(payload)
+                query["field_quality"] = canonical_field_quality(canonical, purpose)
+                required = REQUIRED_QUALITY_FIELDS.get(purpose, set())
+                missing_required = any(query["field_quality"].get(field) == "field_missing"
+                                       for field in required)
+                if purpose == "inventory_snapshot":
+                    inbound = ("fba_inbound_total", "fba_inbound_working", "fba_inbound_shipped",
+                               "fba_inbound_receiving")
+                    missing_required = missing_required or all(
+                        query["field_quality"].get(field) == "field_missing" for field in inbound
+                    )
+                if not canonical:
+                    query["status"] = "out_of_scope_response" if query["raw_record_count"] else "empty_response"
+                elif missing_required:
+                    query["status"] = "field_missing"
+                source["records"][purpose] = canonical
                 if purpose == "historical_sales":
-                    coverage = _historical_coverage(payload, request)
-                    source["queries"][purpose]["coverage"] = coverage
-                    if coverage["status"] == "incomplete" and source["queries"][purpose]["status"] == "ok":
-                        source["queries"][purpose]["status"] = "period_incomplete"
+                    coverage = _historical_coverage(canonical, request)
+                    query["coverage"] = coverage
+                    if coverage["status"] == "incomplete" and query["status"] == "ok":
+                        query["status"] = "period_incomplete"
 
         query_states = [item.get("status") for key, item in source["queries"].items()
                         if not (key == "listing_requested_asin" and
                                 source["queries"].get("listing_parent_family", {}).get("status") == "ok")]
-        bad = {"interface_failed", "empty_response", "field_missing", "possibly_truncated",
+        bad = {"interface_failed", "empty_response", "out_of_scope_response", "field_missing", "possibly_truncated",
                "period_incomplete"}
-        source["status"] = "ok" if query_states and not any(state in bad for state in query_states) else (
+        mapping_needs_review = source["family_scope"].get("mapping_status") != "complete_candidate"
+        source["status"] = "ok" if query_states and not any(state in bad for state in query_states) and not mapping_needs_review else (
             "partial" if source["records"] else "error"
         )
-        failures = sum(state in bad for state in query_states)
+        failures = sum(state in bad for state in query_states) + int(mapping_needs_review)
         if failures:
-            source["error"] = f"{failures} 个领星只读查询存在失败、空响应或字段缺失，已保留逐项状态"
+            source["error"] = f"{failures} 个领星查询或父子体映射存在失败、空响应、越界或字段缺失，已保留逐项状态"
     except CollectionError as exc:
         source["error"] = str(exc)
         source["status"] = "partial" if source["records"] else "error"
@@ -695,6 +722,51 @@ def _node_matches(node: dict, request: dict) -> bool:
     return _node_match_type(node, request) is not None
 
 
+def _normalized_match_text(value: str) -> str:
+    return re.sub(r"[^0-9a-z\u4e00-\u9fff]+", "", value.casefold())
+
+
+def _table_match_basis(table: Any, request: dict) -> str | None:
+    """Match table content without treating another product's values as target data."""
+    asin = request["asin"].upper()
+    product = _normalized_match_text(str(request.get("product") or ""))
+    inspected = 0
+
+    def scalar_texts(value: Any):
+        nonlocal inspected
+        if inspected >= 20_000:
+            return
+        if isinstance(value, dict):
+            for child in value.values():
+                yield from scalar_texts(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from scalar_texts(child)
+        elif isinstance(value, (str, int, float)):
+            inspected += 1
+            yield str(value)
+
+    texts = list(scalar_texts(table))
+    if any(asin in re.findall(r"\b[A-Z0-9]{10}\b", text.upper()) for text in texts):
+        return "content_asin"
+    if len(product) >= 4 and any(product in _normalized_match_text(text) for text in texts):
+        return "content_product"
+    return None
+
+
+def _title_match_basis(title: str, request: dict) -> str | None:
+    if request["asin"].casefold() in title.casefold():
+        return "title_asin"
+    normalized_title = _normalized_match_text(title)
+    normalized_product = _normalized_match_text(str(request.get("product") or ""))
+    # A short product name is still safe here because the fixed "销售计划"
+    # boundary prevents a generic prefix (for example 加热垫) from matching
+    # a different variant title (for example 加热垫2.0销售计划).
+    if len(normalized_product) >= 2 and normalized_title.startswith(normalized_product + "销售计划"):
+        return "title_product_exact"
+    return None
+
+
 def collect_lark(request: dict, lark_bin: str) -> dict:
     source = {"status": "error", "collected_at": utc_now(), "knowledge_base": "",
               "documents": [], "document_errors": [], "warnings": [], "error": ""}
@@ -741,8 +813,12 @@ def collect_lark(request: dict, lark_bin: str) -> dict:
                             str(node.get("obj_type") or node.get("objType") or "").lower()
                             in ("sheet", "spreadsheet")]
         target_candidates = [node for node in sheet_candidates if node.get("_match_type") == "target"]
-        selected = (target_candidates or sheet_candidates)[:5]
-        source["target_match_found"] = bool(target_candidates)
+        selected = (target_candidates or sheet_candidates)[:MAX_LARK_SHEET_CANDIDATES]
+        source["directory_summary"] = {
+            "visited_node_count": len(visited),
+            "candidate_sheet_count": len(sheet_candidates),
+            "candidate_titles": [str(node.get("title") or "") for node in sheet_candidates],
+        }
         for index, node in enumerate(selected, start=1):
             obj_type = str(node.get("obj_type") or node.get("objType") or "").lower()
             if obj_type not in ("sheet", "spreadsheet"):
@@ -771,13 +847,22 @@ def collect_lark(request: dict, lark_bin: str) -> dict:
             except CollectionError as exc:
                 source["document_errors"].append({"candidate": index, "error": str(exc)})
                 continue
+            match_basis = (_title_match_basis(str(node.get("title", "")), request) or
+                           _table_match_basis(table, request))
+            match_type = "target" if match_basis else "reference"
             source["documents"].append({
                 # Resource locators are used in-memory for the read then discarded. They are
                 # not credentials, but omitting them also prevents accidental disclosure.
-                "title": str(node.get("title") or ""), "match_type": node.get("_match_type"),
+                "title": str(node.get("title") or ""), "match_type": match_type,
+                "match_basis": match_basis or "structure_reference",
                 "read_mode": read_mode,
-                "workbook": _redact_sensitive(workbook), "table": _redact_sensitive(table),
+                "workbook": _redact_sensitive(workbook),
+                "table": (_redact_sensitive(table) if match_type == "target" else
+                          {"omitted": True, "reason": "reference_values_not_for_target"}),
             })
+        target_documents = [doc for doc in source["documents"] if doc.get("match_type") == "target"]
+        source["target_match_found"] = bool(target_documents)
+        source["target_match_count"] = len(target_documents)
         if not source["documents"]:
             if source["document_errors"]:
                 source["status"] = "error"
@@ -788,9 +873,12 @@ def collect_lark(request: dict, lark_bin: str) -> dict:
         elif source["document_errors"]:
             source["status"] = "partial"
             source["error"] = f"已读取 {len(source['documents'])} 个表格，另有 {len(source['document_errors'])} 个读取失败"
-        elif not source["target_match_found"]:
+        elif len(target_documents) > 1:
             source["status"] = "partial"
-            source["error"] = "知识库可访问且参考表格可读取，但未找到标题匹配当前产品或 ASIN 的表格"
+            source["error"] = "知识库中有多个表格匹配当前产品或 ASIN，需要人工确认目标表"
+        elif not target_documents:
+            source["status"] = "partial"
+            source["error"] = "知识库可访问，但标题和表格内容均未找到当前产品或 ASIN；参考表未作为业务数据"
         else:
             source["status"] = "ok"
     except CollectionError as exc:
@@ -808,22 +896,26 @@ def _walk(value: Any):
             yield from _walk(child)
 
 
-def build_sku_map(sources: dict) -> list[dict]:
-    aliases = {
-        "asin": ("asin", "ASIN"), "parent_asin": ("parent_asin", "parentAsin", "父ASIN"),
-        "sku": ("sku", "SKU", "local_sku", "localSku"),
-        "msku": ("msku", "MSKU", "seller_sku", "sellerSku"),
-        "fnsku": ("fnsku", "FNSKU"),
-    }
+def build_sku_map(sources: dict, request: dict | None = None) -> list[dict]:
+    aliases = IDENTITY_ALIASES
+    family = sources.get("lingxing", {}).get("family_scope", {})
+    allowed_asins = {str(value).upper() for value in family.get("child_asins", []) if value}
+    if request and request.get("asin"):
+        allowed_asins.add(str(request["asin"]).upper())
     found: list[dict] = []
     for source_name, source in sources.items():
-        for row in _walk(source.get("records", source.get("documents", []))):
+        payload = source.get("records")
+        if payload is None:
+            payload = [doc for doc in source.get("documents", []) if doc.get("match_type") == "target"]
+        for row in _walk(payload):
             mapped = {}
             for canonical, keys in aliases.items():
                 for key in keys:
                     if row.get(key) not in (None, ""):
                         mapped[canonical] = str(row[key])
                         break
+            if mapped.get("asin") and allowed_asins and mapped["asin"].upper() not in allowed_asins:
+                continue
             if mapped.get("asin") and any(mapped.get(key) for key in ("sku", "msku", "fnsku")):
                 identifiers = {mapped.get(name) for name in ("sku", "msku", "fnsku") if mapped.get(name)}
                 entry = next((item for item in found if item.get("asin") == mapped["asin"] and
@@ -860,11 +952,11 @@ def collect_trusted_data(request: dict, codex_bin: str | None, lark_bin: str | N
     statuses = {source.get("status") for source in sources.values()}
     overall = "ok" if statuses == {"ok"} else "partial" if "ok" in statuses or "partial" in statuses else "blocked"
     return {
-        "schema_version": "1.1", "collected_at": utc_now(), "overall_status": overall,
+        "schema_version": "1.2", "collected_at": utc_now(), "overall_status": overall,
         "request_identity": {key: request[key] for key in ("asin", "site", "start_month", "end_month")},
-        "sources": sources, "sku_map": build_sku_map(sources), "warnings": warnings,
+        "sources": sources, "sku_map": build_sku_map(sources, request), "warnings": warnings,
         "rules": {
-            "inventory": "按SKU核对FBA可售、待调仓、入库中、实际在途、计划入库、AWD可用、AWD标发在途；批次不清不得相加；reported_zero仅表示接口明确返回0，field_missing/empty_response/interface_failed绝不能当0",
+            "inventory": "按SKU核对FBA可售、待调仓、入库中、实际在途、计划入库、AWD可用、AWD标发在途；批次不清不得相加；reported_zero仅表示接口明确返回0，field_missing/empty_response/out_of_scope_response/interface_failed绝不能当0",
             "allocation": "月度比例为输入、销量为输出；逐SKU不得超过已核对库存，不得跨SKU抵消",
             "profit": "成本缺失标待核算，不得把缺失成本或利润当作0",
         },

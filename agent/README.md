@@ -7,9 +7,10 @@
 ## 只读采集边界
 
 - 领星固定走 `help → search → action`。只有 help 与 search 同时返回 `toolType=read`、参数通过 Schema 校验且工具 ID 在代码白名单内时才允许 action。目前白名单为：`erp_listing`、`get_fba_stock_list`、`query_fba_valid_list`、`query_product_performance_asin_lists`。
+- 领星响应先按父/子 ASIN、SKU、MSKU、FNSKU 规范化并做目标范围过滤，再进入分析快照；接口返回的其他产品行会标记 `out_of_scope_response` 并排除。字段、接口和去重风险见 [FIELD_MAPPING.md](FIELD_MAPPING.md)。
 - 飞书只允许 `auth status`、`wiki +space-list`、`wiki +node-list`、`sheets +workbook-info`、`sheets +table-get`，并对每条命令的 flags 再做固定白名单检查。命令通过参数数组执行，不经过 shell，也不接受网页或模型提供的命令文本。
 - `+table-get` 遇到重复表头的 validation/exit 2 时，自动使用只读 `--no-header` 位置列模式重试并标记待核对；单个表格失败不会再抹掉其他已成功读取的表格。CLI 固定在用户主目录运行，并关闭更新/Skill 通知，确保 stdout 只用于 JSON。
-- 飞书标题能匹配当前 ASIN/产品名时标记为 `target`；只命中其他“销售计划/库存/利润”表时标记为 `reference`，仅可参考结构，禁止把其他产品数值用于当前计划。
+- 飞书标题或表格内容精确匹配当前 ASIN/产品名时才标记为 `target`；只命中其他“销售计划/库存/利润”表时标记为 `reference`，仅保留结构元数据，业务数值在采集层即移除。SKU 映射也只扫描 `target` 表，禁止把其他产品数值用于当前计划。
 - 利润数据只从已授权的现有飞书销售计划/利润表读取；当前不会用一个缺少产品筛选条件的领星利润接口批量拉取数据。
 - 采集快照只保存在当前任务内存中。MCP HTTP 头、飞书授权信息、Cookie、API Key 和资源 token 不进入模型提示、浏览器响应或日志。
 - 任一来源缺失或失败时，页面显示来源状态；两边均不可用时会把计划标记为 blocked，并清空库存和月目标，禁止模型补数。

@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import read_only_collectors as collectors
+import sales_data_mapping as mapping
 
 REQUEST = {
     "product": "Test Product", "asin": "B012345678", "site": "US",
@@ -83,7 +84,7 @@ class LingxingTests(unittest.TestCase):
                     size = 200 if offset == 0 else 1
                     return {"data":{"rows":[{
                         "asin":f"B{offset+i:09d}","parent_asin":"B099999999",
-                        "sku":f"SKU-{offset+i}","seller_sku":f"MSKU-{offset+i}"
+                        "sku":f"FAMILY-SKU-{offset+i}","seller_sku":f"FAMILY-MSKU-{offset+i}"
                     } for i in range(size)]}}
                 return super().call_tool(name, arguments)
         fake = PagingMcp()
@@ -145,6 +146,56 @@ class LingxingTests(unittest.TestCase):
                 {"offset":0,"delete":True},
             )
 
+    def test_history_query_is_monthly_sku_scoped_without_profit_payload(self):
+        params = collectors._lingxing_params(
+            "query_product_performance_asin_lists", REQUEST,
+            {"parent_asin":"B099999999", "asins":[REQUEST["asin"]]},
+        )
+        self.assertEqual(params["date_view_type"], "month")
+        self.assertEqual(params["summary_field"], "sku")
+        self.assertEqual(params["search_field"], "parent_asin")
+        self.assertFalse(params["query_order_profit"])
+
+    def test_out_of_scope_rows_are_not_exposed_as_target_data(self):
+        class OtherProductMcp(FakeMcp):
+            def call_tool(self, name, arguments):
+                if name == "action" and arguments["toolId"] == "get_fba_stock_list":
+                    self.calls.append((name, arguments))
+                    return {"data":{"rows":[{
+                        "asin":"B000000001", "sku":"OTHER-SKU", "afn_fulfillable_quantity":99,
+                        "afn_reserved_fc_transfers":5, "inbound_quantity":4,
+                        "awd_available_quantity":3, "awd_standard_transit_quantity":2,
+                    }]}}
+                return super().call_tool(name, arguments)
+        fake = OtherProductMcp()
+        with patch.object(collectors.StreamableHttpMcpClient, "from_codex_config", return_value=fake):
+            result = collectors.collect_lingxing(REQUEST, "codex")
+        self.assertEqual(result["queries"]["inventory_snapshot"]["status"], "out_of_scope_response")
+        self.assertEqual(result["records"]["inventory_snapshot"], [])
+
+    def test_numeric_string_zero_remains_reported_zero(self):
+        records, rejected = mapping.canonicalize_records({"rows":[{
+            "asin":REQUEST["asin"], "sku":"SKU-1", "afn_fulfillable_quantity":"0"
+        }]}, "inventory_snapshot", {"asins":[REQUEST["asin"]]})
+        self.assertEqual(rejected, 0)
+        self.assertEqual(records[0]["fba_available"], 0)
+        self.assertEqual(mapping.canonical_field_quality(records, "inventory_snapshot")["fba_available"],
+                         "reported_zero")
+
+    def test_matching_sku_cannot_override_wrong_asin(self):
+        records, rejected = mapping.canonicalize_records({"rows":[{
+            "asin":"B000000001", "sku":"SKU-1", "afn_fulfillable_quantity":99,
+        }]}, "inventory_snapshot", {"asins":[REQUEST["asin"]], "skus":["SKU-1"]})
+        self.assertEqual(records, [])
+        self.assertEqual(rejected, 1)
+
+    def test_identifier_conflict_requires_review(self):
+        conflicts = mapping.mapping_conflicts([
+            {"asin":"B000000001", "msku":"DUPLICATE"},
+            {"asin":"B000000002", "msku":"DUPLICATE"},
+        ])
+        self.assertEqual(conflicts, ["msku DUPLICATE 对应多个子 ASIN"])
+
 
 class LarkTests(unittest.TestCase):
     def test_duplicate_header_error_is_safely_classified(self):
@@ -171,6 +222,48 @@ class LarkTests(unittest.TestCase):
             self.assertEqual(collectors._run_lark("lark-cli", ["auth", "status", "--json", "--verify"]),
                              {"authenticated": True})
 
+    def test_table_content_matches_exact_target_asin(self):
+        table = {"sheets":[{"rows":[["ASIN", REQUEST["asin"]], ["SKU", "SKU-1"]]}]}
+        self.assertEqual(collectors._table_match_basis(table, REQUEST), "content_asin")
+        self.assertIsNone(collectors._table_match_basis(
+            {"rows":[["ASIN", "B000000001"], ["产品", "其他产品"]]}, REQUEST
+        ))
+        generic = {**REQUEST, "product":"加热垫"}
+        self.assertIsNone(collectors._title_match_basis("加热垫2.0销售计划-最新", generic))
+        self.assertEqual(collectors._title_match_basis("加热垫销售计划-最新", generic),
+                         "title_product_exact")
+
+    def test_collect_lark_promotes_content_match_and_omits_reference_values(self):
+        def fake_lark(_bin, args):
+            command = tuple(args[:2])
+            if command == ("auth", "status"):
+                return {"verified":True, "identity":"user"}
+            if command == ("wiki", "+space-list"):
+                return {"data":{"items":[{"name":"至拓-运营", "space_id":"space"}]}}
+            if command == ("wiki", "+node-list"):
+                return {"data":{"items":[
+                    {"node_token":"node1","obj_token":"target-sheet","obj_type":"sheet",
+                     "title":"历史销售计划"},
+                    {"node_token":"node2","obj_token":"reference-sheet","obj_type":"sheet",
+                     "title":"参考销售计划"},
+                ]}}
+            if command == ("sheets", "+workbook-info"):
+                return {"data":{"sheets":[{"title":"销售计划"}]}}
+            if command == ("sheets", "+table-get"):
+                token = args[args.index("--spreadsheet-token") + 1]
+                return ({"rows":[["ASIN", REQUEST["asin"]], ["MSKU", "TARGET-MSKU"]]}
+                        if token == "target-sheet" else
+                        {"rows":[["ASIN", "B000000001"], ["MSKU", "OTHER-MSKU"]]})
+            self.fail(f"unexpected lark command: {args}")
+        with patch.object(collectors, "_run_lark", side_effect=fake_lark):
+            result = collectors.collect_lark(REQUEST, "lark-cli")
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["target_match_count"], 1)
+        target = next(doc for doc in result["documents"] if doc["match_type"] == "target")
+        reference = next(doc for doc in result["documents"] if doc["match_type"] == "reference")
+        self.assertEqual(target["match_basis"], "content_asin")
+        self.assertTrue(reference["table"]["omitted"])
+
 
 class StructureTests(unittest.TestCase):
     def test_sensitive_keys_are_removed_before_analysis(self):
@@ -184,6 +277,20 @@ class StructureTests(unittest.TestCase):
         mapping = collectors.build_sku_map(sources)
         self.assertEqual(mapping[0]["msku"], "MSKU-1")
         self.assertEqual(mapping[0]["sources"], ["lingxing"])
+
+    def test_sku_map_excludes_reference_and_other_asins(self):
+        sources = {
+            "lingxing":{"family_scope":{"child_asins":[REQUEST["asin"]]},"records":{}},
+            "feishu":{"documents":[
+                {"match_type":"reference","table":{"asin":REQUEST["asin"],"sku":"BAD-REF"}},
+                {"match_type":"target","table":{"rows":[
+                    {"asin":REQUEST["asin"],"seller_sku":"TARGET-MSKU"},
+                    {"asin":"B000000001","seller_sku":"OTHER-MSKU"},
+                ]}},
+            ]},
+        }
+        result = collectors.build_sku_map(sources, REQUEST)
+        self.assertEqual([row["msku"] for row in result], ["TARGET-MSKU"])
 
     def test_simulation_never_calls_real_collectors(self):
         simulated = {"schema_version":"1.0","overall_status":"ok","sources":{},"sku_map":[]}
