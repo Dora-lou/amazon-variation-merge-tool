@@ -30,13 +30,28 @@ h1{font-size:33px;letter-spacing:-.04em;margin:6px 0} .hero p{max-width:720px;fo
 .footer{font-size:11px;color:#8b99a6;margin-top:28px}
 @media(max-width:850px){.topbar{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}}
 .input-section{border:1px solid #e0e8ed;border-radius:14px;padding:17px;margin-top:15px;background:#fff}.input-section.required-section{border-color:#d1e5d9;background:#fbfdfb}.input-section.optional-section{background:#fafbfd}.section-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:14px}.planner .section-top h5{font-size:14px;margin:0;color:#2a4556}.section-top small{font-size:11px;color:#8496a5}.required-section .section-top h5{color:#25724b}.field label{font-size:12px}.field label .req{color:#24845c;font-weight:800}.input-section .fields{gap:13px}.planner .actions{margin-top:16px}@media(max-width:600px){.fields{grid-template-columns:1fr}.field.full{grid-column:auto}.shell{padding:18px 13px 40px}nav{width:100%}nav a{flex:1;text-align:center;padding:9px 5px;font-size:11px}.hero{padding:26px 22px}h1{font-size:29px}}
+
+/* 统一主导航：独立横排，优先展示常用工具与 Skills */
+.topbar,.site-header,header:has(> nav){flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:17px!important;margin-bottom:26px!important}
+.topbar .brand,.site-header .brand,header:has(> nav) .brand{align-self:flex-start}
+nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important;width:100%!important;padding:7px!important;margin:0!important;background:#fff!important;border:1px solid #e0e8ed!important;border-radius:16px!important;box-shadow:0 5px 20px rgba(35,53,72,.045)!important}
+nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;padding:13px 8px!important;min-height:47px!important;border:0!important;border-radius:11px!important;font-size:13px!important;font-weight:750!important;white-space:nowrap!important;text-decoration:none!important;color:#526677!important}
+nav[aria-label="工具模块"] a:hover,nav[aria-label="工具导航"] a:hover{background:#f0f6f3!important;color:#28734d!important}
+nav[aria-label="工具模块"] a.active,nav[aria-label="工具导航"] a.active{background:#e2f1e8!important;color:#216a46!important}
+nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:focus-visible{outline:2px solid #398e63!important;outline-offset:2px!important}
+@media(max-width:650px){nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:flex!important;overflow-x:auto!important;gap:5px!important;scrollbar-width:thin}nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{flex:0 0 auto!important;padding:11px 13px!important;min-height:43px!important}}
+
 </style>
 </head>
 <body><main class="shell">
 <header class="topbar">
 <a class="brand" href="./index.html"><span class="mark">O</span><span><strong>亚马逊运营工具箱</strong><small>Amazon Operations Workspace</small></span></a>
-<nav aria-label="工具模块">
-<a href="./index.html">首页</a><a href="./variation-guide.html">知识库</a><a href="./tools.html">运营工具中心</a><a href="./listing.html?view=library">商品库</a><a href="./skills.html" class="active" aria-current="page">AI Skills</a>
+<nav class="module-nav" aria-label="工具模块">
+  <a href="./index.html">首页</a>
+  <a href="./tools.html" id="navTools">运营工具中心</a>
+  <a href="./skills.html" class="active" aria-current="page">AI Skills</a>
+  <a href="./variation-guide.html">知识库</a>
+  <a href="./listing.html?view=library" id="navLibrary">商品库</a>
 </nav></header>
 <section class="hero"><div class="eyebrow">YOUR CODEX SKILL LIBRARY</div><h1>AI Skills</h1><p>把自己开发的 Codex Skills 收集到这里。按任务找到 Skill、复制启动指令，再到 Codex 中使用。Skill 文件继续由 Codex 本地安装目录管理。</p></section>
 <div class="heading"><h2>我的 Skills</h2><p>已收录 1 个 · 后续可继续添加 Listing、选品等 Skill</p></div>
