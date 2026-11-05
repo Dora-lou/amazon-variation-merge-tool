@@ -116,6 +116,17 @@ td input{min-width:125px;padding:10px}
  .export-actions{align-items:stretch;flex-direction:column}
  #generate{width:100%}
 }
+
+/* 统一主导航：独立横排，优先展示常用工具与 Skills */
+.topbar,.site-header,header:has(> nav){flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:17px!important;margin-bottom:26px!important}
+.topbar .brand,.site-header .brand,header:has(> nav) .brand{align-self:flex-start}
+nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important;width:100%!important;padding:7px!important;margin:0!important;background:#fff!important;border:1px solid #e0e8ed!important;border-radius:16px!important;box-shadow:0 5px 20px rgba(35,53,72,.045)!important}
+nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;padding:13px 8px!important;min-height:47px!important;border:0!important;border-radius:11px!important;font-size:13px!important;font-weight:750!important;white-space:nowrap!important;text-decoration:none!important;color:#526677!important}
+nav[aria-label="工具模块"] a:hover,nav[aria-label="工具导航"] a:hover{background:#f0f6f3!important;color:#28734d!important}
+nav[aria-label="工具模块"] a.active,nav[aria-label="工具导航"] a.active{background:#e2f1e8!important;color:#216a46!important}
+nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:focus-visible{outline:2px solid #398e63!important;outline-offset:2px!important}
+@media(max-width:650px){nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:flex!important;overflow-x:auto!important;gap:5px!important;scrollbar-width:thin}nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{flex:0 0 auto!important;padding:11px 13px!important;min-height:43px!important}}
+
 </style>
 </head>
 <body>
@@ -129,11 +140,12 @@ td input{min-width:125px;padding:10px}
       </div>
     </div>
     <nav class="module-nav" aria-label="工具模块">
-      <a href="./index.html">首页</a>
-      <a href="./variation-guide.html">知识库</a>
-      <a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
-      <a href="./listing.html?view=library" id="navLibrary">商品库</a>
-    </nav>
+  <a href="./index.html">首页</a>
+  <a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
+  <a href="./skills.html">AI Skills</a>
+  <a href="./variation-guide.html">知识库</a>
+  <a href="./listing.html?view=library" id="navLibrary">商品库</a>
+</nav>
   </header>
 
   <div class="hero">
