@@ -72,25 +72,21 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 @media(max-width:650px){nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:flex!important;overflow-x:auto!important;gap:5px!important;scrollbar-width:thin}nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{flex:0 0 auto!important;padding:11px 13px!important;min-height:43px!important}}
 
 </style>
+<link rel="stylesheet" href="./workspace-shell.css"/>
 </head>
 <body>
 <main class="shell">
-<header class="topbar">
-  <a class="brand" href="./index.html" aria-label="亚马逊运营工具箱首页">
-    <span class="brand-mark">O</span><span><span class="brand-name">亚马逊运营工具箱</span><span class="brand-caption" style="display:block">Amazon Operations Workspace</span></span>
-  </a>
-  <nav class="module-nav" aria-label="工具模块">
-  <a href="./index.html" class="active" aria-current="page">首页</a>
-  <a href="./tools.html" id="navTools">运营工具中心</a>
-  <a href="./skills.html">AI Skills</a>
-  <a href="./variation-guide.html">知识库</a>
-  <a href="./listing.html?view=library" id="navLibrary">商品库</a>
-</nav>
-</header>
-<section class="hero" aria-labelledby="pageTitle">
-  <div class="hero-main">
+<header class="workspace-header"><a class="workspace-brand" href="./index.html" aria-label="亚马逊运营工具箱首页"><span class="workspace-logo" aria-hidden="true">O</span><span><span class="workspace-name">亚马逊运营工具箱</span><span class="workspace-sub">Amazon Operations Workspace</span></span></a><nav class="workspace-nav" aria-label="工具模块">
+<a href="./index.html" class="active" aria-current="page">首页</a>
+<a href="./tools.html" id="navTools">运营工具中心</a>
+<a href="./skills.html">AI Skills</a>
+<a href="./variation-guide.html">知识库</a>
+<a href="./listing.html?view=library" id="navLibrary">商品库</a>
+</nav></header>
+<section class="hero workspace-home-hero" aria-labelledby="pageTitle">
+  <div class="hero-main workspace-intro">
     <div class="eyebrow">AMAZON OPERATIONS WORKSPACE</div>
-    <h1 id="pageTitle">让运营操作更清晰，<br/>让重复工作更简单。</h1>
+    <h1 id="pageTitle">让运营工作更简单</h1>
     <p>把日常工具与自己开发的 AI Skills 放在最顺手的位置。需要做什么，就从这里开始。</p>
     <div class="hero-pill"><span></span>常用工具优先 · AI Skills 集中管理</div>
   </div>
