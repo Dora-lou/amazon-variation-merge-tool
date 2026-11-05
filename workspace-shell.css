@@ -28,3 +28,35 @@ nav.workspace-nav a:focus-visible{outline:2px solid #547eaf!important;outline-of
 .workspace-home-hero h1 br:after{content:" "}
 .workspace-body-nav-spacer{display:none}
 @media(max-width:700px){.shell{padding:16px 14px 38px!important}.workspace-header{gap:13px!important;margin-bottom:17px!important}nav.workspace-nav{display:flex!important;overflow-x:auto!important;gap:3px!important;scrollbar-width:thin}nav.workspace-nav a{flex:0 0 auto!important;min-height:41px!important;padding:9px 13px!important;font-size:12px!important}.workspace-intro,.hero.workspace-intro,.hero-main.workspace-intro{min-height:145px!important;padding:24px 22px!important;border-radius:16px!important}.workspace-intro h1,.workspace-intro #pageTitle{font-size:26px!important}}
+
+/* Premium dark-blue introduction cards: restrained typography and depth */
+.workspace-intro,.hero.workspace-intro,.hero-main.workspace-intro{
+ min-height:188px!important;
+ padding:34px 43px!important;
+ background:linear-gradient(113deg,#182d47 0%,#203f5f 49%,#305f83 100%)!important;
+ border:1px solid rgba(153,189,222,.19)!important;
+ border-radius:22px!important;
+ box-shadow:0 15px 34px rgba(23,51,80,.13),inset 0 1px rgba(255,255,255,.08)!important;
+}
+.workspace-intro:before{
+ right:-72px!important;top:-202px!important;width:520px!important;height:520px!important;
+ background:radial-gradient(circle at center,transparent 39%,rgba(182,210,241,.13) 39.1%,transparent 39.4%,transparent 52%,rgba(182,210,241,.075) 52.1%,transparent 52.4%,transparent 65%,rgba(182,210,241,.04) 65.1%,transparent 65.4%)!important;
+}
+.workspace-intro .eyebrow{
+ font-size:10px!important;letter-spacing:.19em!important;
+ font-weight:750!important;color:#bdd6ef!important;margin-bottom:10px!important;
+}
+.workspace-intro h1,.workspace-intro #pageTitle{
+ font-size:32px!important;letter-spacing:-.035em!important;
+ font-weight:760!important;line-height:1.25!important;
+}
+.workspace-intro p,.workspace-intro .hero-copy,.workspace-intro #pageDescription{
+ max-width:690px!important;font-size:13px!important;line-height:1.85!important;
+ font-weight:400!important;color:#d5e3f1!important;margin-top:12px!important;
+}
+.workspace-home-hero .hero-main.workspace-intro{margin-bottom:24px!important}
+@media(max-width:700px){
+ .workspace-intro,.hero.workspace-intro,.hero-main.workspace-intro{min-height:166px!important;padding:26px 24px!important}
+ .workspace-intro h1,.workspace-intro #pageTitle{font-size:27px!important}
+ .workspace-intro:before{right:-240px!important}
+}
