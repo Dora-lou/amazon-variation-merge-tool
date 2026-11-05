@@ -2,14 +2,14 @@
 
 在线工具：https://dora-lou.github.io/amazon-variation-merge-tool/
 
-目前四个模块：
+目前四个主要模块：
 
 - **知识库**：合并/拆分变体、FBA 发货 SOP 等。
 - **运营工具中心**：变体合并和 Listing 修改，生成 Excel 上传文件。
 - **商品库**：本浏览器保存 ASIN/MSKU、类目模板；支持 ZIP 备份与恢复。
-- **AI Agent（本地预览版）**：宿主侧固定只读采集层通过领星 MCP 与飞书 lark-cli 读取数据，再由本机 Codex CLI + 销售计划 Skill 分析结构化快照；目前**没有飞书写入接口**。
+- **AI Skills**：集中展示 Codex 技能，目前收录销售计划 Skill，提供启动指令及 Skill 文件链接。\n\n旧版 **AI Agent** 入口已从导航和首页移除，相关代码保留在仓库中供未来参考，不再作为日常推荐入口。
 
-## 首次使用销售计划 Agent
+## 旧版销售计划 Agent（保留代码，非推荐入口）
 
 1. 下载整个项目代码。在需要运行 Agent 的 Windows 电脑上安装 Python 3.10+、Codex CLI、飞书 CLI 并配置有权使用的领星 MCP。
 2. 确认安装 `feishu-amazon-sales-plan` Skill。仓库 `agent/skills/` 附带通用版本；如已有个人维护的同名 Skill，不要直接覆盖。
