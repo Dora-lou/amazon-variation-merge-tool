@@ -74,6 +74,70 @@ class FakeMcp:
 
 
 class LingxingTests(unittest.TestCase):
+    def test_tool_429_is_classified_and_retried_without_raw_response(self):
+        client = collectors.StreamableHttpMcpClient(
+            "https://example.invalid/mcp", {}, source_label="领星"
+        )
+        limited = {"result":{"isError":True,"content":[{
+            "type":"text", "text":'call failed, status: 429, response: {"traceId":"hidden"}'
+        }]}}
+        success = {"result":{"content":[{
+            "type":"text", "text":json.dumps({"data":{"tools":[]}})
+        }]}}
+        with patch.object(collectors, "MCP_RETRY_DELAYS", (0,)), \
+             patch.object(client, "_post", side_effect=[limited, success]) as post:
+            result = client.call_tool("help", {"limit":50,"offset":0})
+        self.assertEqual(result, {"data":{"tools":[]}})
+        self.assertEqual(post.call_count, 2)
+
+    def test_tool_error_exposes_only_stable_category_and_status(self):
+        result = {"content":[{
+            "type":"text", "text":'call failed, status: 429, response: {"traceId":"hidden"}'
+        }]}
+        error = collectors._classify_mcp_tool_error("help", result)
+        self.assertEqual(error.category, "rate_limited")
+        self.assertEqual(error.http_status, 429)
+        self.assertNotIn("hidden", str(error))
+
+    def test_business_failure_is_classified_without_message_content(self):
+        details = collectors._business_failure_details({
+            "success":False, "code":422, "msg":"contains sensitive business details"
+        })
+        self.assertEqual(details, {
+            "error_category":"validation", "response_status":422, "retryable":False
+        })
+
+    def test_approval_status_is_polled_without_approving(self):
+        class ApprovalClient:
+            def __init__(self): self.calls = []
+            def call_tool(self, name, arguments):
+                self.calls.append((name, arguments))
+                return ({"data":{"status":"pending"}} if len(self.calls) == 1 else
+                        {"data":{"status":"completed","rows":[{"sku":"S1"}]}})
+        client = ApprovalClient()
+        with patch.object(collectors, "MCP_APPROVAL_POLL_INTERVAL", 0), \
+             patch.object(collectors, "MCP_APPROVAL_POLL_ATTEMPTS", 2):
+            result = collectors._resolve_approval(client, {"data":{"approval_ref":"safe-ref"}})
+        self.assertEqual(result["data"]["rows"][0]["sku"], "S1")
+        self.assertEqual([name for name, _ in client.calls], ["approval_status", "approval_status"])
+        self.assertTrue(all(set(args) == {"approval_ref"} for _, args in client.calls))
+
+    def test_common_metadata_rate_limit_stops_further_help_calls(self):
+        class LimitedMcp:
+            def __init__(self): self.calls = []
+            def initialize(self): pass
+            def call_tool(self, name, arguments):
+                self.calls.append((name, arguments))
+                raise collectors.McpCallError(name, "rate_limited", 429, retryable=True)
+        fake = LimitedMcp()
+        with patch.object(collectors.StreamableHttpMcpClient, "from_codex_config", return_value=fake):
+            result = collectors.collect_lingxing(REQUEST, "codex")
+        self.assertEqual(len(fake.calls), 1)
+        for key in ("listing_requested_asin", "inventory_snapshot",
+                    "replenishment_inventory", "historical_sales", "recent_sales"):
+            self.assertEqual(result["queries"][key]["error_category"], "rate_limited")
+            self.assertEqual(result["queries"][key]["response_status"], 429)
+
     def test_empty_sse_is_controlled_collection_error(self):
         client = collectors.StreamableHttpMcpClient(
             "https://example.invalid/mcp", {}, source_label="领星"

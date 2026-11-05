@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -28,6 +29,10 @@ from sales_plan_engine import build_plan_evidence
 COLLECTION_TIMEOUT = 90
 MAX_LARK_OUTPUT = 2_000_000
 MAX_MCP_OUTPUT = 3_000_000
+MCP_MIN_REQUEST_INTERVAL = 1.25
+MCP_RETRY_DELAYS = (3.0, 8.0)
+MCP_APPROVAL_POLL_INTERVAL = 2.0
+MCP_APPROVAL_POLL_ATTEMPTS = 15
 DEFAULT_KNOWLEDGE_BASE = "至拓-运营"
 
 # Exact IDs only. A matching name or description is never sufficient.
@@ -67,6 +72,31 @@ def utc_now() -> str:
 
 class CollectionError(RuntimeError):
     """A controlled error that is safe to show without subprocess output."""
+
+
+class McpCallError(CollectionError):
+    """Sanitized MCP transport/tool failure with a stable diagnostic category."""
+
+    def __init__(self, operation: str, category: str, http_status: int | None = None,
+                 retryable: bool = False):
+        self.operation = operation
+        self.category = category
+        self.http_status = http_status
+        self.retryable = retryable
+        labels = {
+            "rate_limited": "认证请求频率受限",
+            "authentication": "认证失败",
+            "authorization": "权限不足",
+            "validation": "请求参数校验失败",
+            "upstream": "上游服务异常",
+            "timeout": "上游服务超时",
+            "tool_error": "工具返回错误",
+            "rpc_error": "JSON-RPC 返回错误",
+            "approval_pending": "审批或服务端执行未完成",
+            "approval_rejected": "审批被拒绝或服务端执行失败",
+        }
+        status = f"，HTTP {http_status}" if http_status else ""
+        super().__init__(f"领星 MCP {operation} 失败（{labels.get(category, labels['tool_error'])}{status}）")
 
 
 class LarkCommandError(CollectionError):
@@ -171,6 +201,7 @@ class StreamableHttpMcpClient:
         self.source_label = source_label
         self.session_id: str | None = None
         self.request_id = 0
+        self.last_request_at = 0.0
 
     @classmethod
     def from_codex_config(cls, codex_bin: str, server_name: str = "yb-lingxing",
@@ -222,7 +253,13 @@ class StreamableHttpMcpClient:
             return None
         return _json_from_text(text)
 
-    def _post(self, payload: dict) -> Any:
+    def _wait_for_request_slot(self) -> None:
+        remaining = MCP_MIN_REQUEST_INTERVAL - (time.monotonic() - self.last_request_at)
+        if remaining > 0:
+            time.sleep(remaining)
+
+    def _post_once(self, payload: dict) -> Any:
+        self._wait_for_request_slot()
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
@@ -235,15 +272,37 @@ class StreamableHttpMcpClient:
         )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                self.last_request_at = time.monotonic()
                 session = response.headers.get("Mcp-Session-Id")
                 if session:
                     self.session_id = session
-                return self._decode_response(response.headers.get("Content-Type", ""), response.read())
+                body = response.read(MAX_MCP_OUTPUT + 1)
+                return self._decode_response(response.headers.get("Content-Type", ""), body)
         except urllib.error.HTTPError as exc:
+            self.last_request_at = time.monotonic()
             # Never include response bodies or request headers: either may contain secrets.
-            raise CollectionError(f"{self.source_label} MCP HTTP 请求失败（状态码 {exc.code}）") from None
+            category = (
+                "rate_limited" if exc.code == 429 else
+                "authentication" if exc.code == 401 else
+                "authorization" if exc.code == 403 else
+                "validation" if exc.code in (400, 404, 422) else
+                "upstream" if exc.code >= 500 else "tool_error"
+            )
+            raise McpCallError("HTTP", category, exc.code,
+                               retryable=exc.code == 429 or exc.code >= 500) from None
         except (urllib.error.URLError, TimeoutError, UnicodeError, OSError):
-            raise CollectionError(f"{self.source_label} MCP 网络连接失败或响应无法解析") from None
+            self.last_request_at = time.monotonic()
+            raise McpCallError("HTTP", "timeout", retryable=True) from None
+
+    def _post(self, payload: dict) -> Any:
+        for attempt in range(len(MCP_RETRY_DELAYS) + 1):
+            try:
+                return self._post_once(payload)
+            except McpCallError as exc:
+                if not exc.retryable or attempt >= len(MCP_RETRY_DELAYS):
+                    raise
+                time.sleep(MCP_RETRY_DELAYS[attempt])
+        raise AssertionError("unreachable")
 
     def initialize(self) -> None:
         self.request_id += 1
@@ -260,17 +319,95 @@ class StreamableHttpMcpClient:
         self._post({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}})
 
     def call_tool(self, name: str, arguments: dict) -> Any:
-        self.request_id += 1
-        response = self._post({
-            "jsonrpc": "2.0", "id": self.request_id, "method": "tools/call",
-            "params": {"name": name, "arguments": arguments},
-        })
-        if not isinstance(response, dict) or "error" in response:
-            raise CollectionError(f"{self.source_label} MCP {name} 调用失败")
-        result = response.get("result")
-        if isinstance(result, dict) and result.get("isError"):
-            raise CollectionError(f"{self.source_label} MCP {name} 返回工具错误")
-        return _extract_mcp_payload(response)
+        for attempt in range(len(MCP_RETRY_DELAYS) + 1):
+            self.request_id += 1
+            response = self._post({
+                "jsonrpc": "2.0", "id": self.request_id, "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+            })
+            if not isinstance(response, dict) or "error" in response:
+                raise McpCallError(name, "rpc_error")
+            result = response.get("result")
+            if isinstance(result, dict) and result.get("isError"):
+                error = _classify_mcp_tool_error(name, result)
+                if error.retryable and attempt < len(MCP_RETRY_DELAYS):
+                    time.sleep(MCP_RETRY_DELAYS[attempt])
+                    continue
+                raise error
+            return _extract_mcp_payload(response)
+        raise AssertionError("unreachable")
+
+
+def _classify_mcp_tool_error(operation: str, result: dict) -> McpCallError:
+    """Classify a tool error without retaining its raw text or trace identifier."""
+    text = " ".join(
+        str(item.get("text", "")) for item in result.get("content", [])
+        if isinstance(item, dict) and item.get("type") == "text"
+    )
+    status_match = re.search(r"(?:status\s*:\s*|\"code\"\s*:\s*)(\d{3})", text, re.IGNORECASE)
+    status = int(status_match.group(1)) if status_match else None
+    folded = text.casefold()
+    category = (
+        "rate_limited" if status == 429 or "过于频繁" in text or "rate limit" in folded else
+        "authentication" if status == 401 or "unauthenticated" in folded else
+        "authorization" if status == 403 or "permission" in folded or "权限" in text else
+        "validation" if status in (400, 404, 422) or "invalid" in folded or "参数" in text else
+        "upstream" if status is not None and status >= 500 else
+        "timeout" if "timeout" in folded or "超时" in text else "tool_error"
+    )
+    return McpCallError(operation, category, status,
+                        retryable=category in ("rate_limited", "upstream", "timeout"))
+
+
+def _failure_details(exc: CollectionError) -> dict:
+    if isinstance(exc, McpCallError):
+        return {
+            "error_category": exc.category,
+            "response_status": exc.http_status,
+            "retryable": exc.retryable,
+        }
+    return {"error_category": "collection_error", "response_status": None, "retryable": False}
+
+
+def _find_named_value(value: Any, names: set[str]) -> Any:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if str(key).casefold() in names and child not in (None, ""):
+                return child
+        for child in value.values():
+            found = _find_named_value(child, names)
+            if found not in (None, ""):
+                return found
+    elif isinstance(value, list):
+        for child in value:
+            found = _find_named_value(child, names)
+            if found not in (None, ""):
+                return found
+    return None
+
+
+def _resolve_approval(client: StreamableHttpMcpClient, payload: Any) -> Any:
+    """Poll status for an action-created approval; never approves or mutates it."""
+    approval_ref = _find_named_value(payload, {"approval_ref", "approvalref"})
+    if not isinstance(approval_ref, str) or not approval_ref:
+        return payload
+    completed = {"completed", "complete", "succeeded", "success", "done", "已完成", "成功"}
+    failed = {"failed", "failure", "rejected", "denied", "expired", "cancelled",
+              "canceled", "失败", "已拒绝", "已取消", "已过期"}
+    for attempt in range(MCP_APPROVAL_POLL_ATTEMPTS):
+        status_payload = client.call_tool("approval_status", {"approval_ref": approval_ref})
+        state = _find_named_value(
+            status_payload, {"approval_status", "approvalstatus", "execution_status",
+                             "executionstatus", "status", "state"}
+        )
+        normalized = str(state).strip().casefold() if state is not None else ""
+        if normalized in failed:
+            raise McpCallError("approval_status", "approval_rejected")
+        if normalized in completed or _business_records(status_payload):
+            return status_payload
+        if attempt + 1 < MCP_APPROVAL_POLL_ATTEMPTS:
+            time.sleep(MCP_APPROVAL_POLL_INTERVAL)
+    raise McpCallError("approval_status", "approval_pending")
 
 
 def _tool_data(payload: Any) -> dict:
@@ -374,6 +511,22 @@ def _payload_failed(payload: Any) -> bool:
     )
 
 
+def _business_failure_details(payload: Any) -> dict:
+    code = _find_named_value(payload, {"code", "status_code", "statuscode"})
+    status = int(code) if isinstance(code, (int, str)) and str(code).isdigit() else None
+    category = (
+        "rate_limited" if status == 429 else
+        "authentication" if status == 401 else
+        "authorization" if status == 403 else
+        "validation" if status in (400, 404, 422) else
+        "upstream" if status is not None and status >= 500 else "business_response_error"
+    )
+    return {
+        "error_category": category, "response_status": status,
+        "retryable": category in ("rate_limited", "upstream"),
+    }
+
+
 def _field_quality(rows: list[dict], groups: dict[str, tuple[str, ...]]) -> dict[str, str]:
     quality = {}
     nested_rows = [item for row in rows for item in _walk(row)]
@@ -455,28 +608,62 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
         client = StreamableHttpMcpClient.from_codex_config(codex_bin)
         client.initialize()
         schemas = {}
+        common_metadata_failure: CollectionError | None = None
         for tool_id in LINGXING_READ_ALLOWLIST:
+            metadata_stage = "help"
+            if common_metadata_failure is not None:
+                source["queries"][tool_id] = {
+                    "status": "interface_failed", "stage": "help",
+                    "error": str(common_metadata_failure),
+                    **_failure_details(common_metadata_failure),
+                }
+                continue
             try:
                 help_data = _tool_data(client.call_tool("help", {"query": tool_id, "limit": 50, "offset": 0}))
                 tools = help_data.get("tools", [])
                 matched = [tool for tool in tools if isinstance(tool, dict) and tool.get("toolId") == tool_id]
                 if len(matched) != 1 or matched[0].get("toolType") != "read":
                     raise CollectionError(f"领星工具 {tool_id} 未通过 help 只读校验")
+                metadata_stage = "search"
                 search_data = _tool_data(client.call_tool("search", {"toolId": tool_id}))
                 if search_data.get("toolId") != tool_id or search_data.get("toolType") != "read":
                     raise CollectionError(f"领星工具 {tool_id} 未通过 search 只读校验")
                 schemas[tool_id] = search_data.get("inputSchema", {})
             except CollectionError as exc:
-                source["queries"][tool_id] = {"status": "interface_failed", "stage": "metadata", "error": str(exc)}
+                source["queries"][tool_id] = {
+                    "status": "interface_failed", "stage": metadata_stage, "error": str(exc),
+                    **_failure_details(exc),
+                }
+                if isinstance(exc, McpCallError) and exc.category in (
+                    "rate_limited", "authentication", "authorization"
+                ):
+                    common_metadata_failure = exc
 
         def execute(tool_id: str, purpose: str, params: dict, key: str | None = None) -> Any | None:
             query_key = key or purpose
             if tool_id not in schemas:
+                metadata = source["queries"].get(tool_id, {})
+                source["queries"][query_key] = {
+                    "status": "interface_failed", "stage": metadata.get("stage", "metadata"),
+                    "tool_id": tool_id,
+                    "error": metadata.get("error", "领星 MCP 未取得工具元数据"),
+                    "error_category": metadata.get("error_category", "metadata_unavailable"),
+                    "response_status": metadata.get("response_status"),
+                    "retryable": metadata.get("retryable", False),
+                }
                 return None
             try:
                 _schema_validate(schemas[tool_id], params)
                 payload = client.call_tool("action", {"toolId": tool_id, "params": params})
+                payload = _resolve_approval(client, payload)
                 clean = _redact_sensitive(payload)
+                if _payload_failed(clean):
+                    source["queries"][query_key] = {
+                        "status": "interface_failed", "stage": "action_response",
+                        "tool_id": tool_id, "error": "领星业务接口返回失败状态",
+                        **_business_failure_details(clean),
+                    }
+                    return None
                 summary = _query_summary(clean, purpose)
                 page_size = params.get("length")
                 if type(page_size) is int:
@@ -492,14 +679,13 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
                 source["queries"][query_key] = {
                     **summary, "tool_id": tool_id, "query_context": context
                 }
-                if _payload_failed(clean):
-                    return None
                 if tool_id not in source["tools"]:
                     source["tools"].append(tool_id)
                 return clean
             except CollectionError as exc:
                 source["queries"][query_key] = {
-                    "status": "interface_failed", "stage": "action", "tool_id": tool_id, "error": str(exc)
+                    "status": "interface_failed", "stage": "action", "tool_id": tool_id,
+                    "error": str(exc), **_failure_details(exc),
                 }
                 return None
 
@@ -553,6 +739,14 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
             first_error = next((item.get("error") for item in summaries if item.get("error")), None)
             if first_error:
                 source["queries"][key]["error"] = first_error
+            first_failure = next((item for item in summaries if item.get("error_category")), None)
+            if first_failure:
+                source["queries"][key].update({
+                    "stage": first_failure.get("stage", "action"),
+                    "error_category": first_failure.get("error_category"),
+                    "response_status": first_failure.get("response_status"),
+                    "retryable": first_failure.get("retryable", False),
+                })
             if not pages:
                 return None
             return pages[0] if len(pages) == 1 else {"pages": pages}
