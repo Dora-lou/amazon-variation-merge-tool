@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AI Skills｜亚马逊运营工具箱</title>
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#253a4b;background:#f4f7fb;font-size:14px;line-height:1.6}
+*{box-sizing:border-box}body{margin:0}a{color:inherit;text-decoration:none}
+.shell{max-width:1180px;margin:auto;padding:28px 26px 60px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:32px}
+.brand{display:flex;align-items:center;gap:12px}.mark{width:44px;height:44px;border-radius:14px;background:#dff1e6;display:grid;place-items:center;color:#23734b;font-size:20px;font-weight:850}
+.brand strong{display:block;font-size:14px}.brand small{display:block;color:#8897a5;font-size:11px}
+nav{display:flex;flex-wrap:wrap;gap:5px;padding:5px;border:1px solid #e2e8ef;border-radius:12px;background:#fff}
+nav a{font-size:12px;font-weight:700;color:#627386;padding:9px 12px;border-radius:8px}
+nav a:hover{background:#f3f7f5}nav a.active{background:#e7f3eb;color:#216b44}
+.hero{background:linear-gradient(120deg,#203c35,#317154);border-radius:22px;color:#fff;padding:35px 38px}
+.eyebrow{color:#c4e5cf;letter-spacing:.15em;font-size:10px;font-weight:800}
+h1{font-size:33px;letter-spacing:-.04em;margin:6px 0} .hero p{max-width:720px;font-size:13px;color:#d7e9df;margin:8px 0 0}
+.heading{margin:30px 0 15px}.heading h2{font-size:19px;margin:0}.heading p{font-size:12px;color:#7e91a0;margin:4px 0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+.skill{background:white;border:1px solid #e0e8ed;border-radius:18px;padding:24px;box-shadow:0 5px 18px #26394c05}
+.icon{width:48px;height:48px;border-radius:14px;background:#e5f2eb;color:#2b7750;display:grid;place-items:center;font-size:22px}
+.top{display:flex;justify-content:space-between;align-items:center}.type{font-size:11px;color:#899aab;font-weight:750;letter-spacing:.05em}
+.skill h3{font-size:20px;margin:18px 0 7px}.skill p{color:#718595;font-size:12px;margin:0;line-height:1.85}
+.tags{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0 20px}.tag{font-size:11px;color:#577260;background:#eef6f1;padding:5px 9px;border-radius:7px}
+.actions{display:flex;gap:9px;flex-wrap:wrap}.button{display:inline-flex;align-items:center;justify-content:center;border:1px solid #d4e0d9;border-radius:9px;padding:10px 14px;background:#fff;color:#28543d;font-weight:750;font-size:12px;cursor:pointer}
+.button.primary{background:#28724f;color:#fff;border-color:#28724f}.button:hover{filter:brightness(.97)}
+.note{background:#edf4f1;border:1px solid #dceae2;border-radius:14px;margin-top:20px;padding:16px 18px;color:#607d6b;font-size:12px}
+.note strong{display:block;color:#365a47;font-size:13px;margin-bottom:3px}
+.footer{font-size:11px;color:#8b99a6;margin-top:28px}
+@media(max-width:850px){.topbar{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}}
+@media(max-width:600px){.shell{padding:18px 13px 40px}nav{width:100%}nav a{flex:1;text-align:center;padding:9px 5px;font-size:11px}.hero{padding:26px 22px}h1{font-size:29px}}
+</style>
+</head>
+<body><main class="shell">
+<header class="topbar">
+<a class="brand" href="./index.html"><span class="mark">O</span><span><strong>亚马逊运营工具箱</strong><small>Amazon Operations Workspace</small></span></a>
+<nav aria-label="工具模块">
+<a href="./index.html">首页</a><a href="./variation-guide.html">知识库</a><a href="./tools.html">运营工具中心</a><a href="./listing.html?view=library">商品库</a><a href="./skills.html" class="active" aria-current="page">AI Skills</a><a href="./agent.html">AI Agent</a>
+</nav></header>
+<section class="hero"><div class="eyebrow">YOUR CODEX SKILL LIBRARY</div><h1>AI Skills</h1><p>把自己开发的 Codex Skills 收集到这里。按任务找到 Skill、复制启动指令，再到 Codex 中使用。Skill 文件继续由 Codex 本地安装目录管理。</p></section>
+<div class="heading"><h2>我的 Skills</h2><p>已收录 1 个 · 后续可继续添加 Listing、选品等 Skill</p></div>
+<section class="grid" aria-label="Skill 目录">
+<article class="skill">
+<div class="top"><span class="icon" aria-hidden="true">▥</span><span class="type">CODEX SKILL · 已收录</span></div>
+<h3>销售计划与备货分析</h3>
+<p>使用已有 feishu-amazon-sales-plan Skill，结合已授权的数据来源分析销售、库存、利润和月度目标。遵循原 Skill 的去重、备货与规划规则。</p>
+<div class="tags"><span class="tag">销售计划</span><span class="tag">库存分析</span><span class="tag">月度目标</span><span class="tag">飞书</span></div>
+<div class="actions">
+<button id="copySales" class="button primary" type="button">复制 Codex 启动指令</button>
+<a class="button" href="https://github.com/Dora-lou/amazon-variation-merge-tool/blob/main/agent/skills/feishu-amazon-sales-plan/SKILL.md" target="_blank" rel="noopener noreferrer">查看 Skill 文件 ↗</a>
+</div>
+<p id="copyStatus" role="status" aria-live="polite" style="margin-top:10px;min-height:18px"></p>
+</article>
+</section>
+<div class="note"><strong>使用方式</strong>在 Codex 中安装好对应 Skill 后，点击「复制 Codex 启动指令」，粘贴到 Codex 新对话即可。这个网页只管理入口，不会直接运行 Codex，也不会自动读取领星、飞书或上传业务数据。仓库附带的 Skill 是通用版本；如果本机有更新过的个人版本，应以实际安装的版本为准。</div>
+<footer class="footer">亚马逊运营工具箱 · AI Skills 目录</footer>
+</main>
+<script>
+'use strict';
+const instruction = '请调用已安装的 feishu-amazon-sales-plan Skill，为我制定亚马逊销售与备货计划。严格遵守 Skill 中的库存、销量、利润、父子体及月度分配规则；先确认目标产品和规划周期，数据不足时明确标记，不要编造。';
+document.getElementById('copySales').addEventListener('click', async () => {
+ const status=document.getElementById('copyStatus');
+ try {
+   if(navigator.clipboard && window.isSecureContext){await navigator.clipboard.writeText(instruction);}
+   else {const t=document.createElement('textarea');t.value=instruction;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();if(!document.execCommand('copy'))throw new Error('copy');t.remove();}
+   status.textContent='已复制，打开 Codex 粘贴即可。';
+ } catch(e){status.textContent='复制失败，请在 Codex 输入 Skill 名称：feishu-amazon-sales-plan';}
+});
+</script>
+</body></html>
