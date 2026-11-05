@@ -69,18 +69,30 @@ pre{font-family:inherit;font-size:12px;line-height:1.85;white-space:pre-wrap;ove
 footer{text-align:center;color:#8c9dab;font-size:11px;margin:26px auto;line-height:1.9}
 @media(max-width:780px){.shell{padding:20px 13px 46px}header{flex-direction:column;align-items:flex-start;margin-bottom:24px}nav{width:100%}nav a{flex:1;text-align:center;padding:8px}h1{font-size:26px}.columns{grid-template-columns:1fr}.panel{min-height:0;padding:22px 18px}.menu{padding:16px}.menu-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.categories{grid-template-columns:1fr;gap:9px}.category{padding:12px 15px}.category-icon{width:38px;height:38px;flex-basis:38px}.category-title{font-size:14px}}
 @media(max-width:410px){.menu-list{grid-template-columns:1fr}nav a{font-size:11px;padding:8px 4px}}
+
+/* 统一主导航：独立横排，优先展示常用工具与 Skills */
+.topbar,.site-header,header:has(> nav){flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:17px!important;margin-bottom:26px!important}
+.topbar .brand,.site-header .brand,header:has(> nav) .brand{align-self:flex-start}
+nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important;width:100%!important;padding:7px!important;margin:0!important;background:#fff!important;border:1px solid #e0e8ed!important;border-radius:16px!important;box-shadow:0 5px 20px rgba(35,53,72,.045)!important}
+nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;padding:13px 8px!important;min-height:47px!important;border:0!important;border-radius:11px!important;font-size:13px!important;font-weight:750!important;white-space:nowrap!important;text-decoration:none!important;color:#526677!important}
+nav[aria-label="工具模块"] a:hover,nav[aria-label="工具导航"] a:hover{background:#f0f6f3!important;color:#28734d!important}
+nav[aria-label="工具模块"] a.active,nav[aria-label="工具导航"] a.active{background:#e2f1e8!important;color:#216a46!important}
+nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:focus-visible{outline:2px solid #398e63!important;outline-offset:2px!important}
+@media(max-width:650px){nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:flex!important;overflow-x:auto!important;gap:5px!important;scrollbar-width:thin}nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{flex:0 0 auto!important;padding:11px 13px!important;min-height:43px!important}}
+
 </style>
 </head>
 <body>
 <main class="shell">
 <header>
   <div class="brand"><span class="brand-mark">V</span><span>亚马逊运营工具箱<small>Operations Knowledge Base</small></span></div>
-  <nav aria-label="工具导航">
-    <a href="./index.html">首页</a>
-    <a class="active" href="./variation-guide.html" aria-current="page">知识库</a>
-    <a href="./tools.html">运营工具中心</a>
-    <a href="./listing.html?view=library">商品库</a>
-  </nav>
+  <nav class="module-nav" aria-label="工具模块">
+  <a href="./index.html">首页</a>
+  <a href="./tools.html" id="navTools">运营工具中心</a>
+  <a href="./skills.html">AI Skills</a>
+  <a href="./variation-guide.html" class="active" aria-current="page">知识库</a>
+  <a href="./listing.html?view=library" id="navLibrary">商品库</a>
+</nav>
 </header>
 <div class="hero"><div class="eyebrow">OPERATIONS KNOWLEDGE BASE</div><h1>运营知识库</h1><p>按业务场景查找操作方法。先选择知识分类，再选择具体事项，查看清晰的步骤与注意事项。</p></div>
 <div class="categories" role="tablist" aria-label="选择知识分类" id="categoryTabs">
