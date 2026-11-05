@@ -29,7 +29,7 @@ h1{font-size:33px;letter-spacing:-.04em;margin:6px 0} .hero p{max-width:720px;fo
 .note strong{display:block;color:#365a47;font-size:13px;margin-bottom:3px}
 .footer{font-size:11px;color:#8b99a6;margin-top:28px}
 @media(max-width:850px){.topbar{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}}
-.planner .actions{margin-top:16px}@media(max-width:600px){.fields{grid-template-columns:1fr}.field.full{grid-column:auto}.shell{padding:18px 13px 40px}nav{width:100%}nav a{flex:1;text-align:center;padding:9px 5px;font-size:11px}.hero{padding:26px 22px}h1{font-size:29px}}
+.input-section{border:1px solid #e0e8ed;border-radius:14px;padding:17px;margin-top:15px;background:#fff}.input-section.required-section{border-color:#d1e5d9;background:#fbfdfb}.input-section.optional-section{background:#fafbfd}.section-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:14px}.planner .section-top h5{font-size:14px;margin:0;color:#2a4556}.section-top small{font-size:11px;color:#8496a5}.required-section .section-top h5{color:#25724b}.field label{font-size:12px}.field label .req{color:#24845c;font-weight:800}.input-section .fields{gap:13px}.planner .actions{margin-top:16px}@media(max-width:600px){.fields{grid-template-columns:1fr}.field.full{grid-column:auto}.shell{padding:18px 13px 40px}nav{width:100%}nav a{flex:1;text-align:center;padding:9px 5px;font-size:11px}.hero{padding:26px 22px}h1{font-size:29px}}
 </style>
 </head>
 <body><main class="shell">
@@ -47,20 +47,29 @@ h1{font-size:33px;letter-spacing:-.04em;margin:6px 0} .hero p{max-width:720px;fo
 <p>使用已有 feishu-amazon-sales-plan Skill，结合已授权的数据来源分析销售、库存、利润和月度目标。遵循原 Skill 的去重、备货与规划规则。</p>
 <div class="tags"><span class="tag">销售计划</span><span class="tag">库存分析</span><span class="tag">月度目标</span><span class="tag">飞书</span></div>
 <form id="salesForm" class="planner">
-<h4>填写计划信息</h4><p class="sub">填写后自动生成完整的 Codex 指令；带“可选”的项目不填也可以。</p>
+<h4>填写销售计划</h4>
+<p class="sub">先完成必填信息；有特殊需求时再补充选填信息。最后生成指令交给 Codex。</p>
+<div class="input-section required-section">
+<div class="section-top"><h5>01 · 必填信息</h5><small>生成销售计划需要的基本条件</small></div>
 <div class="fields">
-<div class="field"><label for="product">产品名称（可选）</label><input id="product" maxlength="100" placeholder="例如：六角围栏"/></div>
-<div class="field"><label for="asin">目标 ASIN <span aria-hidden="true">*</span></label><input id="asin" required maxlength="1000" placeholder="父 ASIN 或子 ASIN；多个可用逗号隔开"/><span class="help">请输入至少一个真实的 10 位 ASIN</span></div>
+<div class="field full"><label for="asin">目标 ASIN <span class="req">必填</span></label><input id="asin" required maxlength="1000" placeholder="父 ASIN 或子 ASIN；多个用逗号隔开"/><span class="help">至少填写一个真实的 10 位 ASIN</span></div>
+<div class="field"><label for="startMonth">规划开始月份 <span class="req">必填</span></label><input id="startMonth" type="month" required/></div>
+<div class="field"><label for="endMonth">规划结束月份 <span class="req">必填</span></label><input id="endMonth" type="month" required/></div>
 <div class="field"><label for="site">站点</label><select id="site"><option value="US">美国站 US</option><option value="CA">加拿大站 CA</option><option value="UK">英国站 UK</option><option value="DE">德国站 DE</option><option value="FR">法国站 FR</option><option value="JP">日本站 JP</option><option value="other">其他（在补充要求注明）</option></select></div>
-<div class="field"><label for="goal">库存消化目标（%）</label><input id="goal" type="number" min="1" max="100" step="1" value="95" required/></div>
-<div class="field"><label for="startMonth">规划开始月份 <span aria-hidden="true">*</span></label><input id="startMonth" type="month" required/></div>
-<div class="field"><label for="endMonth">规划结束月份 <span aria-hidden="true">*</span></label><input id="endMonth" type="month" required/></div>
-<div class="field"><label for="mode">本次操作</label><select id="mode"><option value="preview">仅分析与预览，不修改飞书</option><option value="update">更新飞书已有销售计划表</option><option value="create">新建飞书销售计划表</option></select></div>
+<div class="field"><label for="goal">库存消化目标（%）</label><input id="goal" type="number" min="1" max="100" step="1" value="95" required/><span class="help">默认 95%，可调整</span></div>
+<div class="field full"><label for="mode">本次操作</label><select id="mode"><option value="preview">仅分析与预览，不修改飞书</option><option value="update">更新飞书已有销售计划表</option><option value="create">新建飞书销售计划表</option></select></div>
+</div>
+</div>
+<div class="input-section optional-section">
+<div class="section-top"><h5>02 · 选填信息</h5><small>没有额外要求可直接跳过</small></div>
+<div class="fields">
+<div class="field"><label for="product">产品名称</label><input id="product" maxlength="100" placeholder="例如：六角围栏"/></div>
 <div class="field"><label for="comparison">竞品季节性</label><select id="comparison"><option value="auto">按 Skill 规则判断是否需要</option><option value="yes">需要分析竞品</option><option value="no">不需要竞品分析</option></select></div>
 <div class="field"><label for="knowledge">飞书知识库</label><input id="knowledge" maxlength="100" value="至拓-运营"/></div>
-<div class="field"><label for="sheet">目标表格名称（可选）</label><input id="sheet" maxlength="100" placeholder="留空按 Skill 默认规则查找"/></div>
-<div class="field full"><label for="profit">利润成本表位置（可选）</label><input id="profit" maxlength="300" placeholder="例如：至拓-运营 / 利润测算，或在 Codex 中提供截图"/></div>
-<div class="field full"><label for="preferences">计划偏好与补充要求（可选）</label><textarea id="preferences" maxlength="1500" placeholder="例如：11月多卖一些；不补货；未完成销量按原月比例分摊；指定 SKU 的库存例外"></textarea></div>
+<div class="field"><label for="sheet">目标表格名称</label><input id="sheet" maxlength="100" placeholder="留空按 Skill 默认规则查找"/></div>
+<div class="field full"><label for="profit">利润成本表位置</label><input id="profit" maxlength="300" placeholder="例如：至拓-运营 / 利润测算，或在 Codex 中提供截图"/></div>
+<div class="field full"><label for="preferences">计划偏好与补充要求</label><textarea id="preferences" maxlength="1500" placeholder="例如：11 月多卖一些；不补货；未完成销量按原月比例分摊；指定 SKU 的库存例外"></textarea></div>
+</div>
 </div>
 <div class="actions"><button id="generateSales" type="submit" class="button primary">生成并复制 Codex 指令</button><button id="showSales" type="button" class="button">仅预览指令</button><a class="button" href="https://github.com/Dora-lou/amazon-variation-merge-tool/blob/main/agent/skills/feishu-amazon-sales-plan/SKILL.md" target="_blank" rel="noopener noreferrer">查看 Skill 文件 ↗</a></div>
 <p id="copyStatus" role="status" aria-live="polite" style="margin-top:10px;min-height:18px"></p>
