@@ -25,11 +25,11 @@ h1{font-size:33px;letter-spacing:-.04em;margin:6px 0} .hero p{max-width:720px;fo
 .tags{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0 20px}.tag{font-size:11px;color:#577260;background:#eef6f1;padding:5px 9px;border-radius:7px}
 .actions{display:flex;gap:9px;flex-wrap:wrap}.button{display:inline-flex;align-items:center;justify-content:center;border:1px solid #d4e0d9;border-radius:9px;padding:10px 14px;background:#fff;color:#28543d;font-weight:750;font-size:12px;cursor:pointer}
 .button.primary{background:#28724f;color:#fff;border-color:#28724f}.button:hover{filter:brightness(.97)}
-.note{background:#edf4f1;border:1px solid #dceae2;border-radius:14px;margin-top:20px;padding:16px 18px;color:#607d6b;font-size:12px}
+.planner{margin-top:18px;padding-top:20px;border-top:1px solid #edf1f4}.planner h4{font-size:14px;margin:0 0 5px}.planner>.sub{font-size:12px;color:#7b90a0;margin:0 0 14px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:750;color:#445d6b}.field input,.field select,.field textarea{font:inherit;font-size:13px;width:100%;padding:10px 11px;border:1px solid #d4e0e7;border-radius:9px;background:#fff;color:#273c4e}.field textarea{resize:vertical;min-height:68px}.help{font-size:11px;color:#8b99a6}.preview{white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;border:1px solid #dee8e3;background:#f7faf8;border-radius:11px;color:#354e42;font-size:12px;max-height:290px;overflow:auto;margin-top:12px}.note{background:#edf4f1;border:1px solid #dceae2;border-radius:14px;margin-top:20px;padding:16px 18px;color:#607d6b;font-size:12px}
 .note strong{display:block;color:#365a47;font-size:13px;margin-bottom:3px}
 .footer{font-size:11px;color:#8b99a6;margin-top:28px}
 @media(max-width:850px){.topbar{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}}
-@media(max-width:600px){.shell{padding:18px 13px 40px}nav{width:100%}nav a{flex:1;text-align:center;padding:9px 5px;font-size:11px}.hero{padding:26px 22px}h1{font-size:29px}}
+.planner .actions{margin-top:16px}@media(max-width:600px){.fields{grid-template-columns:1fr}.field.full{grid-column:auto}.shell{padding:18px 13px 40px}nav{width:100%}nav a{flex:1;text-align:center;padding:9px 5px;font-size:11px}.hero{padding:26px 22px}h1{font-size:29px}}
 </style>
 </head>
 <body><main class="shell">
@@ -46,26 +46,86 @@ h1{font-size:33px;letter-spacing:-.04em;margin:6px 0} .hero p{max-width:720px;fo
 <h3>销售计划与备货分析</h3>
 <p>使用已有 feishu-amazon-sales-plan Skill，结合已授权的数据来源分析销售、库存、利润和月度目标。遵循原 Skill 的去重、备货与规划规则。</p>
 <div class="tags"><span class="tag">销售计划</span><span class="tag">库存分析</span><span class="tag">月度目标</span><span class="tag">飞书</span></div>
-<div class="actions">
-<button id="copySales" class="button primary" type="button">复制 Codex 启动指令</button>
-<a class="button" href="https://github.com/Dora-lou/amazon-variation-merge-tool/blob/main/agent/skills/feishu-amazon-sales-plan/SKILL.md" target="_blank" rel="noopener noreferrer">查看 Skill 文件 ↗</a>
+<form id="salesForm" class="planner">
+<h4>填写计划信息</h4><p class="sub">填写后自动生成完整的 Codex 指令；带“可选”的项目不填也可以。</p>
+<div class="fields">
+<div class="field"><label for="product">产品名称（可选）</label><input id="product" maxlength="100" placeholder="例如：六角围栏"/></div>
+<div class="field"><label for="asin">目标 ASIN <span aria-hidden="true">*</span></label><input id="asin" required maxlength="1000" placeholder="父 ASIN 或子 ASIN；多个可用逗号隔开"/><span class="help">请输入至少一个真实的 10 位 ASIN</span></div>
+<div class="field"><label for="site">站点</label><select id="site"><option value="US">美国站 US</option><option value="CA">加拿大站 CA</option><option value="UK">英国站 UK</option><option value="DE">德国站 DE</option><option value="FR">法国站 FR</option><option value="JP">日本站 JP</option><option value="other">其他（在补充要求注明）</option></select></div>
+<div class="field"><label for="goal">库存消化目标（%）</label><input id="goal" type="number" min="1" max="100" step="1" value="95" required/></div>
+<div class="field"><label for="startMonth">规划开始月份 <span aria-hidden="true">*</span></label><input id="startMonth" type="month" required/></div>
+<div class="field"><label for="endMonth">规划结束月份 <span aria-hidden="true">*</span></label><input id="endMonth" type="month" required/></div>
+<div class="field"><label for="mode">本次操作</label><select id="mode"><option value="preview">仅分析与预览，不修改飞书</option><option value="update">更新飞书已有销售计划表</option><option value="create">新建飞书销售计划表</option></select></div>
+<div class="field"><label for="comparison">竞品季节性</label><select id="comparison"><option value="auto">按 Skill 规则判断是否需要</option><option value="yes">需要分析竞品</option><option value="no">不需要竞品分析</option></select></div>
+<div class="field"><label for="knowledge">飞书知识库</label><input id="knowledge" maxlength="100" value="至拓-运营"/></div>
+<div class="field"><label for="sheet">目标表格名称（可选）</label><input id="sheet" maxlength="100" placeholder="留空按 Skill 默认规则查找"/></div>
+<div class="field full"><label for="profit">利润成本表位置（可选）</label><input id="profit" maxlength="300" placeholder="例如：至拓-运营 / 利润测算，或在 Codex 中提供截图"/></div>
+<div class="field full"><label for="preferences">计划偏好与补充要求（可选）</label><textarea id="preferences" maxlength="1500" placeholder="例如：11月多卖一些；不补货；未完成销量按原月比例分摊；指定 SKU 的库存例外"></textarea></div>
 </div>
+<div class="actions"><button id="generateSales" type="submit" class="button primary">生成并复制 Codex 指令</button><button id="showSales" type="button" class="button">仅预览指令</button><a class="button" href="https://github.com/Dora-lou/amazon-variation-merge-tool/blob/main/agent/skills/feishu-amazon-sales-plan/SKILL.md" target="_blank" rel="noopener noreferrer">查看 Skill 文件 ↗</a></div>
 <p id="copyStatus" role="status" aria-live="polite" style="margin-top:10px;min-height:18px"></p>
+<pre id="salesPreview" class="preview" hidden></pre>
+</form>
 </article>
 </section>
-<div class="note"><strong>使用方式</strong>在 Codex 中安装好对应 Skill 后，点击「复制 Codex 启动指令」，粘贴到 Codex 新对话即可。这个网页只管理入口，不会直接运行 Codex，也不会自动读取领星、飞书或上传业务数据。仓库附带的 Skill 是通用版本；如果本机有更新过的个人版本，应以实际安装的版本为准。</div>
+<div class="note"><strong>使用方式</strong>在 Codex 中安装好对应 Skill 后，填写卡片内的计划参数，生成指令并粘贴到 Codex 新对话即可。这个网页只管理入口，不会直接运行 Codex，也不会自动读取领星、飞书或上传业务数据。仓库附带的 Skill 是通用版本；如果本机有更新过的个人版本，应以实际安装的版本为准。</div>
 <footer class="footer">亚马逊运营工具箱 · AI Skills 目录</footer>
 </main>
 <script>
 'use strict';
-const instruction = '请调用已安装的 feishu-amazon-sales-plan Skill，为我制定亚马逊销售与备货计划。严格遵守 Skill 中的库存、销量、利润、父子体及月度分配规则；先确认目标产品和规划周期，数据不足时明确标记，不要编造。';
-document.getElementById('copySales').addEventListener('click', async () => {
- const status=document.getElementById('copyStatus');
- try {
-   if(navigator.clipboard && window.isSecureContext){await navigator.clipboard.writeText(instruction);}
-   else {const t=document.createElement('textarea');t.value=instruction;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();if(!document.execCommand('copy'))throw new Error('copy');t.remove();}
-   status.textContent='已复制，打开 Codex 粘贴即可。';
- } catch(e){status.textContent='复制失败，请在 Codex 输入 Skill 名称：feishu-amazon-sales-plan';}
-});
+const $ = id => document.getElementById(id);
+const val = id => $(id).value.trim();
+const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/;
+const asinsPattern = /^[A-Z0-9]{10}$/;
+function makeInstruction(){
+ const asins=val('asin').toUpperCase().split(/[,，;；\s]+/).filter(Boolean);
+ if(!asins.length || asins.some(v=>!asinsPattern.test(v)))throw new Error('请填写有效的 10 位 ASIN，多个 ASIN 用逗号隔开');
+ if(!monthPattern.test(val('startMonth'))||!monthPattern.test(val('endMonth'))||val('startMonth')>val('endMonth'))throw new Error('请填写有效的规划月份，结束月份不能早于开始月份');
+ const goal=Number(val('goal'));
+ if(!Number.isInteger(goal)||goal<1||goal>100)throw new Error('库存消化目标应在 1%–100% 之间');
+ const modes={preview:'仅分析并生成预览，不创建或修改任何飞书表格',update:'查找并维护已有飞书销售计划表，不得新建同名替代表；执行写入前先向我确认具体变更',create:'明确要求新建一份飞书销售计划表；执行写入前先向我确认目标和具体变更'};
+ const comparisons={auto:'按 Skill 规则判断是否需要竞品分析',yes:'需要竞品季节性分析，按照 Skill 的合格样本与稳健比例规则执行',no:'本次不要求竞品分析；如因数据缺失影响目标可信度，请明确说明'};
+ const site=val('site')==='other'?'其他站点（见补充要求）':val('site');
+ const parts=[
+ '请调用我本机已安装的 feishu-amazon-sales-plan Skill，按其最新规则执行本次亚马逊销售与备货计划任务。',
+ '',
+ '【我已提供的任务信息】',
+ '- 目标 ASIN：'+asins.join('、'),
+ '- 产品名称：'+(val('product')||'未指定，请从可信数据识别'),
+ '- 站点：'+site,
+ '- 规划月份：'+val('startMonth')+' 至 '+val('endMonth'),
+ '- 计划库存消化目标：'+goal+'%',
+ '- 执行方式：'+modes[val('mode')],
+ '- 竞品分析：'+comparisons[val('comparison')],
+ '- 目标飞书知识库：'+(val('knowledge')||'至拓-运营'),
+ '- 目标表格：'+(val('sheet')||'按 Skill 默认名称与原表匹配规则'),
+ '- 利润成本表位置：'+(val('profit')||'未提供；先在已授权位置查找，找不到再向我索取'),
+ '- 其他计划偏好：'+(val('preferences')||'无额外要求'),
+ '',
+ '【执行要求】',
+ '1. 请先读取已安装 Skill 的完整说明和引用规则，以上输入已提供，不要重复询问；只有关键业务口径无法判断时再提问。',
+ '2. 在已授权范围内查询目标父子体/SKU、真实销量、FBA/AWD及在途库存，核对日期、批次和去重；不得把缺失/查询失败当作0。',
+ '3. 按 Skill 规定使用历史销量、月度比例、已有实际与剩余库存；不编造数据，不跨 SKU 借库存。',
+ '4. 利润缺少必要成本时标记待核算；如找不到成本表或需要截图，明确指出缺口，不妨碍先完成可靠部分。',
+ '5. 遵守上述执行方式：预览模式绝不写入；需要写入时先确认目标表格、计划修改范围，并得到我的明确同意。',
+ '6. 输出数据来源、统计时间、库存去重说明、SKU/月度目标和需要人工确认的缺口。'
+ ];
+ return parts.join('\n');
+}
+async function copyText(text){
+ if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);return;}
+ const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();const ok=document.execCommand('copy');area.remove();if(!ok)throw new Error('copy failed');
+}
+function renderInstruction(copy){
+ const status=$('copyStatus');
+ if(!$('salesForm').reportValidity())return;
+ try{
+  const instruction=makeInstruction();$('salesPreview').textContent=instruction;$('salesPreview').hidden=false;
+  if(copy){copyText(instruction).then(()=>{status.textContent='已复制完整指令，打开 Codex 粘贴即可。';}).catch(()=>{status.textContent='复制失败，请从下方预览手动复制。';});}
+  else status.textContent='已生成预览，可核对后点击「生成并复制 Codex 指令」。';
+ }catch(e){status.textContent=e.message;}
+}
+$('salesForm').addEventListener('submit',e=>{e.preventDefault();renderInstruction(true);});
+$('showSales').addEventListener('click',()=>renderInstruction(false));
 </script>
 </body></html>
