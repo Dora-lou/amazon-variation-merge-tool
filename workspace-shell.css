@@ -1,24 +1,24 @@
 /* Unified workspace visual system — shared across active pages */
-:root{--ws-ink:#243b4a;--ws-muted:#748597;--ws-line:#e0e9e7;--ws-green:#26734e}
+:root{--ws-ink:#24364b;--ws-muted:#73869a;--ws-line:#e0e7f0;--ws-green:#365f91}
 body{background:#f5f7f9!important;color:var(--ws-ink)}
 .shell{max-width:1180px!important;margin:0 auto!important;padding:22px 28px 60px!important}
 .workspace-header{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:20px!important;margin:0 0 22px!important}
 .workspace-brand{display:flex!important;align-items:center!important;gap:12px!important;align-self:flex-start!important;text-decoration:none!important;color:#263e50!important}
-.workspace-brand .workspace-logo{display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;background:#e1f0e7;color:#26744b;border-radius:12px;font-size:20px;font-weight:850}
+.workspace-brand .workspace-logo{display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;background:#e4edf8;color:#315f94;border-radius:12px;font-size:20px;font-weight:850}
 .workspace-brand .workspace-name{display:block;font-size:15px;font-weight:800;line-height:1.4;letter-spacing:-.02em}
 .workspace-brand .workspace-sub{display:block;font-size:11px;color:#8797a3;font-weight:500;line-height:1.5;margin-top:1px}
 nav.workspace-nav{width:100%!important;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:7px!important;margin:0!important;padding:6px!important;background:#fff!important;border:1px solid var(--ws-line)!important;border-radius:15px!important;box-shadow:0 3px 16px #26394c05!important}
 nav.workspace-nav a{display:flex!important;align-items:center!important;justify-content:center!important;min-height:46px!important;padding:10px 8px!important;border:0!important;border-radius:10px!important;text-align:center!important;text-decoration:none!important;color:#607281!important;font-size:13px!important;font-weight:720!important;white-space:nowrap!important;background:transparent!important}
-nav.workspace-nav a.active{background:#e5f3eb!important;color:#226b47!important}
-nav.workspace-nav a:hover:not(.active){background:#f1f5f4!important;color:#276f4b!important}
-nav.workspace-nav a:focus-visible{outline:2px solid #38875c!important;outline-offset:2px!important}
-.workspace-intro,.hero.workspace-intro,.hero-main.workspace-intro{box-sizing:border-box!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:0!important;min-height:158px!important;height:auto!important;margin:0 0 24px!important;padding:27px 34px!important;background:linear-gradient(114deg,#193b3b 0%,#244e48 55%,#315f53 100%)!important;border:1px solid #345e55!important;border-radius:20px!important;box-shadow:0 12px 30px rgba(21,53,49,.12)!important;color:#f6faf8!important;overflow:hidden!important;position:relative!important;isolation:isolate!important}
-.workspace-intro:before{content:""!important;position:absolute!important;right:-102px!important;top:-170px!important;width:430px!important;height:430px!important;border-radius:50%!important;background:radial-gradient(circle at 50% 50%,transparent 36%,rgba(194,231,213,.10) 36.3%,transparent 36.8%,transparent 49%,rgba(194,231,213,.07) 49.3%,transparent 50%,transparent 64%,rgba(194,231,213,.045) 64.3%,transparent 65%)!important;pointer-events:none!important;z-index:-1!important}
+nav.workspace-nav a.active{background:#e7effa!important;color:#295b96!important}
+nav.workspace-nav a:hover:not(.active){background:#f0f4fa!important;color:#315f94!important}
+nav.workspace-nav a:focus-visible{outline:2px solid #547eaf!important;outline-offset:2px!important}
+.workspace-intro,.hero.workspace-intro,.hero-main.workspace-intro{box-sizing:border-box!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:0!important;min-height:158px!important;height:auto!important;margin:0 0 24px!important;padding:27px 34px!important;background:linear-gradient(114deg,#1c344e 0%,#254b6c 56%,#35678a 100%)!important;border:1px solid #3c6685!important;border-radius:20px!important;box-shadow:0 12px 30px rgba(21,48,78,.14)!important;color:#f6faf8!important;overflow:hidden!important;position:relative!important;isolation:isolate!important}
+.workspace-intro:before{content:""!important;position:absolute!important;right:-102px!important;top:-170px!important;width:430px!important;height:430px!important;border-radius:50%!important;background:radial-gradient(circle at 50% 50%,transparent 36%,rgba(186,211,239,.10) 36.3%,transparent 36.8%,transparent 49%,rgba(186,211,239,.07) 49.3%,transparent 50%,transparent 64%,rgba(186,211,239,.045) 64.3%,transparent 65%)!important;pointer-events:none!important;z-index:-1!important}
 .workspace-intro:after{display:none!important}
 .workspace-intro>*{position:relative;z-index:1}
-.workspace-intro .eyebrow{margin:0 0 7px!important;color:#aad8c2!important;font-size:10px!important;font-weight:800!important;letter-spacing:.14em!important}
+.workspace-intro .eyebrow{margin:0 0 7px!important;color:#b7d7f1!important;font-size:10px!important;font-weight:800!important;letter-spacing:.14em!important}
 .workspace-intro h1,.workspace-intro #pageTitle{margin:0!important;color:#ffffff!important;font-size:30px!important;font-weight:800!important;line-height:1.32!important;letter-spacing:-.035em!important;max-width:900px!important}
-.workspace-intro p,.workspace-intro .hero-copy,.workspace-intro #pageDescription{margin:9px 0 0!important;color:#d1e4dc!important;font-size:13px!important;font-weight:400!important;line-height:1.7!important;max-width:890px!important}
+.workspace-intro p,.workspace-intro .hero-copy,.workspace-intro #pageDescription{margin:9px 0 0!important;color:#d9e7f5!important;font-size:13px!important;font-weight:400!important;line-height:1.7!important;max-width:890px!important}
 .workspace-intro p strong{color:#fff!important}
 .workspace-intro .hero-pill{display:none!important}
 .workspace-home-hero{display:block!important;margin:0!important}
