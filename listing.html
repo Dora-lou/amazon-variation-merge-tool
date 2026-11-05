@@ -56,7 +56,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 <a href="./listing.html?view=library" id="navLibrary">商品库</a>
 </nav></header><div class="workspace-intro"><div class="eyebrow" id="pageEyebrow">LISTING EDITOR</div>
   <h1 id="pageTitle">修改 Listing</h1>
-  <p id="pageDescription">选择类目模板和商品，勾选要修改的字段，再生成上传表格。商品资料和类目模板在「商品库」统一维护。</p></div>
+  <p id="pageDescription">选择商品与字段，快速生成 Listing 批量修改表格。</p></div>
   
   <div class="page-tabs">
     <button id="openListingTab" class="active" type="button">修改商品信息</button>
@@ -212,7 +212,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 if(new URLSearchParams(window.location.search).get('view')==='library'){
   document.getElementById('pageEyebrow').textContent='PRODUCT LIBRARY';
   document.getElementById('pageTitle').textContent='商品库';
-  document.getElementById('pageDescription').textContent='统一维护商品资料、类目模板，并在这里完成完整备份与恢复。运营工具中心会从这里读取对应资料。';
+  document.getElementById('pageDescription').textContent='集中维护商品资料、类目模板与备份，随时调用。';
   document.getElementById('navLibrary').classList.add('active');
   document.getElementById('navTools').classList.remove('active');
 }
