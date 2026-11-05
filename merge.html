@@ -128,27 +128,19 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 @media(max-width:650px){nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:flex!important;overflow-x:auto!important;gap:5px!important;scrollbar-width:thin}nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{flex:0 0 auto!important;padding:11px 13px!important;min-height:43px!important}}
 
 </style>
+<link rel="stylesheet" href="./workspace-shell.css"/>
 </head>
 <body>
 <main class="shell">
-  <header class="site-header">
-    <div class="brand">
-      <div class="brand-mark" aria-hidden="true">V</div>
-      <div>
-        <div class="brand-name">亚马逊运营工具箱</div>
-        <div class="brand-caption">让重复的表格操作更简单</div>
-      </div>
-    </div>
-    <nav class="module-nav" aria-label="工具模块">
-  <a href="./index.html">首页</a>
-  <a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
-  <a href="./skills.html">AI Skills</a>
-  <a href="./variation-guide.html">知识库</a>
-  <a href="./listing.html?view=library" id="navLibrary">商品库</a>
-</nav>
-  </header>
+  <header class="workspace-header"><a class="workspace-brand" href="./index.html" aria-label="亚马逊运营工具箱首页"><span class="workspace-logo" aria-hidden="true">O</span><span><span class="workspace-name">亚马逊运营工具箱</span><span class="workspace-sub">Amazon Operations Workspace</span></span></a><nav class="workspace-nav" aria-label="工具模块">
+<a href="./index.html">首页</a>
+<a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
+<a href="./skills.html">AI Skills</a>
+<a href="./variation-guide.html">知识库</a>
+<a href="./listing.html?view=library" id="navLibrary">商品库</a>
+</nav></header>
 
-  <div class="hero">
+  <div class="hero workspace-intro">
     <div class="eyebrow">Variation Merge</div>
     <h1>合并独立子体</h1>
     <p class="hero-copy">将<strong>多个已经上架、目前互相独立的商品</strong>，整理成一个新父体下的变体。先选对应类目模板，再填写父体和每个子体的信息，最后下载上传表格。</p>
