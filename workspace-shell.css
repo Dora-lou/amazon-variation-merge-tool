@@ -4,9 +4,9 @@ body{background:#f5f7f9!important;color:var(--ws-ink)}
 .shell{max-width:1180px!important;margin:0 auto!important;padding:22px 28px 60px!important}
 .workspace-header{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:20px!important;margin:0 0 22px!important}
 .workspace-brand{display:flex!important;align-items:center!important;gap:12px!important;align-self:flex-start!important;text-decoration:none!important;color:#263e50!important}
-.workspace-brand .workspace-logo{display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;background:#e4edf8;color:#315f94;border-radius:12px;font-size:20px;font-weight:850}
-.workspace-brand .workspace-name{display:block;font-size:15px;font-weight:800;line-height:1.4;letter-spacing:-.02em}
-.workspace-brand .workspace-sub{display:block;font-size:11px;color:#8797a3;font-weight:500;line-height:1.5;margin-top:1px}
+.workspace-brand .workspace-logo{display:grid;place-items:center;width:48px;height:48px;flex:0 0 48px;background:#e4edf8;color:#315f94;border-radius:12px;font-size:20px;font-weight:850}
+.workspace-brand .workspace-name{display:block;font-size:19px;font-weight:800;line-height:1.35;letter-spacing:-.025em}
+.workspace-brand .workspace-sub{display:block;font-size:12px;color:#8294a5;font-weight:500;line-height:1.5;margin-top:2px}
 nav.workspace-nav{width:100%!important;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:7px!important;margin:0!important;padding:6px!important;background:#fff!important;border:1px solid var(--ws-line)!important;border-radius:15px!important;box-shadow:0 3px 16px #26394c05!important}
 nav.workspace-nav a{display:flex!important;align-items:center!important;justify-content:center!important;min-height:46px!important;padding:10px 8px!important;border:0!important;border-radius:10px!important;text-align:center!important;text-decoration:none!important;color:#607281!important;font-size:13px!important;font-weight:720!important;white-space:nowrap!important;background:transparent!important}
 nav.workspace-nav a.active{background:#e7effa!important;color:#295b96!important}
