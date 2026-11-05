@@ -204,8 +204,7 @@ class StreamableHttpMcpClient:
             headers["Authorization"] = "Bearer " + os.environ[str(bearer_env)]
         return cls(str(transport.get("url", "")), headers, source_label=source_label)
 
-    @staticmethod
-    def _decode_response(content_type: str, body: bytes) -> Any:
+    def _decode_response(self, content_type: str, body: bytes) -> Any:
         if len(body) > MAX_MCP_OUTPUT:
             raise CollectionError(f"{self.source_label} MCP 返回超过安全大小限制")
         text = body.decode("utf-8", errors="strict")
@@ -1021,37 +1020,50 @@ def build_sku_map(sources: dict, request: dict | None = None) -> list[dict]:
     return found[:500]
 
 
+def _notify_stage(stage_callback, stage: str, status: str) -> None:
+    if stage_callback is not None:
+        stage_callback(stage, status)
+
+
 def collect_trusted_data(request: dict, codex_bin: str | None, lark_bin: str | None,
-                         simulated: dict | None = None) -> dict:
+                         simulated: dict | None = None, stage_callback=None) -> dict:
     """Collect all sources before Codex starts; never persists the returned snapshot."""
     if simulated is not None:
         return simulated
-    sources = {
-        "lingxing": collect_lingxing(request, codex_bin) if codex_bin else {
-            "status": "error", "collected_at": utc_now(), "records": {}, "tools": [],
-            "error": "未找到 Codex CLI，无法读取 yb-lingxing MCP 配置",
-        },
-        "feishu": collect_lark(request, lark_bin) if lark_bin else {
-            "status": "error", "collected_at": utc_now(), "knowledge_base": "",
-            "documents": [], "error": "未找到 lark-cli",
-        },
+    _notify_stage(stage_callback, "lingxing_collection", "running")
+    lingxing = collect_lingxing(request, codex_bin) if codex_bin else {
+        "status": "error", "collected_at": utc_now(), "records": {}, "tools": [],
+        "error": "未找到 Codex CLI，无法读取 yb-lingxing MCP 配置",
     }
+    _notify_stage(stage_callback, "lingxing_collection", "completed")
+    _notify_stage(stage_callback, "feishu_collection", "running")
+    feishu = collect_lark(request, lark_bin) if lark_bin else {
+        "status": "error", "collected_at": utc_now(), "knowledge_base": "",
+        "documents": [], "error": "未找到 lark-cli",
+    }
+    _notify_stage(stage_callback, "feishu_collection", "completed")
+    sources = {"lingxing": lingxing, "feishu": feishu}
     warnings = [f"{name}: {source['error']}" for name, source in sources.items() if source.get("error")]
     for name, source in sources.items():
         warnings.extend(f"{name}: {warning}" for warning in source.get("warnings", []))
     statuses = {source.get("status") for source in sources.values()}
     overall = "ok" if statuses == {"ok"} else "partial" if "ok" in statuses or "partial" in statuses else "blocked"
+    _notify_stage(stage_callback, "product_mapping", "running")
+    sku_map = build_sku_map(sources, request)
+    _notify_stage(stage_callback, "product_mapping", "completed")
     snapshot = {
         "schema_version": "2.0", "collected_at": utc_now(), "overall_status": overall,
         "request_identity": {key: request[key] for key in ("asin", "site", "start_month", "end_month")},
-        "sources": sources, "sku_map": build_sku_map(sources, request), "warnings": warnings,
+        "sources": sources, "sku_map": sku_map, "warnings": warnings,
         "rules": {
             "inventory": "按SKU核对FBA可售、待调仓、入库中、实际在途、计划入库、AWD可用、AWD标发在途；批次不清不得相加；reported_zero仅表示接口明确返回0，field_missing/empty_response/out_of_scope_response/interface_failed绝不能当0",
             "allocation": "月度比例为输入、销量为输出；逐SKU不得超过已核对库存，不得跨SKU抵消",
             "profit": "成本缺失标待核算，不得把缺失成本或利润当作0",
         },
     }
-    snapshot["planning_evidence"] = build_plan_evidence(snapshot, request)
+    snapshot["planning_evidence"] = build_plan_evidence(
+        snapshot, request, stage_callback=stage_callback
+    )
     if snapshot["planning_evidence"]["status"] != "ready" and snapshot["overall_status"] == "ok":
         snapshot["overall_status"] = "partial"
     snapshot["warnings"].extend(

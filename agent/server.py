@@ -17,6 +17,7 @@ import subprocess
 import tempfile
 import threading
 import time
+import traceback
 import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -47,6 +48,24 @@ CODEX_TOP_LEVEL_BUDGETS = {
 }
 REQUIRED_CODEX_EXEC_FLAGS = {
     "--ignore-user-config", "--ephemeral", "--output-schema", "--output-last-message",
+}
+DIAGNOSTIC_LOG_PATH = Path(
+    os.getenv(
+        "AMAZON_AGENT_DIAGNOSTIC_LOG",
+        str(Path(os.getenv("LOCALAPPDATA", tempfile.gettempdir())) /
+            "AmazonSalesAgent" / "diagnostics.jsonl"),
+    )
+)
+STAGE_LABELS = {
+    "environment": "本地环境检查",
+    "product_mapping": "商品映射",
+    "lingxing_collection": "领星采集",
+    "feishu_collection": "飞书读取",
+    "inventory_calculation": "库存计算",
+    "historical_sales": "历史销量",
+    "plan_calculation": "计划计算",
+    "codex_analysis": "Codex 分析",
+    "result_validation": "结果校验",
 }
 
 # The codex CLI --output-schema contract is strict (no unknown fields).
@@ -395,6 +414,41 @@ def prepare_codex_snapshot(trusted_data: dict) -> dict:
     return snapshot
 
 
+def _safe_exception_summary(exc: Exception) -> str:
+    """Return a bounded diagnostic summary without credentials or business identifiers."""
+    summary = " ".join(str(exc).split())
+    summary = re.sub(r"https?://\S+", "[URL_REDACTED]", summary, flags=re.IGNORECASE)
+    summary = re.sub(
+        r"(?i)(authorization|cookie|token|api[_-]?key|secret)\s*[:=]\s*\S+",
+        r"\1=[REDACTED]", summary,
+    )
+    summary = re.sub(r"\bB0[A-Z0-9]{8}\b", "[ASIN_REDACTED]", summary)
+    summary = re.sub(r"\b[A-Za-z0-9_\-]{24,}\b", "[VALUE_REDACTED]", summary)
+    return (summary or "no message")[:240]
+
+
+def record_safe_diagnostic(job_id: str, stage: str, exc: Exception) -> None:
+    """Append only a redacted exception fingerprint; never persist request or source data."""
+    location = {"file": "unknown", "line": 0, "function": "unknown"}
+    frames = traceback.extract_tb(exc.__traceback__)
+    if frames:
+        frame = frames[-1]
+        location = {"file": Path(frame.filename).name, "line": frame.lineno,
+                    "function": frame.name}
+    entry = {
+        "timestamp": utc_now(), "job_id": job_id, "stage": stage,
+        "exception_type": type(exc).__name__, "summary": _safe_exception_summary(exc),
+        "location": location,
+    }
+    try:
+        DIAGNOSTIC_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with DIAGNOSTIC_LOG_PATH.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(entry, ensure_ascii=False, separators=(",", ":")) + "\n")
+    except OSError:
+        # Diagnostics must never replace or mask the original job failure.
+        pass
+
+
 class AgentState:
     def __init__(self):
         self.pair_key = secrets.token_urlsafe(24)
@@ -412,6 +466,7 @@ class AgentState:
                 del self.jobs[oldest]
             job_id = uuid.uuid4().hex
             job = {"id": job_id, "status": "queued", "created_at": utc_now(), "result": None, "error": None}
+            job["stage"] = "environment"
             self.jobs[job_id] = job
             self.active_job_id = job_id
         thread = threading.Thread(target=self._run_job, args=(job_id, params), daemon=True)
@@ -426,16 +481,31 @@ class AgentState:
     def _run_job(self, job_id: str, params: dict) -> None:
         with self.lock:
             self.jobs[job_id]["status"] = "running"
+        stage = "environment"
+
+        def update_stage(name: str, status: str) -> None:
+            nonlocal stage
+            stage = name
+            with self.lock:
+                job = self.jobs.get(job_id)
+                if job is not None:
+                    job["stage"] = name
+                    job["stage_status"] = status
+
         try:
-            trusted_data = collect_trusted_data(params, resolve_codex_bin(), resolve_lark_cli())
-            result = run_codex_preview(params, trusted_data)
+            trusted_data = collect_trusted_data(
+                params, resolve_codex_bin(), resolve_lark_cli(), stage_callback=update_stage
+            )
+            result = run_codex_preview(params, trusted_data, stage_callback=update_stage)
             with self.lock:
                 self.jobs[job_id]["status"] = "completed"
                 self.jobs[job_id]["result"] = result
         except Exception as exc:
             # Never expose subprocess stdout/stderr or arbitrary exceptions to the browser.
+            record_safe_diagnostic(job_id, stage, exc)
             safe_error = (str(exc) if isinstance(exc, AgentPreviewError)
-                          else "Agent 发生未分类错误，请检查本地环境或联系维护者。")
+                          else f"{STAGE_LABELS.get(stage, '任务执行')}失败，"
+                               "已写入本机脱敏诊断日志。")
             with self.lock:
                 self.jobs[job_id]["status"] = "failed"
                 self.jobs[job_id]["error"] = safe_error
@@ -615,7 +685,9 @@ def validate_generated_preview(result: dict, params: dict, trusted_data: dict | 
     return result
 
 
-def run_codex_preview(params: dict, trusted_data: dict) -> dict:
+def run_codex_preview(params: dict, trusted_data: dict, stage_callback=None) -> dict:
+    if stage_callback is not None:
+        stage_callback("codex_analysis", "running")
     codex_bin = resolve_codex_bin()
     if not codex_bin:
         raise AgentPreviewError("未找到 Codex CLI，请确认桌面版 Codex 已安装。")
@@ -654,8 +726,14 @@ def run_codex_preview(params: dict, trusted_data: dict) -> dict:
         if not output_path.is_file():
             raise _codex_error("output_format")
         try:
+            if stage_callback is not None:
+                stage_callback("codex_analysis", "completed")
+                stage_callback("result_validation", "running")
             result = json.loads(output_path.read_text(encoding="utf-8"))
-            return validate_generated_preview(result, params, analysis_snapshot)
+            result = validate_generated_preview(result, params, analysis_snapshot)
+            if stage_callback is not None:
+                stage_callback("result_validation", "completed")
+            return result
         except (ValueError, TypeError, KeyError, UnicodeError):
             raise _codex_error("output_format") from None
 

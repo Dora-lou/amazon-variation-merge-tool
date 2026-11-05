@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Run with: python -m unittest discover -s agent -p 'test_*.py'"""
 import http.client
+import inspect
 import json
 import os
 import sys
@@ -36,6 +37,32 @@ TRUSTED_DATA = {
 
 
 class ValidationTests(unittest.TestCase):
+    def test_unexpected_job_error_is_redacted_and_locally_diagnosed(self):
+        state = server.AgentState()
+        state.jobs["job"] = {"id":"job", "status":"queued", "result":None, "error":None}
+        state.active_job_id = "job"
+
+        def fail_collection(*args, stage_callback=None, **kwargs):
+            stage_callback("lingxing_collection", "running")
+            raise NameError("token=DO_NOT_LEAK B012345678")
+
+        with tempfile.TemporaryDirectory() as root, \
+             patch.object(server, "DIAGNOSTIC_LOG_PATH", Path(root) / "diagnostics.jsonl"), \
+             patch.object(server, "collect_trusted_data", side_effect=fail_collection):
+            args = ("job", EXAMPLE, "sales_plan") if \
+                "job_type" in inspect.signature(state._run_job).parameters else ("job", EXAMPLE)
+            state._run_job(*args)
+            entry = json.loads((Path(root) / "diagnostics.jsonl").read_text(encoding="utf-8"))
+        job = state.get_job("job")
+        self.assertEqual(job["status"], "failed")
+        self.assertEqual(job["stage"], "lingxing_collection")
+        self.assertNotIn("DO_NOT_LEAK", job["error"])
+        self.assertNotIn("Traceback", job["error"])
+        self.assertEqual(entry["exception_type"], "NameError")
+        self.assertEqual(entry["stage"], "lingxing_collection")
+        self.assertNotIn("DO_NOT_LEAK", entry["summary"])
+        self.assertNotIn("B012345678", entry["summary"])
+
     def test_valid_request(self):
         self.assertEqual(server.valid_request(EXAMPLE)['sell_through'],95)
 
@@ -135,6 +162,24 @@ class ValidationTests(unittest.TestCase):
              patch.object(server,'probe_codex_runtime',return_value={'version':'test','authenticated':True}), \
              patch.object(server.subprocess,'run',side_effect=fake_run):
             self.assertEqual(server.run_codex_preview(EXAMPLE,TRUSTED_DATA)['status'],'needs_review')
+
+    def test_codex_reports_analysis_and_validation_stages(self):
+        stages = []
+        def fake_run(cmd, **kwargs):
+            output=Path(cmd[cmd.index('--output-last-message')+1])
+            output.write_text(json.dumps(SAMPLE_RESULT), encoding='utf-8')
+            return SimpleNamespace(returncode=0)
+        with patch.object(server.shutil,'which',return_value='codex'), \
+             patch.object(server,'probe_codex_runtime',return_value={'version':'test','authenticated':True}), \
+             patch.object(server.subprocess,'run',side_effect=fake_run):
+            server.run_codex_preview(
+                EXAMPLE, TRUSTED_DATA,
+                stage_callback=lambda name, status: stages.append((name, status)),
+            )
+        self.assertEqual(stages, [
+            ('codex_analysis', 'running'), ('codex_analysis', 'completed'),
+            ('result_validation', 'running'), ('result_validation', 'completed'),
+        ])
 
     def test_codex_bad_flags_are_reported_without_exposing_stderr(self):
         with patch.object(server.shutil,'which',return_value='codex'), \

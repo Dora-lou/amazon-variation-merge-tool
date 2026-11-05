@@ -286,11 +286,22 @@ def _capacity_constrained(desired: list[int], capacities: list[int | float]) -> 
     return allocated, carry
 
 
-def build_plan_evidence(snapshot: dict, request: dict, today: date | None = None) -> dict:
+def _notify_stage(stage_callback, stage: str, status: str) -> None:
+    if stage_callback is not None:
+        stage_callback(stage, status)
+
+
+def build_plan_evidence(snapshot: dict, request: dict, today: date | None = None,
+                        stage_callback=None) -> dict:
     today = today or datetime.now(timezone.utc).date()
     months = _month_range(request["start_month"], request["end_month"])
+    _notify_stage(stage_callback, "inventory_calculation", "running")
     inventory = build_inventory_evidence(snapshot)
+    _notify_stage(stage_callback, "inventory_calculation", "completed")
+    _notify_stage(stage_callback, "historical_sales", "running")
     history = build_history_evidence(snapshot, request)
+    _notify_stage(stage_callback, "historical_sales", "completed")
+    _notify_stage(stage_callback, "plan_calculation", "running")
     problems = [*inventory["problems"], *history["problems"]]
     current_month = f"{today.year:04d}-{today.month:02d}"
     if months and months[0] <= current_month:
@@ -337,9 +348,11 @@ def build_plan_evidence(snapshot: dict, request: dict, today: date | None = None
                      for item in sku_plan) if sku_plan else None)
         monthly.append({"month": month, "target_units": value})
     ready = bool(sku_plan) and not problems
-    return {
+    result = {
         "status": "ready" if ready else "needs_review", "generated_by": "deterministic_host_engine_v1",
         "inventory": inventory, "history": history, "monthly_plan": monthly,
         "sku_plan": sku_plan, "problems": list(dict.fromkeys(problems)),
         "sell_through": request["sell_through"],
     }
+    _notify_stage(stage_callback, "plan_calculation", "completed")
+    return result

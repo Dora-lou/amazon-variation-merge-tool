@@ -106,6 +106,18 @@ class InventoryEvidenceTests(unittest.TestCase):
 
 
 class HistoryAndPlanTests(unittest.TestCase):
+    def test_plan_engine_reports_calculation_stages(self):
+        stages = []
+        build_plan_evidence(
+            complete_snapshot(), REQUEST, today=date(2027, 10, 1),
+            stage_callback=lambda name, status: stages.append((name, status)),
+        )
+        self.assertEqual(stages, [
+            ("inventory_calculation", "running"), ("inventory_calculation", "completed"),
+            ("historical_sales", "running"), ("historical_sales", "completed"),
+            ("plan_calculation", "running"), ("plan_calculation", "completed"),
+        ])
+
     def test_complete_natural_month_history(self):
         evidence = build_history_evidence(complete_snapshot(), REQUEST)
         self.assertEqual(evidence["status"], "ready")

@@ -74,6 +74,35 @@ class FakeMcp:
 
 
 class LingxingTests(unittest.TestCase):
+    def test_empty_sse_is_controlled_collection_error(self):
+        client = collectors.StreamableHttpMcpClient(
+            "https://example.invalid/mcp", {}, source_label="领星"
+        )
+        with self.assertRaises(collectors.CollectionError) as caught:
+            client._decode_response("text/event-stream", b"")
+        self.assertIn("SSE", str(caught.exception))
+
+    def test_oversized_mcp_response_is_controlled_collection_error(self):
+        client = collectors.StreamableHttpMcpClient(
+            "https://example.invalid/mcp", {}, source_label="领星"
+        )
+        with patch.object(collectors, "MAX_MCP_OUTPUT", 2):
+            with self.assertRaises(collectors.CollectionError) as caught:
+                client._decode_response("application/json", b"123")
+        self.assertIn("安全大小限制", str(caught.exception))
+
+    def test_empty_sse_degrades_lingxing_source_instead_of_escaping(self):
+        client = collectors.StreamableHttpMcpClient(
+            "https://example.invalid/mcp", {}, source_label="领星"
+        )
+        client.initialize = lambda: client._decode_response("text/event-stream", b"")
+        with patch.object(
+            collectors.StreamableHttpMcpClient, "from_codex_config", return_value=client
+        ):
+            result = collectors.collect_lingxing(REQUEST, "codex")
+        self.assertEqual(result["status"], "error")
+        self.assertIn("SSE", result["error"])
+
     def test_parent_listing_is_paginated_until_short_page(self):
         class PagingMcp(FakeMcp):
             def call_tool(self, name, arguments):
@@ -340,6 +369,21 @@ class StructureTests(unittest.TestCase):
         with patch.object(collectors, "collect_lingxing") as lx, patch.object(collectors, "collect_lark") as lark:
             self.assertIs(collectors.collect_trusted_data(REQUEST, "codex", "lark", simulated), simulated)
             lx.assert_not_called(); lark.assert_not_called()
+
+    def test_collection_reports_safe_processing_stages(self):
+        stages = []
+        lingxing = {"status":"error", "error":"unavailable", "records": {}, "tools": []}
+        feishu = {"status":"error", "error":"unavailable", "documents": []}
+        with patch.object(collectors, "collect_lingxing", return_value=lingxing), \
+             patch.object(collectors, "collect_lark", return_value=feishu):
+            collectors.collect_trusted_data(
+                REQUEST, "codex", "lark", stage_callback=lambda name, status: stages.append((name, status))
+            )
+        names = [name for name, status in stages if status == "running"]
+        self.assertEqual(names, [
+            "lingxing_collection", "feishu_collection", "product_mapping",
+            "inventory_calculation", "historical_sales", "plan_calculation",
+        ])
 
 
 if __name__ == "__main__":
