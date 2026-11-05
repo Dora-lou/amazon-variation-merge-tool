@@ -18,12 +18,27 @@ IDENTITY_ALIASES = {
     "fnsku": ("fnsku", "FNSKU"),
 }
 
+CONTEXT_ALIASES = {
+    "product_name": ("product_name", "productName", "listing_name", "listingName", "title", "item_name"),
+    "site": ("site", "marketplace", "marketplace_name", "marketplaceName", "country_code"),
+    "store_id": ("store_id", "storeId", "sid", "seller_id", "sellerId"),
+    "store": ("store_name", "storeName", "shop_name", "shopName"),
+    "listing_status": ("listing_status", "listingStatus", "status", "listing_state"),
+}
+
+LEDGER_ALIASES = {
+    "warehouse": ("warehouse", "warehouse_name", "warehouseName", "warehouse_code"),
+    "batch_id": ("batch_id", "batchId", "shipment_id", "shipmentId", "shipment_id_ext"),
+    "shipment_id": ("shipment_id", "shipmentId", "shipment_id_ext", "shipmentIdExt"),
+    "status_date": ("status_date", "statusDate", "update_time", "updated_at", "gmt_modified"),
+}
+
 # Aliases are accepted only when an actual response contains them.  Missing
 # aliases stay missing; no default zero is ever synthesized.
 FIELD_ALIASES = {
-    "listing_and_sku_mapping": IDENTITY_ALIASES,
+    "listing_and_sku_mapping": {**IDENTITY_ALIASES, **CONTEXT_ALIASES},
     "inventory_snapshot": {
-        **IDENTITY_ALIASES,
+        **IDENTITY_ALIASES, **CONTEXT_ALIASES, **LEDGER_ALIASES,
         "fba_available": ("afn_fulfillable_quantity", "fba_available_quantity", "available_quantity"),
         "fba_transfer_pending": (
             "afn_reserved_fc_transfers", "reserved_fc_transfers", "pending_transfer_quantity",
@@ -41,9 +56,13 @@ FIELD_ALIASES = {
             "awd_to_fba_quantity",
         ),
         "snapshot_date": ("snapshot_date", "snapshotDate", "update_time", "updated_at", "gmt_modified"),
+        "arrival_date": (
+            "arrival_date", "arrivalDate", "expected_arrival_date", "expectedArrivalDate",
+            "estimated_arrival_date",
+        ),
     },
     "replenishment_inventory": {
-        **IDENTITY_ALIASES,
+        **IDENTITY_ALIASES, **CONTEXT_ALIASES, **LEDGER_ALIASES,
         "actual_transit": ("real_transit_quantity", "actualTransitQuantity", "actual_transit_quantity"),
         "planned_inbound": ("stock_up_num", "stockUpNum", "planned_inbound_quantity"),
         "available": ("available_quantity", "availableQuantity", "afn_fulfillable_quantity"),
@@ -53,8 +72,14 @@ FIELD_ALIASES = {
         ),
     },
     "historical_sales": {
-        **IDENTITY_ALIASES,
+        **IDENTITY_ALIASES, **CONTEXT_ALIASES,
         "period": ("period", "month", "date", "date_time", "dateTime", "report_date", "reportDate"),
+        "sales_units": ("volume", "sales_quantity", "salesQuantity", "totalSalesQuantity"),
+        "sales_amount": ("sales_amount", "salesAmount", "totalSalesAmount"),
+    },
+    "recent_sales": {
+        **IDENTITY_ALIASES, **CONTEXT_ALIASES,
+        "period": ("period", "date", "month", "date_time", "dateTime", "report_date", "reportDate"),
         "sales_units": ("volume", "sales_quantity", "salesQuantity", "totalSalesQuantity"),
         "sales_amount": ("sales_amount", "salesAmount", "totalSalesAmount"),
     },
@@ -66,6 +91,7 @@ REQUIRED_CANONICAL_FIELDS = {
                            "awd_standard_transit"},
     "replenishment_inventory": {"actual_transit", "planned_inbound"},
     "historical_sales": {"period", "sales_units"},
+    "recent_sales": {"period", "sales_units"},
 }
 
 
@@ -119,7 +145,18 @@ def _identity_matches_scope(record: dict, scope: dict | None) -> bool:
     comparable = [(key, value) for key, value in observed.items() if allowed[key]]
     # One matching identifier must never override another explicit mismatch.  A
     # response row carrying a known SKU but a different ASIN is not target data.
-    return bool(comparable) and all(value in allowed[key] for key, value in comparable)
+    if not comparable or not all(value in allowed[key] for key, value in comparable):
+        return False
+    allowed_sites = {str(value).casefold() for value in scope.get("sites", []) if value}
+    if allowed_sites and record.get("site"):
+        aliases = {
+            "us": {"us", "usa", "amazon.com", "unitedstates", "美国", "美国站"},
+        }
+        observed_site = re.sub(r"[^0-9a-z一-鿿.]+", "", str(record["site"]).casefold())
+        accepted = set().union(*(aliases.get(site, {site}) for site in allowed_sites))
+        if observed_site not in accepted:
+            return False
+    return True
 
 
 def canonicalize_records(payload: Any, purpose: str, scope: dict | None = None) -> tuple[list[dict], int]:
@@ -141,8 +178,9 @@ def canonicalize_records(payload: Any, purpose: str, scope: dict | None = None) 
         if not _identity_matches_scope(canonical, scope):
             rejected += 1
             continue
-        if purpose == "historical_sales" and canonical.get("period"):
-            match = re.search(r"20\d{2}-(?:0[1-9]|1[0-2])", str(canonical["period"]))
+        if purpose in ("historical_sales", "recent_sales") and canonical.get("period"):
+            pattern = r"20\d{2}-(?:0[1-9]|1[0-2])(?:-[0-3]\d)?" if purpose == "recent_sales" else r"20\d{2}-(?:0[1-9]|1[0-2])"
+            match = re.search(pattern, str(canonical["period"]))
             canonical["period"] = match.group(0) if match else canonical["period"]
         canonical["source_fields"] = source_fields
         fingerprint = tuple(sorted((key, repr(value)) for key, value in canonical.items()
@@ -158,7 +196,7 @@ def canonical_field_quality(records: list[dict], purpose: str) -> dict[str, str]
     identity_fields = set(IDENTITY_ALIASES)
     for field in FIELD_ALIASES.get(purpose, {}):
         if (field in identity_fields and purpose != "listing_and_sku_mapping") or field in {
-            "snapshot_date", "arrival_date"
+            "snapshot_date", "arrival_date", *CONTEXT_ALIASES, *LEDGER_ALIASES,
         }:
             continue
         values = [record[field] for record in records if record.get(field) not in (None, "")]
@@ -197,3 +235,22 @@ def mapping_conflicts(records: list[dict]) -> list[str]:
             if len(asins) > 1:
                 conflicts.append(f"{field} {value} 对应多个子 ASIN")
     return conflicts
+
+
+def mapping_context_issues(records: list[dict]) -> list[str]:
+    issues = []
+    stores = {str(row.get("store_id") or row.get("store") or "").strip()
+              for row in records if row.get("store_id") or row.get("store")}
+    sites = {str(row.get("site") or "").strip() for row in records if row.get("site")}
+    if len(stores) > 1:
+        issues.append("父子体映射包含多个店铺，需选择唯一店铺")
+    if len(sites) > 1:
+        issues.append("父子体映射包含多个站点，需选择唯一站点")
+    inactive = []
+    for row in records:
+        status = str(row.get("listing_status") or "").casefold()
+        if any(marker in status for marker in ("inactive", "closed", "deleted", "archived", "停售", "停用")):
+            inactive.append(str(row.get("msku") or row.get("sku") or row.get("asin") or "未知SKU"))
+    if inactive:
+        issues.append("映射包含已停用或历史Listing：" + "、".join(sorted(set(inactive))))
+    return issues

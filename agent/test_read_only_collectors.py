@@ -122,7 +122,7 @@ class LingxingTests(unittest.TestCase):
         names = [name for name, _ in fake.calls]
         self.assertEqual(names.count("help"), 4)
         self.assertEqual(names.count("search"), 4)
-        self.assertEqual(names.count("action"), 5)
+        self.assertEqual(names.count("action"), 6)
         self.assertEqual(result["family_scope"]["parent_asin"], "B099999999")
         self.assertEqual(result["queries"]["inventory_snapshot"]["field_quality"]["fba_available"],
                          "reported_zero")
@@ -196,6 +196,35 @@ class LingxingTests(unittest.TestCase):
         ])
         self.assertEqual(conflicts, ["msku DUPLICATE 对应多个子 ASIN"])
 
+    def test_multiple_parent_candidates_require_review(self):
+        class MultipleParents(FakeMcp):
+            def call_tool(self, name, arguments):
+                if name == "action" and arguments["toolId"] == "erp_listing":
+                    self.calls.append((name, arguments))
+                    if arguments["params"].get("search_field") == "asin":
+                        return {"data":{"rows":[
+                            {"asin":REQUEST["asin"],"parent_asin":"B011111111","sku":"SKU-1"},
+                            {"asin":REQUEST["asin"],"parent_asin":"B022222222","sku":"SKU-1"},
+                        ]}}
+                return super().call_tool(name, arguments)
+        fake = MultipleParents()
+        with patch.object(collectors.StreamableHttpMcpClient, "from_codex_config", return_value=fake):
+            result = collectors.collect_lingxing(REQUEST, "codex")
+        self.assertEqual(result["family_scope"]["parent_candidates"], ["B011111111", "B022222222"])
+        self.assertEqual(result["family_scope"]["mapping_status"], "needs_review")
+        parent_actions = [args for name, args in fake.calls if name == "action" and
+                          args["toolId"] == "erp_listing" and
+                          args["params"].get("search_field") == "parent_asin"]
+        self.assertEqual(parent_actions, [])
+
+    def test_cross_store_and_inactive_listing_are_mapping_issues(self):
+        issues = mapping.mapping_context_issues([
+            {"asin":"B000000001","msku":"A","store_id":"S1","site":"US","listing_status":"active"},
+            {"asin":"B000000002","msku":"B","store_id":"S2","site":"US","listing_status":"inactive"},
+        ])
+        self.assertTrue(any("多个店铺" in issue for issue in issues))
+        self.assertTrue(any("已停用" in issue for issue in issues))
+
 
 class LarkTests(unittest.TestCase):
     def test_duplicate_header_error_is_safely_classified(self):
@@ -263,6 +292,20 @@ class LarkTests(unittest.TestCase):
         reference = next(doc for doc in result["documents"] if doc["match_type"] == "reference")
         self.assertEqual(target["match_basis"], "content_asin")
         self.assertTrue(reference["table"]["omitted"])
+
+    def test_workbook_reader_keeps_hidden_sheet_metadata(self):
+        payload = {"ok":True,"data":{"sheets":[
+            {"sheet_id":"visible","title":"销售计划"},
+            {"sheet_id":"hidden","title":"利润测算","hidden":True},
+        ]}}
+        sheets = collectors._workbook_sheets(payload)
+        self.assertEqual(len(sheets), 2)
+        self.assertTrue(sheets[1]["hidden"])
+
+    def test_auth_success_envelope_is_user(self):
+        self.assertEqual(collectors._lark_auth_identity(
+            {"ok":True,"identity":"user","data":{"verified":True}}
+        ), (True, "user"))
 
 
 class StructureTests(unittest.TestCase):

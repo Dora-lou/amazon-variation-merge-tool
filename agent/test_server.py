@@ -39,6 +39,9 @@ class ValidationTests(unittest.TestCase):
     def test_valid_request(self):
         self.assertEqual(server.valid_request(EXAMPLE)['sell_through'],95)
 
+    def test_product_name_may_be_resolved_after_collection(self):
+        self.assertEqual(server.valid_request({**EXAMPLE, 'product':''})['product'], '')
+
     def test_reject_bad_asin(self):
         with self.assertRaises(ValueError):
             server.valid_request({**EXAMPLE, 'asin':'test'})
@@ -223,6 +226,42 @@ class ValidationTests(unittest.TestCase):
         table = compacted['sources']['feishu']['documents'][0]['table']
         self.assertTrue(table['omitted'])
         self.assertNotIn('profit', table)
+
+    def test_authoritative_evidence_overrides_model_numbers(self):
+        trusted=json.loads(json.dumps(TRUSTED_DATA))
+        trusted['overall_status']='partial'
+        trusted['sources']['lingxing'].update({
+            'status':'ok','family_scope':{'parent_asin':'B099999999','child_asins':[EXAMPLE['asin']],
+                                         'mapping_status':'complete_candidate'},
+            'records':{'listing_and_sku_mapping':[{'asin':EXAMPLE['asin'],'sku':'SKU-1',
+                                                   'product_name':'真实产品'}]},
+        })
+        trusted['sku_map']=[{'asin':EXAMPLE['asin'],'sku':'SKU-1','sources':['lingxing']}]
+        trusted['planning_evidence']={
+            'status':'ready','problems':[],
+            'inventory':{'status':'ready','inventory_total':100,'sku_details':[]},
+            'history':{'status':'ready','values_by_sku':{},'source':'lingxing:test'},
+            'monthly_plan':[{'month':m,'target_units':v} for m,v in zip(
+                ['2026-11','2026-12','2027-01','2027-02'],[40,30,20,5])],
+            'sku_plan':[{'sku':'SKU-1','monthly':[]}],
+        }
+        model={**SAMPLE_RESULT,'status':'ready','inventory_total':999,'warnings':[],
+               'monthly_plan':[{'month':m,'target_units':999,'note':'model'} for m in
+                               ['2026-11','2026-12','2027-01','2027-02']]}
+        checked=server.validate_generated_preview(model,EXAMPLE,trusted)
+        self.assertEqual(checked['status'],'ready')
+        self.assertEqual(checked['inventory_total'],100)
+        self.assertEqual([row['target_units'] for row in checked['monthly_plan']],[40,30,20,5])
+        self.assertEqual(checked['product'],'真实产品')
+
+    def test_web_page_contains_detailed_status_sections(self):
+        root=Path(__file__).resolve().parent.parent
+        html=(root/'agent.html').read_text(encoding='utf-8')
+        script=(root/'agent-ui.js').read_text(encoding='utf-8')
+        for element_id in ('moduleStates','mapping','inventoryDetails','historyDetails','skuPlan'):
+            self.assertIn(f'id="{element_id}"',html)
+            self.assertIn(f"$('{element_id}')",script)
+        self.assertNotIn("'产品 '+$('productChoice').value",script)
 
 
 

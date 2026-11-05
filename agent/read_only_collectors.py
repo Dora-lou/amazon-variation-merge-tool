@@ -14,14 +14,16 @@ import shutil
 import subprocess
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 from sales_data_mapping import (
     FIELD_ALIASES, IDENTITY_ALIASES, REQUIRED_CANONICAL_FIELDS,
     build_scope_from_mapping, canonical_field_quality, canonicalize_records, mapping_conflicts,
+    mapping_context_issues,
 )
+from sales_plan_engine import build_plan_evidence
 
 COLLECTION_TIMEOUT = 90
 MAX_LARK_OUTPUT = 2_000_000
@@ -159,34 +161,37 @@ def _schema_validate(schema: dict, value: Any, path: str = "params") -> None:
 class StreamableHttpMcpClient:
     """Minimal MCP streamable-HTTP client using only the Python standard library."""
 
-    def __init__(self, url: str, headers: dict[str, str], timeout: int = COLLECTION_TIMEOUT):
+    def __init__(self, url: str, headers: dict[str, str], timeout: int = COLLECTION_TIMEOUT,
+                 source_label: str = "领星"):
         if not url.lower().startswith("https://"):
-            raise CollectionError("领星 MCP 必须使用 HTTPS")
+            raise CollectionError(f"{source_label} MCP 必须使用 HTTPS")
         self.url = url
         self.headers = dict(headers)
         self.timeout = timeout
+        self.source_label = source_label
         self.session_id: str | None = None
         self.request_id = 0
 
     @classmethod
-    def from_codex_config(cls, codex_bin: str) -> "StreamableHttpMcpClient":
+    def from_codex_config(cls, codex_bin: str, server_name: str = "yb-lingxing",
+                          source_label: str = "领星") -> "StreamableHttpMcpClient":
         try:
             proc = subprocess.run(
-                [codex_bin, "mcp", "get", "yb-lingxing", "--json"],
+                [codex_bin, "mcp", "get", server_name, "--json"],
                 capture_output=True, text=True, encoding="utf-8", errors="replace",
                 timeout=20, check=False,
             )
         except (OSError, subprocess.TimeoutExpired):
-            raise CollectionError("无法读取本机领星 MCP 配置") from None
+            raise CollectionError(f"无法读取本机{source_label} MCP 配置") from None
         if proc.returncode != 0 or len(proc.stdout) > 200_000:
-            raise CollectionError("本机未找到可用的 yb-lingxing MCP 配置")
+            raise CollectionError(f"本机未找到可用的 {server_name} MCP 配置")
         try:
             config = json.loads(proc.stdout)
             transport = config["transport"]
         except (json.JSONDecodeError, KeyError, TypeError):
-            raise CollectionError("yb-lingxing MCP 配置格式无法识别") from None
+            raise CollectionError(f"{server_name} MCP 配置格式无法识别") from None
         if not config.get("enabled") or transport.get("type") != "streamable_http":
-            raise CollectionError("yb-lingxing MCP 未启用或不是受支持的 HTTP 类型")
+            raise CollectionError(f"{server_name} MCP 未启用或不是受支持的 HTTP 类型")
         if transport.get("http_headers_helper"):
             raise CollectionError("安全策略不执行 MCP 的外部凭证辅助命令")
         headers = {str(k): str(v) for k, v in (transport.get("http_headers") or {}).items()}
@@ -197,12 +202,12 @@ class StreamableHttpMcpClient:
         bearer_env = transport.get("bearer_token_env_var")
         if bearer_env and os.getenv(str(bearer_env)):
             headers["Authorization"] = "Bearer " + os.environ[str(bearer_env)]
-        return cls(str(transport.get("url", "")), headers)
+        return cls(str(transport.get("url", "")), headers, source_label=source_label)
 
     @staticmethod
     def _decode_response(content_type: str, body: bytes) -> Any:
         if len(body) > MAX_MCP_OUTPUT:
-            raise CollectionError("领星 MCP 返回超过安全大小限制")
+            raise CollectionError(f"{self.source_label} MCP 返回超过安全大小限制")
         text = body.decode("utf-8", errors="strict")
         if "text/event-stream" in content_type:
             events = []
@@ -212,7 +217,7 @@ class StreamableHttpMcpClient:
                 if data:
                     events.append(_json_from_text(data))
             if not events:
-                raise CollectionError("领星 MCP SSE 响应为空")
+                raise CollectionError(f"{self.source_label} MCP SSE 响应为空")
             return events[-1]
         if not text.strip():
             return None
@@ -237,9 +242,9 @@ class StreamableHttpMcpClient:
                 return self._decode_response(response.headers.get("Content-Type", ""), response.read())
         except urllib.error.HTTPError as exc:
             # Never include response bodies or request headers: either may contain secrets.
-            raise CollectionError(f"领星 MCP HTTP 请求失败（状态码 {exc.code}）") from None
+            raise CollectionError(f"{self.source_label} MCP HTTP 请求失败（状态码 {exc.code}）") from None
         except (urllib.error.URLError, TimeoutError, UnicodeError, OSError):
-            raise CollectionError("领星 MCP 网络连接失败或响应无法解析") from None
+            raise CollectionError(f"{self.source_label} MCP 网络连接失败或响应无法解析") from None
 
     def initialize(self) -> None:
         self.request_id += 1
@@ -252,7 +257,7 @@ class StreamableHttpMcpClient:
             },
         })
         if not isinstance(result, dict) or ("result" not in result and "error" in result):
-            raise CollectionError("领星 MCP 初始化失败")
+            raise CollectionError(f"{self.source_label} MCP 初始化失败")
         self._post({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}})
 
     def call_tool(self, name: str, arguments: dict) -> Any:
@@ -262,10 +267,10 @@ class StreamableHttpMcpClient:
             "params": {"name": name, "arguments": arguments},
         })
         if not isinstance(response, dict) or "error" in response:
-            raise CollectionError(f"领星 MCP {name} 调用失败")
+            raise CollectionError(f"{self.source_label} MCP {name} 调用失败")
         result = response.get("result")
         if isinstance(result, dict) and result.get("isError"):
-            raise CollectionError(f"领星 MCP {name} 返回工具错误")
+            raise CollectionError(f"{self.source_label} MCP {name} 返回工具错误")
         return _extract_mcp_payload(response)
 
 
@@ -304,9 +309,11 @@ def _lingxing_params(tool_id: str, request: dict, scope: dict | None = None) -> 
         trend_start_index = today.year * 12 + today.month - 1 - 24
         query_start_index = min(prior_start_index, trend_start_index)
         query_start = f"{query_start_index // 12:04d}-{query_start_index % 12 + 1:02d}-01"
+        first_of_current = today.replace(day=1)
+        last_complete_day = first_of_current - timedelta(days=1)
         return {
             "offset": 0, "length": 500, "start_date": query_start,
-            "end_date": today.isoformat(), "date_type": "purchase", "date_view_type": "month",
+            "end_date": last_complete_day.isoformat(), "date_type": "purchase", "date_view_type": "month",
             "date_view_order_type": 1, "summary_field": "sku", "summary_field_level1": "sku",
             "search_field": "parent_asin" if scope.get("parent_asin") else "asin",
             "search_value": [scope.get("parent_asin") or asin], "turn_on_summary": 1,
@@ -322,6 +329,21 @@ def _lingxing_params(tool_id: str, request: dict, scope: dict | None = None) -> 
         return {"offset": 0, "length": 200, "dataType": 1, "searchField": "asin",
                 "searchValue": asin, "fulfillmentChannelType": "FBA", "analysisMode": 2}
     raise CollectionError("领星工具不在本地只读白名单")
+
+
+def _lingxing_recent_sales_params(request: dict, scope: dict) -> dict:
+    """Use the validated performance tool for a separate, completed-day trend query."""
+    today = datetime.now().date()
+    end = today - timedelta(days=1)
+    start = end - timedelta(days=29)
+    return {
+        "offset": 0, "length": 500, "start_date": start.isoformat(), "end_date": end.isoformat(),
+        "date_type": "purchase", "date_view_type": "day", "date_view_order_type": 1,
+        "summary_field": "sku", "summary_field_level1": "sku",
+        "search_field": "parent_asin" if scope.get("parent_asin") else "asin",
+        "search_value": [scope.get("parent_asin") or request["asin"]],
+        "turn_on_summary": 1, "query_order_profit": False,
+    }
 
 
 QUALITY_FIELD_GROUPS = FIELD_ALIASES
@@ -541,26 +563,29 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
             "listing_requested_asin"
         )
         parents = _values(requested_listing, ("parent_asin", "parentAsin")) if requested_listing else set()
-        parent_asin = sorted(parents)[0] if len(parents) == 1 else request["asin"]
+        parent_candidates = sorted(parents)
+        parent_asin = parent_candidates[0] if len(parent_candidates) == 1 else (
+            request["asin"] if not parent_candidates else None
+        )
         # The webpage normally supplies a parent ASIN. If it supplies a child ASIN,
         # the first query discovers the parent and this second scoped query expands it.
-        family_listing = execute_paginated(
+        family_listing = (execute_paginated(
             "erp_listing", "listing_and_sku_mapping",
             _lingxing_params("erp_listing", request, {"parent_asin": parent_asin}),
             "listing_parent_family",
-        )
+        ) if parent_asin else None)
         if not _business_records(family_listing):
             # Do not assert that the requested ASIN is a parent when expansion returned no rows.
             if not parents:
                 parent_asin = None
         mapping_rows, mapping_rejected = canonicalize_records(
             requested_listing, "listing_and_sku_mapping",
-            {"parent_asin": parent_asin, "asins": [request["asin"]]},
+            {"parent_asin": parent_asin, "asins": [request["asin"]], "sites": [request["site"]]},
         )
         # A parent expansion is allowed to add child ASINs even though they were not in
         # the initial request. Filter it by exact parent separately, then merge.
         family_rows, family_rejected = canonicalize_records(
-            family_listing, "listing_and_sku_mapping", {"parent_asin": parent_asin}
+            family_listing, "listing_and_sku_mapping", {"parent_asin": parent_asin, "sites": [request["site"]]}
         ) if family_listing is not None else ([], 0)
         fingerprints = {(row.get("asin"), row.get("sku"), row.get("msku"), row.get("fnsku"))
                         for row in mapping_rows}
@@ -571,13 +596,15 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
                 fingerprints.add(fingerprint)
         source["records"]["listing_and_sku_mapping"] = mapping_rows
         scope = build_scope_from_mapping(mapping_rows, request["asin"], parent_asin)
-        conflicts = mapping_conflicts(mapping_rows)
+        scope["sites"] = [request["site"]]
+        conflicts = mapping_conflicts(mapping_rows) + mapping_context_issues(mapping_rows)
         identifiers_complete = bool(mapping_rows) and all(
             row.get("asin") and any(row.get(key) for key in ("sku", "msku", "fnsku"))
             for row in mapping_rows
         )
         source["family_scope"] = {
             "parent_asin": parent_asin,
+            "parent_candidates": parent_candidates,
             "child_asins": scope["asins"], "skus": scope["skus"],
             "mskus": scope["mskus"], "fnskus": scope["fnskus"],
             "mapping_status": "complete_candidate" if parent_asin and family_listing and
@@ -617,6 +644,25 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
                     query["coverage"] = coverage
                     if coverage["status"] == "incomplete" and query["status"] == "ok":
                         query["status"] = "period_incomplete"
+
+        recent_payload = execute_paginated(
+            "query_product_performance_asin_lists", "recent_sales",
+            _lingxing_recent_sales_params(request, scope), "recent_sales",
+        )
+        if recent_payload is not None:
+            canonical, rejected = canonicalize_records(recent_payload, "recent_sales", scope)
+            query = source["queries"]["recent_sales"]
+            query["raw_record_count"] = query.get("record_count", 0)
+            query["record_count"] = len(canonical)
+            query["out_of_scope_record_count"] = rejected
+            query["observed_fields"] = _observed_fields(recent_payload)
+            query["field_quality"] = canonical_field_quality(canonical, "recent_sales")
+            if not canonical:
+                query["status"] = "out_of_scope_response" if query["raw_record_count"] else "empty_response"
+            elif any(query["field_quality"].get(field) == "field_missing"
+                     for field in REQUIRED_QUALITY_FIELDS["recent_sales"]):
+                query["status"] = "field_missing"
+            source["records"]["recent_sales"] = canonical
 
         query_states = [item.get("status") for key, item in source["queries"].items()
                         if not (key == "listing_requested_asin" and
@@ -708,6 +754,38 @@ def _list_items(payload: Any) -> list[dict]:
     return []
 
 
+def _lark_auth_identity(payload: Any) -> tuple[bool, str]:
+    """Accept both current success envelopes and older flat auth-status JSON."""
+    if not isinstance(payload, dict):
+        return False, ""
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
+    identity = str(payload.get("identity") or data.get("identity") or "")
+    verified = data.get("verified") is True
+    if not verified:
+        user = data.get("identities", {}).get("user", {}) if isinstance(data.get("identities"), dict) else {}
+        verified = str(user.get("status") or "").casefold() in ("valid", "active", "authenticated") and \
+            str(user.get("tokenStatus") or user.get("token_status") or "").casefold() not in ("expired", "invalid")
+        if verified and not identity:
+            identity = "user"
+    return verified, identity
+
+
+def _workbook_sheets(payload: Any) -> list[dict]:
+    """Return bounded sheet descriptors, including hidden sheets when reported."""
+    descriptors = []
+    for item in _walk(payload):
+        sheet_id = item.get("sheet_id") or item.get("sheetId") or item.get("id")
+        title = item.get("title") or item.get("name")
+        if sheet_id and title:
+            descriptor = {
+                "sheet_id": str(sheet_id), "title": str(title),
+                "hidden": bool(item.get("hidden") or item.get("is_hidden") or item.get("isHidden")),
+            }
+            if descriptor not in descriptors:
+                descriptors.append(descriptor)
+    return descriptors[:30]
+
+
 def _node_match_type(node: dict, request: dict) -> str | None:
     title = str(node.get("title") or node.get("name") or "").casefold()
     target_terms = [request["asin"].casefold(), request["product"].casefold()]
@@ -772,7 +850,8 @@ def collect_lark(request: dict, lark_bin: str) -> dict:
               "documents": [], "document_errors": [], "warnings": [], "error": ""}
     try:
         auth = _run_lark(lark_bin, ["auth", "status", "--json", "--verify"])
-        if not isinstance(auth, dict) or auth.get("verified") is not True or auth.get("identity") != "user":
+        verified, identity = _lark_auth_identity(auth)
+        if not verified or identity != "user":
             raise CollectionError("飞书用户授权状态无法确认")
         spaces_payload = _run_lark(lark_bin, [
             "wiki", "+space-list", "--as", "user", "--page-all", "--page-limit", "10", "--format", "json"
@@ -829,21 +908,31 @@ def collect_lark(request: dict, lark_bin: str) -> dict:
             try:
                 workbook = _run_lark(lark_bin, ["sheets", "+workbook-info", "--spreadsheet-token", token,
                                                        "--as", "user", "--format", "json"])
-                table_args = ["sheets", "+table-get", "--spreadsheet-token", token,
-                              "--as", "user", "--max-chars", "500000", "--format", "json"]
+                sheet_descriptors = _workbook_sheets(workbook)
+                reads = []
                 read_mode = "header"
-                try:
-                    table = _run_lark(lark_bin, table_args)
-                except LarkCommandError as exc:
-                    if exc.category != "duplicate_header":
-                        raise
-                    # +table-get refuses duplicate names because the result could not round-trip.
-                    # Positional columns are lossless for analysis and remain strictly read-only.
-                    table = _run_lark(lark_bin, [*table_args, "--no-header"])
-                    read_mode = "positional_no_header"
-                    source["warnings"].append(
-                        f"第 {index} 个匹配表格存在重复表头，已按位置列只读；列名需要人工核对。"
-                    )
+                targets = sheet_descriptors or [{"sheet_id": "", "title": "", "hidden": False}]
+                for descriptor in targets:
+                    table_args = ["sheets", "+table-get", "--spreadsheet-token", token]
+                    if descriptor["sheet_id"]:
+                        table_args.extend(["--sheet-id", descriptor["sheet_id"]])
+                    table_args.extend(["--as", "user", "--max-chars", "500000", "--format", "json"])
+                    try:
+                        table_payload = _run_lark(lark_bin, table_args)
+                        mode = "header"
+                    except LarkCommandError as exc:
+                        if exc.category != "duplicate_header":
+                            raise
+                        # Positional columns preserve duplicate headings without changing data.
+                        table_payload = _run_lark(lark_bin, [*table_args, "--no-header"])
+                        mode = "positional_no_header"
+                        read_mode = mode
+                        source["warnings"].append(
+                            f"第 {index} 个匹配表格的工作表「{descriptor['title'] or '未命名'}」存在重复表头，"
+                            "已按位置列只读；列名需要人工核对。"
+                        )
+                    reads.append({**descriptor, "read_mode": mode, "table": table_payload})
+                table = {"sheets": reads}
             except CollectionError as exc:
                 source["document_errors"].append({"candidate": index, "error": str(exc)})
                 continue
@@ -856,6 +945,7 @@ def collect_lark(request: dict, lark_bin: str) -> dict:
                 "title": str(node.get("title") or ""), "match_type": match_type,
                 "match_basis": match_basis or "structure_reference",
                 "read_mode": read_mode,
+                "sheet_count": len(table.get("sheets", [])),
                 "workbook": _redact_sensitive(workbook),
                 "table": (_redact_sensitive(table) if match_type == "target" else
                           {"omitted": True, "reason": "reference_values_not_for_target"}),
@@ -951,8 +1041,8 @@ def collect_trusted_data(request: dict, codex_bin: str | None, lark_bin: str | N
         warnings.extend(f"{name}: {warning}" for warning in source.get("warnings", []))
     statuses = {source.get("status") for source in sources.values()}
     overall = "ok" if statuses == {"ok"} else "partial" if "ok" in statuses or "partial" in statuses else "blocked"
-    return {
-        "schema_version": "1.2", "collected_at": utc_now(), "overall_status": overall,
+    snapshot = {
+        "schema_version": "2.0", "collected_at": utc_now(), "overall_status": overall,
         "request_identity": {key: request[key] for key in ("asin", "site", "start_month", "end_month")},
         "sources": sources, "sku_map": build_sku_map(sources, request), "warnings": warnings,
         "rules": {
@@ -961,3 +1051,11 @@ def collect_trusted_data(request: dict, codex_bin: str | None, lark_bin: str | N
             "profit": "成本缺失标待核算，不得把缺失成本或利润当作0",
         },
     }
+    snapshot["planning_evidence"] = build_plan_evidence(snapshot, request)
+    if snapshot["planning_evidence"]["status"] != "ready" and snapshot["overall_status"] == "ok":
+        snapshot["overall_status"] = "partial"
+    snapshot["warnings"].extend(
+        warning for warning in snapshot["planning_evidence"]["problems"]
+        if warning not in snapshot["warnings"]
+    )
+    return snapshot

@@ -27,7 +27,9 @@
 | 月份字段 | `month`, `date`, `date_time`, `dateTime`, `report_date`, `reportDate` 中实际出现的字段 |
 | 完整性检查 | 必须覆盖规划月份对应的全部去年同期自然月；缺月为 `period_incomplete` |
 
-查询从“去年同期规划起点”和“当前月往前 24 个月”中的更早日期开始，到采集日结束。`query_order_profit=false`，避免把订单利润明细混入销量响应。`platform_v2_page_list` 虽然是只读销量统计接口，但其 Schema 没有目标 ASIN/SKU搜索参数，因此不进入白名单，避免拉取并混入其他产品。
+查询从“去年同期规划起点”和“当前月往前 24 个月”中的更早日期开始，到上一个完整自然月末结束。`query_order_profit=false`，避免把订单利润明细混入销量响应。`platform_v2_page_list` 虽然是只读销量统计接口，但其 Schema 没有目标 ASIN/SKU搜索参数，因此不进入白名单，避免拉取并混入其他产品。
+
+完整自然月查询实际截止到上一个自然月末，避免把本月累计销量冒充整月。相同只读接口另执行一次最近30个已结束自然日查询（`date_view_type=day`），只用于趋势说明，不替代自然月季节性。历史结果如包含多个店铺、同一SKU月份重复行或缺少任一同期月份，计划计算会被阻断。
 
 ## 库存字段
 
@@ -56,6 +58,8 @@
 | 预计到货日 | `arrival_date`, `arrivalDate`, `expected_arrival_date`, `expectedArrivalDate`, `estimated_arrival_date` | 有日期时按月判断可承接量；缺日期不能假设可用于较早月份。 |
 
 `get_fba_shipment_list`、`get_delivery_order_relation_quantities` 和 `get_fba_shipment_receive_details` 均经元数据确认是只读接口，但前者参数复杂，后两者要求先取得真实货件明细 ID。当前没有安全、稳定的目标货件调用链和出参 Schema，因此暂未加入自动白名单；实际在途与 AWD/FBA 批次去重仍需人工确认。
+
+宿主只对完全相同的重复记录自动去重；存在真实 `batch_id/shipment_id` 时，同一物理批次按状态进度只计一次并保留被去除状态。多种在途/计划字段同时为正但没有批次标识、预计到货日缺失、统计时间不一致或跨店铺时，规划库存总量为 `null`。月度分配只使用截至该月末已可售或预计到货的数量，不能用未来库存支持更早月份。
 
 ## 状态语义
 

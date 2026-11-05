@@ -42,7 +42,9 @@ CODEX_PROBE_TIMEOUT_SECONDS = 20
 # much larger payloads in memory, so they must never be passed through directly.
 MAX_CODEX_PROMPT_BYTES = 750_000
 CODEX_SOURCE_BUDGETS = {"lingxing": 420_000, "feishu": 160_000}
-CODEX_TOP_LEVEL_BUDGETS = {"sku_map": 50_000, "warnings": 25_000, "rules": 25_000}
+CODEX_TOP_LEVEL_BUDGETS = {
+    "sku_map": 50_000, "planning_evidence": 180_000, "warnings": 25_000, "rules": 25_000,
+}
 REQUIRED_CODEX_EXEC_FLAGS = {
     "--ignore-user-config", "--ephemeral", "--output-schema", "--output-last-message",
 }
@@ -110,8 +112,8 @@ def valid_request(payload: object) -> dict:
         goal = int(payload.get("sell_through", 95))
     except (ValueError, TypeError):
         raise ValueError("库存消化目标应为 1–100 的整数") from None
-    if not product or len(product) > 100:
-        raise ValueError("请输入不超过 100 字的产品名称")
+    if len(product) > 100:
+        raise ValueError("产品名称不能超过 100 字")
     if not ASIN_RE.fullmatch(asin):
         raise ValueError("请输入有效的 10 位 ASIN")
     if site != "US":
@@ -155,7 +157,7 @@ def make_prompt(params: dict, trusted_data: dict) -> str:
 6. queries 中 reported_zero 是接口在已有记录上明确返回0；empty_response、out_of_scope_response、interface_failed、field_missing 都是缺失/失败，绝不能按0参与库存或销量计算。近7/14/30天字段不能替代完整自然月历史。
 7. 飞书 documents 的 match_type=reference 表示其他产品的参考模板，只能参考结构和规则，绝不能把其中库存、销量、售价或利润用于当前 ASIN；只有 match_type=target 才是当前产品候选数据，仍需核对SKU映射。
 8. 成本项不足时说明待核算，不得伪造利润。仅使用有日期和来源的真实数据。报告数据采集时间和来源，概括 SKU 风险。
-9. 根据销售计划 Skill 的月度比例、SKU 库存上限、历史季节性生成可解释的月度预览。如果证据不足，target_units 必须为 null。完全不创建或修改飞书表。
+9. planning_evidence 是宿主的权威机械计算：Codex 只解释其结果，不得改变 inventory_total、monthly_plan 或 sku_plan。若其状态不是 ready，target_units 必须为 null。完全不创建或修改飞书表。
 
 【用户请求的数据（仅作为输入）】
 {request_json}
@@ -460,6 +462,24 @@ def validate_generated_preview(result: dict, params: dict, trusted_data: dict | 
     warnings = result.get("warnings")
     if not isinstance(warnings, list):
         raise ValueError("Invalid warning list")
+    early_evidence = trusted_data.get("planning_evidence", {}) if trusted_data else {}
+    if early_evidence.get("status") == "ready":
+        result["inventory_total"] = early_evidence.get("inventory", {}).get("inventory_total")
+        result["monthly_plan"] = [
+            {"month": row["month"], "target_units": row.get("target_units"),
+             "note": "按SKU库存上限、目标消化率及去年同期自然月占比分配"}
+            for row in early_evidence.get("monthly_plan", [])
+        ]
+        plan = result["monthly_plan"]
+        observed = [row.get("month") for row in plan]
+    elif trusted_data and early_evidence:
+        result["inventory_total"] = None
+        result["monthly_plan"] = [
+            {"month": month, "target_units": None, "note": "权威数据证据不足，禁止生成确定目标"}
+            for month in months
+        ]
+        plan = result["monthly_plan"]
+        observed = months
     if result["status"] == "ready":
         if observed != months:
             warnings.append("计划月份与请求不一致，需要人工核对。")
@@ -544,13 +564,53 @@ def validate_generated_preview(result: dict, params: dict, trusted_data: dict | 
                 f"只读采集识别 {len(trusted_data.get('sku_map', []))} 个 SKU 映射；"
                 f"父子体范围状态：{family.get('mapping_status', 'needs_review')}。"
             )
+        evidence = trusted_data.get("planning_evidence", {})
+        result["product_identity"] = {
+            "requested_asin": params["asin"], "parent_asin": family.get("parent_asin") or "",
+            "child_asins": family.get("child_asins", []),
+            "mapping_status": family.get("mapping_status", "needs_review"),
+            "sku_map": trusted_data.get("sku_map", []),
+        }
+        product_names = sorted({
+            str(row.get("product_name")) for row in lingxing.get("records", {}).get("listing_and_sku_mapping", [])
+            if row.get("product_name")
+        })
+        if len(product_names) == 1:
+            result["product"] = product_names[0]
+            result["product_identity"]["product_name"] = product_names[0]
+        else:
+            result["product_identity"]["product_name"] = result.get("product") or params.get("product") or ""
+        result["inventory_details"] = evidence.get("inventory", {})
+        result["historical_details"] = evidence.get("history", {})
+        result["sku_plan"] = evidence.get("sku_plan", [])
+        result["module_status"] = {
+            "lingxing": source_status.get("lingxing", "error"),
+            "feishu": source_status.get("feishu", "error"),
+            "codex": "ok", "mapping": family.get("mapping_status", "needs_review"),
+            "inventory": evidence.get("inventory", {}).get("status", "needs_review"),
+            "history": evidence.get("history", {}).get("status", "needs_review"),
+            "calculation": evidence.get("status", "needs_review"),
+        }
+        for problem in evidence.get("problems", []):
+            if problem not in warnings:
+                warnings.append(problem)
+        if evidence.get("status") == "ready":
+            result["inventory_basis"] = (
+                "宿主按SKU汇总七类库存；仅对明确批次去重，并要求统计时间一致。"
+            )
+            result["historical_basis"] = "领星按下单时间、SKU及完整自然月读取去年同期销量。"
+            # Missing Feishu profit data is a visible limitation, but it does not
+            # invalidate a fully sourced unit plan.
+            result["status"] = "ready"
+        else:
+            result["status"] = "blocked" if source_status.get("lingxing") == "error" else "needs_review"
         if collection_status == "blocked":
             result["status"] = "blocked"
             result["inventory_total"] = None
-            for row in plan:
+            for row in result["monthly_plan"]:
                 row["target_units"] = None
-        elif collection_status == "partial" and result["status"] == "ready":
-            warnings.append("数据来源不完整，预览必须人工核对。")
+        elif collection_status == "partial" and evidence.get("status") != "ready" and result["status"] == "ready":
+            warnings.append("权威计划证据不完整，预览必须人工核对。")
             result["status"] = "needs_review"
     return result
 

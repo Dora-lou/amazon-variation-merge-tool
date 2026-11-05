@@ -4,6 +4,7 @@
   const $ = id => document.getElementById(id);
   const sessionKey = 'amazonAgentPairKey';
   let connected = false, running = false;
+  const localProducts = new Map();
   let timer = null;
   const labels = { queued:'任务排队中',running:'Agent 正在读取领星与飞书',completed:'预览完成',failed:'执行失败' };
   function setConnection(ok, label) {
@@ -75,13 +76,33 @@
     const strong=document.createElement('strong');strong.textContent=value;
     box.append(small,strong);return box;
   }
+  function renderTable(host, headers, rows, emptyText) {
+    if (!rows.length) { const empty=document.createElement('div');empty.className='empty-state';empty.textContent=emptyText;host.replaceChildren(empty);return; }
+    const wrap=document.createElement('div');wrap.className='table-scroll';const table=document.createElement('table');
+    const thead=document.createElement('thead'),trh=document.createElement('tr');
+    for(const label of headers){const th=document.createElement('th');th.textContent=label;trh.append(th);}thead.append(trh);table.append(thead);
+    const tbody=document.createElement('tbody');for(const row of rows){const tr=document.createElement('tr');for(const value of row){const td=document.createElement('td');td.textContent=value===null||value===undefined||value===''?'待核对':String(value);tr.append(td);}tbody.append(tr);}table.append(tbody);wrap.append(table);host.replaceChildren(wrap);
+  }
   function renderResult(result) {
     $('resultSummary').textContent=result.summary||'';
+    const identity=result.product_identity||{};
     $('facts').replaceChildren(
       textFact('核对状态',({ready:'有条件可预览',needs_review:'需要人工核对',blocked:'数据不足，已阻止估算'})[result.status]||result.status),
+      textFact('真实产品名称',identity.product_name||result.product||'待确认'),
+      textFact('父 ASIN',identity.parent_asin||'待确认'),
+      textFact('子体数量',Array.isArray(identity.child_asins)?String(identity.child_asins.length):'待确认'),
       textFact('规划库存',Number.isInteger(result.inventory_total)?result.inventory_total.toLocaleString()+' 件':'待确认'),
       textFact('库存数据时间',result.data_timestamp||'未取得')
     );
+    const moduleLabels={lingxing:'领星采集',feishu:'飞书读取',codex:'Codex分析',mapping:'父子映射',inventory:'库存核验',history:'历史销量',calculation:'计划计算'};
+    const goodStates=new Set(['ok','ready','complete_candidate']);$('moduleStates').replaceChildren();
+    for(const [key,value] of Object.entries(result.module_status||{})){const item=document.createElement('div');item.className='status-item '+(goodStates.has(value)?'good':'warn');item.textContent=(moduleLabels[key]||key)+'：'+value;$('moduleStates').append(item);}
+    if(!$('moduleStates').children.length){const item=document.createElement('div');item.className='empty-state';item.textContent='未返回模块状态';$('moduleStates').append(item);}
+    renderTable($('mapping'),['子 ASIN','SKU','MSKU','FNSKU','来源'],(identity.sku_map||[]).map(row=>[row.asin,row.sku,row.msku,row.fnsku,(row.sources||[]).join(' / ')]),'尚未建立可信SKU映射');
+    const inventoryRows=[];for(const item of ((result.inventory_details||{}).sku_details||[])){for(const [name,value] of Object.entries(item.components||{})){inventoryRows.push([item.sku||item.msku||item.asin,name,value,item.dedupe_verified?'已核对':'待去重',item.date_aligned?'时间一致':'时间不一致']);}}
+    renderTable($('inventoryDetails'),['SKU主体','库存类别','数量','去重状态','时间状态'],inventoryRows,'尚无可展示的库存明细');
+    const history=result.historical_details||{},historyRows=[];for(const [sku,values] of Object.entries(history.values_by_sku||{})){for(const [month,units] of Object.entries(values)){historyRows.push([sku,month,units,history.source||'']);}}
+    renderTable($('historyDetails'),['SKU主体','自然月','销量','来源'],historyRows,'尚无完整自然月历史销量');
     const table=document.createElement('table');
     const head=document.createElement('thead');const headRow=document.createElement('tr');
     for(const t of ['月份','预计销量','计算说明']){const th=document.createElement('th');th.textContent=t;headRow.append(th);}
@@ -95,6 +116,8 @@
       body.append(tr);
     }
     table.append(body);$('monthly').replaceChildren(table);
+    const skuPlanRows=[];for(const item of (result.sku_plan||[])){for(const month of (item.monthly||[])){skuPlanRows.push([item.sku||item.msku||item.asin,month.month,month.target_units,item.planning_inventory,month.seasonality_basis]);}}
+    renderTable($('skuPlan'),['SKU主体','月份','目标销量','SKU规划库存','同期销量依据'],skuPlanRows,'数据校验未通过，未生成SKU月度分配');
     addTextList($('skuNotes'),[result.inventory_basis,result.historical_basis,...(result.sku_notes||[])].filter(Boolean),'没有额外说明');
     const sourceLabels={lingxing:'领星',feishu:'飞书'};
     const statusLabels={ok:'读取成功',partial:'部分读取',missing:'未找到匹配数据',error:'读取失败'};
@@ -138,7 +161,7 @@
     if(!/^[A-Z0-9]{10}$/.test(payload.asin)){alert('请填写 10 位 ASIN');return;}
     running=true;$('startBtn').disabled=true;
     $('results').hidden=false;$('facts').replaceChildren();$('monthly').replaceChildren();
-    $('skuNotes').replaceChildren();$('warnings').replaceChildren();$('sources').replaceChildren();
+    $('skuNotes').replaceChildren();$('warnings').replaceChildren();$('sources').replaceChildren();$('moduleStates').replaceChildren();$('mapping').replaceChildren();$('inventoryDetails').replaceChildren();$('historyDetails').replaceChildren();$('skuPlan').replaceChildren();
     $('resultSummary').textContent='Agent 正在执行只读查询。任务完成后显示实际数据、月度计划与需要核对的字段。';
     setJobStatus('正在提交任务','warn');$('results').scrollIntoView({behavior:'smooth',block:'start'});
     try{
@@ -168,15 +191,16 @@
       });
       for(const p of records.sort((a,b)=>String(a.parentAsin).localeCompare(String(b.parentAsin)))){
         const asin=String(p.parentAsin||'').toUpperCase();if(!/^[A-Z0-9]{10}$/.test(asin))continue;
+        const name=String(p.productName||p.name||p.title||p.children?.find(c=>c.title)?.title||'').trim();localProducts.set(asin,{...p,name});
         const option=document.createElement('option');option.value=asin;
-        option.textContent=asin+' · '+(p.children||[]).length+' 个子体';
+        option.textContent=(name?name+' · ':'')+asin+' · '+(p.children||[]).length+' 个子体';
         $('productChoice').append(option);
       }
       db.close();
     }catch(_){/* Browser local library is optional */}
   }
   $('productChoice').addEventListener('change',()=>{
-    if($('productChoice').value){$('asin').value=$('productChoice').value;if(!$('product').value.trim())$('product').value='产品 '+$('productChoice').value;}
+    if($('productChoice').value){const asin=$('productChoice').value,p=localProducts.get(asin);$('asin').value=asin;if(p?.name)$('product').value=p.name;}
   });
   const now=new Date(),startYear=now.getFullYear(),startMonth=now.getMonth()+1;
   const toYM=(year,month)=>`${year}-${String(month).padStart(2,'0')}`;

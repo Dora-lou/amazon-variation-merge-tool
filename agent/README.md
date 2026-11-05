@@ -6,14 +6,20 @@
 
 ## 只读采集边界
 
-- 领星固定走 `help → search → action`。只有 help 与 search 同时返回 `toolType=read`、参数通过 Schema 校验且工具 ID 在代码白名单内时才允许 action。目前白名单为：`erp_listing`、`get_fba_stock_list`、`query_fba_valid_list`、`query_product_performance_asin_lists`。
+- 领星固定走 `help → search → action`。只有 help 与 search 同时返回 `toolType=read`、参数通过 Schema 校验且工具 ID 在代码白名单内时才允许 action。目前白名单为：`erp_listing`、`get_fba_stock_list`、`query_fba_valid_list`、`query_product_performance_asin_lists`。销量工具分别执行完整自然月和最近30个已结束自然日查询，二者不会互相替代。
 - 领星响应先按父/子 ASIN、SKU、MSKU、FNSKU 规范化并做目标范围过滤，再进入分析快照；接口返回的其他产品行会标记 `out_of_scope_response` 并排除。字段、接口和去重风险见 [FIELD_MAPPING.md](FIELD_MAPPING.md)。
 - 飞书只允许 `auth status`、`wiki +space-list`、`wiki +node-list`、`sheets +workbook-info`、`sheets +table-get`，并对每条命令的 flags 再做固定白名单检查。命令通过参数数组执行，不经过 shell，也不接受网页或模型提供的命令文本。
 - `+table-get` 遇到重复表头的 validation/exit 2 时，自动使用只读 `--no-header` 位置列模式重试并标记待核对；单个表格失败不会再抹掉其他已成功读取的表格。CLI 固定在用户主目录运行，并关闭更新/Skill 通知，确保 stdout 只用于 JSON。
-- 飞书标题或表格内容精确匹配当前 ASIN/产品名时才标记为 `target`；只命中其他“销售计划/库存/利润”表时标记为 `reference`，仅保留结构元数据，业务数值在采集层即移除。SKU 映射也只扫描 `target` 表，禁止把其他产品数值用于当前计划。
+- 飞书标题或表格内容精确匹配当前 ASIN/产品名时才标记为 `target`；只命中其他“销售计划/库存/利润”表时标记为 `reference`，仅保留结构元数据，业务数值在采集层即移除。目标工作簿按工作表逐一读取并保留隐藏状态；SKU 映射也只扫描 `target` 表，禁止把其他产品数值用于当前计划。
 - 利润数据只从已授权的现有飞书销售计划/利润表读取；当前不会用一个缺少产品筛选条件的领星利润接口批量拉取数据。
 - 采集快照只保存在当前任务内存中。MCP HTTP 头、飞书授权信息、Cookie、API Key 和资源 token 不进入模型提示、浏览器响应或日志。
 - 任一来源缺失或失败时，页面显示来源状态；两边均不可用时会把计划标记为 blocked，并清空库存和月目标，禁止模型补数。
+
+## 权威计算边界
+
+- `sales_plan_engine.py` 在 Codex 启动前建立 SKU 级七类库存台账、批次去重、自然月历史覆盖和到货时点约束。缺字段、跨店铺、日期错位、无批次的多种在途同时为正或规划期包含已开始月份但没有同口径实际销量时，确定目标保持为空。
+- 95% 等消化目标逐 SKU 计算；月度比例取自同 SKU 去年同期自然月占比，整数余数使用稳定的最大余数法。早期月份不得借用未来到货，单 SKU 不得借用其他 SKU 库存。
+- Codex 只解释宿主证据。浏览器中的库存、月目标和 SKU 分配由后端使用 `planning_evidence` 覆盖模型数值，模型无法扩大库存或自行补目标。
 - 领星先按请求 ASIN 查询 Listing，再按识别到的父 ASIN（或把请求值作为父 ASIN候选）分页展开全部子体；库存和自然月产品表现随后按完整父体范围查询。每个查询分别标记 `ok`、`empty_response`、`interface_failed`、`field_missing` 或 `possibly_truncated`。
 - 数字 `0` 只有在已有记录明确返回对应字段时才标记 `reported_zero`；空响应、接口错误和字段缺失绝不转换成 0。库存仍按销售计划 Skill 逐 SKU 核对 FBA/AWD/在途字段，字段不全或批次无法去重时保持待核对。
 - 历史销量使用产品表现接口的自然月维度，并机械检查是否覆盖每个规划月份对应的去年同期月份；缺任一自然月会标记 `period_incomplete`，不会用 Listing 的近 7/14/30 天字段替代。

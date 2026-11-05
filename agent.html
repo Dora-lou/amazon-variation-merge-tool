@@ -12,6 +12,7 @@ nav{display:flex;flex-wrap:wrap;gap:4px;padding:5px;border:1px solid #dfe7ed;bac
 .hero{background:linear-gradient(115deg,#234a3c,#357154);padding:32px 35px;border-radius:20px;color:#fff}.eyebrow{font-size:10px;letter-spacing:.16em;color:#c4e5cf;font-weight:800}h1{font-size:32px;letter-spacing:-.035em;line-height:1.3;margin:8px 0}.hero p{color:#d8ecdf;font-size:13px;margin:0;max-width:780px}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;margin-top:20px}.panel{background:#fff;border:1px solid #e0e8ed;border-radius:16px;padding:22px;min-width:0;box-shadow:0 4px 17px #294a5506}.panel h2{font-size:16px;margin:0 0 6px}.sub{font-size:12px;color:#8294a3;margin:0 0 19px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:15px}.field{display:flex;flex-direction:column;gap:6px;min-width:0}.field.full{grid-column:1/-1}label{font-size:12px;font-weight:750;color:#405769}input,textarea,select{width:100%;border:1px solid #d0dce4;border-radius:9px;padding:10px 11px;color:#26394b;background:white;outline:none}input:focus,textarea:focus,select:focus{border-color:#589572;box-shadow:0 0 0 3px #4d996b19}textarea{min-height:92px;resize:vertical}.hint{font-size:11px;color:#8a9ba8}.connection{display:grid;gap:10px}.info-line{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid #edf1f4;padding-bottom:10px;font-size:12px}.info-line:last-of-type{border-bottom:0}.muted{color:#718497}.chip{border-radius:7px;background:#f1f4f7;color:#6c7f8e;font-size:11px;padding:4px 8px;font-weight:700}.chip.good{background:#e6f3eb;color:#26734c}.chip.warn{background:#fff4e4;color:#9e6828}.btn{border:1px solid #d2dde4;background:#fff;color:#385164;border-radius:10px;padding:10px 13px;font-weight:750;cursor:pointer}.btn:hover{background:#f5f8fa}.btn.primary{background:#297a52;border-color:#297a52;color:white}.btn.primary:hover{background:#206741}.btn:disabled{opacity:.5;cursor:not-allowed}.btn-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:19px}
 .note{background:#f4f8f6;border:1px solid #e2ece6;border-radius:11px;padding:13px 14px;font-size:12px;color:#526d5a;margin-top:14px}
+.status-grid{display:flex;flex-wrap:wrap;gap:8px}.status-item{border:1px solid #e2e9ed;border-radius:9px;padding:8px 10px;background:#f7f9fa;font-size:12px}.status-item.good{background:#e7f4ec;color:#256b48}.status-item.warn{background:#fff4e4;color:#945f22}.table-scroll{overflow:auto;max-width:100%}.empty-state{padding:12px;border:1px dashed #d8e1e7;border-radius:9px;color:#8294a3;font-size:12px}
 #results{margin-top:17px}#results[hidden]{display:none}.result-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}.summary{font-size:13px;color:#3c5264;margin:10px 0}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:15px 0}.fact{background:#f7f9fa;border:1px solid #e7edf1;border-radius:11px;padding:13px}.fact small{display:block;color:#8496a4;font-size:10px}.fact strong{display:block;font-size:15px;word-break:break-word}table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #e8eef2}th{background:#f7faf8;color:#506779}td.num{text-align:right;font-variant-numeric:tabular-nums}ul{padding-left:20px;color:#586e80;font-size:12px;line-height:1.8}h3{font-size:13px;margin:21px 0 6px;color:#354d5f}.alert{margin-top:12px;padding:12px 14px;background:#fff6e9;color:#9b6425;border-radius:9px;font-size:12px}.foot{color:#92a0aa;font-size:11px;margin-top:30px}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.topbar{align-items:flex-start;flex-direction:column}}
 @media(max-width:620px){.shell{padding:17px 12px 40px}.hero{padding:25px 20px}h1{font-size:26px}.panel{padding:17px}.fields{grid-template-columns:1fr}.field.full{grid-column:auto}.facts{grid-template-columns:1fr 1fr}nav a{padding:8px 9px}}
@@ -26,7 +27,7 @@ nav{display:flex;flex-wrap:wrap;gap:4px;padding:5px;border:1px solid #dfe7ed;bac
 <form id="planForm">
 <div class="fields">
 <div class="field full"><label for="productChoice">从当前浏览器的商品库选择（可选）</label><select id="productChoice"><option value="">手动填写 ASIN / 暂无本地商品</option></select><span class="hint">商品库保存在本浏览器；换电脑后请导入自己的商品库备份。</span></div>
-<div class="field"><label for="product">产品名称</label><input id="product" required maxlength="100" placeholder="例如：六角宠物围栏"/></div>
+<div class="field"><label for="product">产品名称（可选）</label><input id="product" maxlength="100" placeholder="可留空，读取后显示领星真实名称"/></div>
 <div class="field"><label for="asin">父 ASIN 或目标 ASIN</label><input id="asin" required minlength="10" maxlength="10" autocapitalize="characters" placeholder="10 位 ASIN"/></div>
 <div class="field"><label for="startMonth">开始月份</label><input id="startMonth" required type="month"/></div>
 <div class="field"><label for="endMonth">结束月份</label><input id="endMonth" required type="month"/></div>
@@ -47,6 +48,12 @@ nav{display:flex;flex-wrap:wrap;gap:4px;padding:5px;border:1px solid #dfe7ed;bac
 </div></aside>
 </div>
 <section id="results" class="panel" hidden aria-live="polite"><div class="result-head"><h2>销售计划预览</h2><span id="jobState" class="chip">未运行</span></div><p id="resultSummary" class="summary"></p><div class="facts" id="facts"></div>
-<h3>月度计划</h3><div id="monthly"></div><h3>SKU / 库存核对</h3><ul id="skuNotes"></ul><h3>需要关注的问题</h3><ul id="warnings"></ul><h3>数据来源与飞书位置</h3><ul id="sources"></ul><div class="alert">仅生成只读预览，当前没有「写入飞书」功能。请先验证库存口径和计算结果。</div></section>
+<h3>模块运行状态</h3><div id="moduleStates" class="status-grid"></div>
+<h3>商品与 SKU 映射</h3><div id="mapping"></div>
+<h3>库存采集明细</h3><div id="inventoryDetails"></div>
+<h3>历史自然月销量</h3><div id="historyDetails"></div>
+<h3>月度计划</h3><div id="monthly"></div>
+<h3>SKU 月度分配</h3><div id="skuPlan"></div>
+<h3>SKU / 库存核对</h3><ul id="skuNotes"></ul><h3>需要关注的问题</h3><ul id="warnings"></ul><h3>数据来源与飞书位置</h3><ul id="sources"></ul><div class="alert">仅生成只读预览，当前没有「写入飞书」功能。只有“计划计算=ready”时月度和SKU目标才是确定数值。</div></section>
 <footer class="foot">个人工具代码可迁移；领星和飞书授权需在使用的电脑上重新配置。请勿将公司业务数据或凭证提交到公共 GitHub 仓库。</footer>
 </main><script src="./agent-ui.js" defer></script></body></html>
