@@ -310,12 +310,20 @@ class LingxingTests(unittest.TestCase):
         }]}, "inventory_snapshot", {"asins":[REQUEST["asin"]], "store_id":"2104"})
         self.assertEqual(rejected, 0)
         self.assertEqual(records[0]["awd_available"], 12)
-        self.assertEqual(records[0]["awd_standard_transit"], 7)
-        self.assertNotEqual(records[0]["awd_standard_transit"], 99)
+        self.assertIsNone(records[0].get("awd_standard_transit"))
+        self.assertEqual(records[0]["awd_actual_quantity_shipped_raw"], 7)
         self.assertEqual(records[0]["source_fields"]["awd_available"],
                          "awd_available_shipped_quantity")
-        self.assertEqual(records[0]["source_fields"]["awd_standard_transit"],
+        self.assertEqual(records[0]["source_fields"]["awd_actual_quantity_shipped_raw"],
                          "awd_actual_quantity_shipped")
+
+    def test_unconfirmed_awd_field_is_audit_only(self):
+        records, _ = mapping.canonicalize_records({"rows":[{
+            "asin": REQUEST["asin"], "seller_sku":"MSKU-1", "sid":"2104",
+            "awd_actual_quantity_shipped":7,
+        }]}, "inventory_snapshot", {"asins":[REQUEST["asin"]], "store_id":"2104"})
+        self.assertNotIn("awd_standard_transit", records[0])
+        self.assertEqual(records[0]["awd_actual_quantity_shipped_raw"], 7)
 
     def test_matching_sku_cannot_override_wrong_asin(self):
         records, rejected = mapping.canonicalize_records({"rows":[{

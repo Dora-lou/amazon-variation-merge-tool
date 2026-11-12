@@ -1540,6 +1540,61 @@ def _notify_stage(stage_callback, stage: str, status: str) -> None:
         stage_callback(stage, status)
 
 
+def _attach_verified_scope_provenance(snapshot: dict, request: dict) -> None:
+    """Record, without overwriting raw fields, why a missing site is safe to inherit.
+
+    Lingxing stock/performance rows may omit marketplace even though the request
+    was constrained by sid/sids.  Inheritance is allowed only after the live task
+    boundary confirmed the store scope and the row carries the same store and a
+    child ASIN from the verified Listing family.
+    """
+    def marketplace_code(value: Any) -> str:
+        aliases = {"us": "US", "usa": "US", "amazon.com": "US", "美国": "US", "美国站": "US"}
+        raw = str(value or "").strip().casefold()
+        return aliases.get(raw, str(value or "").strip().upper())
+
+    lingxing = snapshot.get("sources", {}).get("lingxing", {})
+    family = lingxing.get("family_scope", {})
+    marketplace = str(request.get("site", "")).upper()
+    store_id = str(request.get("store_id", ""))
+    parent_asin = str(family.get("parent_asin") or request.get("asin", "")).upper()
+    child_asins = {str(value).upper() for value in family.get("child_asins", []) if value}
+    if not marketplace or not store_id or not child_asins or request.get("scope_status") != "confirmed":
+        return
+    reason = "响应未返回Marketplace；继承已确认店铺、请求参数和当前父体子ASIN范围"
+
+    def provenance(row: dict) -> dict:
+        return {
+            "source": "amazon_sc_seller_list+erp_listing+scoped_lingxing_request",
+            "scope_provenance": f"store_id={store_id}; marketplace={marketplace}; parent_asin={parent_asin}",
+            "reason": reason, "store_id": store_id, "marketplace": marketplace,
+            "parent_asin": parent_asin, "child_asins": sorted(child_asins),
+            "raw_marketplace": row.get("marketplace") or row.get("site") or "",
+        }
+
+    for row in snapshot.get("sku_map", []):
+        row["_scope_marketplace"] = marketplace
+        row["_scope_provenance"] = provenance(row)
+    for purpose in ("inventory_snapshot", "replenishment_inventory", "historical_sales", "recent_sales"):
+        query = lingxing.get("queries", {}).get(purpose, {})
+        params = query.get("request_params", {}) if isinstance(query, dict) else {}
+        scoped_store = {str(value) for value in (params.get("sids") or params.get("storeIdList") or [])}
+        if params.get("sid") is not None:
+            scoped_store.add(str(params["sid"]))
+        if store_id not in scoped_store:
+            continue
+        for row in lingxing.get("records", {}).get(purpose, []):
+            row_store = row.get("store_id") or row.get("sid")
+            row_asin = str(row.get("asin") or "").upper()
+            observed = row.get("marketplace") or row.get("site")
+            if str(row_store or "") != store_id or row_asin not in child_asins:
+                continue
+            if observed and marketplace_code(observed) != marketplace:
+                continue
+            if not observed:
+                row["_scope_provenance"] = provenance(row)
+
+
 def collect_trusted_data(request: dict, codex_bin: str | None, lark_bin: str | None,
                          simulated: dict | None = None, stage_callback=None) -> dict:
     """Collect all sources before Codex starts; never persists the returned snapshot."""
@@ -1592,6 +1647,7 @@ def collect_trusted_data(request: dict, codex_bin: str | None, lark_bin: str | N
                 "scope": {"store_id": "2104", "marketplace": "US", "parent_asin": "B0HGCYZ7PQ"},
             }
         }
+    _attach_verified_scope_provenance(snapshot, request)
     snapshot["planning_evidence"] = build_plan_evidence(
         snapshot, request, stage_callback=stage_callback
     )

@@ -683,11 +683,20 @@ def validate_generated_preview(result: dict, params: dict, trusted_data: dict | 
     if not isinstance(warnings, list):
         raise ValueError("Invalid warning list")
     early_evidence = trusted_data.get("planning_evidence", {}) if trusted_data else {}
-    if early_evidence.get("status") == "ready":
+    review_only_plan = (
+        early_evidence.get("status") == "needs_review" and
+        not early_evidence.get("blocking_problems") and
+        isinstance(early_evidence.get("sku_plan"), list) and
+        bool(early_evidence.get("sku_plan")) and
+        isinstance(early_evidence.get("inventory", {}).get("inventory_total"), int)
+    )
+    if early_evidence.get("status") == "ready" or review_only_plan:
         result["inventory_total"] = early_evidence.get("inventory", {}).get("inventory_total")
         result["monthly_plan"] = [
             {"month": row["month"], "target_units": row.get("target_units"),
-             "note": "按SKU库存上限、目标消化率及去年同期自然月占比分配"}
+             "note": ("按SKU库存上限、目标消化率及去年同期自然月占比分配"
+                      if early_evidence.get("status") == "ready" else
+                      "当前月实际日期待核对；这里仅展示整月预测目标，未编造已发生销量")}
             for row in early_evidence.get("monthly_plan", [])
         ]
         plan = result["monthly_plan"]

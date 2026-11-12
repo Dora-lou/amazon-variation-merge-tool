@@ -68,8 +68,10 @@ FIELD_ALIASES = {
             # awd_to_fba_quantity_shipped is intentionally not an alias: it is
             # the opposite direction (AWD -> FBA) and must not be mixed into
             # inbound-into-AWD stock.
-            "awd_actual_quantity_shipped",
         ),
+        # Retain this unconfirmed Lingxing field for audit evidence only.  It is
+        # intentionally not an alias for the planning component above.
+        "awd_actual_quantity_shipped_raw": ("awd_actual_quantity_shipped",),
         "snapshot_date": ("snapshot_date", "snapshotDate", "update_time", "updated_at", "gmt_modified"),
         "arrival_date": (
             "arrival_date", "arrivalDate", "expected_arrival_date", "expectedArrivalDate",
@@ -227,7 +229,7 @@ def canonical_field_quality(records: list[dict], purpose: str) -> dict[str, str]
     quality = {}
     identity_fields = set(IDENTITY_ALIASES)
     for field in FIELD_ALIASES.get(purpose, {}):
-        if (field in identity_fields and purpose != "listing_and_sku_mapping") or field in {
+        if field.endswith("_raw") or (field in identity_fields and purpose != "listing_and_sku_mapping") or field in {
             "snapshot_date", "arrival_date", *CONTEXT_ALIASES, *LEDGER_ALIASES,
         }:
             continue

@@ -71,6 +71,23 @@ def _mapping_key(row: dict) -> tuple[str, str, str, str]:
     return tuple(str(row.get(key) or "").upper() for key in ("asin", "sku", "msku", "fnsku"))
 
 
+def _marketplace_code(value: Any) -> str:
+    raw = str(value or "").strip().casefold()
+    aliases = {"us": "US", "usa": "US", "amazon.com": "US", "美国": "US", "美国站": "US"}
+    return aliases.get(raw, str(value or "").strip().upper())
+
+
+def _verified_scope_inheritance(record: dict, mapping: dict, expected: str) -> bool:
+    provenance = record.get("_scope_provenance")
+    if not isinstance(provenance, dict) or provenance.get("marketplace") != expected:
+        return False
+    for key in ("store_id", "parent_asin"):
+        if str(provenance.get(key, "")).upper() != str(mapping.get(key) or provenance.get(key, "")).upper():
+            return False
+    allowed_asins = {str(value).upper() for value in provenance.get("child_asins", []) if value}
+    return not allowed_asins or str(record.get("asin") or "").upper() in allowed_asins
+
+
 def _matches_mapping(record: dict, mapping: dict) -> bool:
     comparable = []
     for key in ("asin", "sku", "msku", "fnsku"):
@@ -84,10 +101,14 @@ def _matches_mapping(record: dict, mapping: dict) -> bool:
                 return False
             if str(record[record_key]).upper() != str(mapping[mapping_key]).upper():
                 return False
-    expected_marketplace = mapping.get("marketplace") or mapping.get("site")
+    expected_marketplace = mapping.get("_scope_marketplace") or mapping.get("marketplace") or mapping.get("site")
     observed_marketplace = record.get("marketplace") or record.get("site")
     if expected_marketplace:
-        if not observed_marketplace or str(observed_marketplace).upper() != str(expected_marketplace).upper():
+        expected = _marketplace_code(expected_marketplace)
+        if observed_marketplace:
+            if _marketplace_code(observed_marketplace) != expected:
+                return False
+        elif not _verified_scope_inheritance(record, mapping, expected):
             return False
     return True
 
@@ -176,6 +197,9 @@ def build_inventory_evidence(snapshot: dict) -> dict:
                         "available_from": str(row.get("arrival_date") or ""),
                         "sku_key": sku_key,
                     }
+                    if row.get("_scope_provenance"):
+                        item["marketplace"] = mapping.get("_scope_marketplace") or mapping.get("marketplace") or mapping.get("site")
+                        item["scope_provenance"] = row["_scope_provenance"]
                     override = _scoped_inventory_override(snapshot, component)
                     if override is not None:
                         item["raw_quantity"] = quantity
@@ -186,6 +210,25 @@ def build_inventory_evidence(snapshot: dict) -> dict:
                             "reason": override.get("reason", ""), "scope": override.get("scope", {}),
                         }
                     candidates.append(item)
+
+        # A human-confirmed zero is a real, scope-bound observation even when
+        # the current response omitted the component field altogether.  Do not
+        # synthesize zeros for any other case.
+        for component in PLANNING_COMPONENTS:
+            override = _scoped_inventory_override(snapshot, component)
+            if override is not None and not any(item["component"] == component for item in candidates):
+                candidates.append({
+                    "component": component, "label": COMPONENT_LABELS[component], "quantity": override["value"],
+                    "raw_quantity": None, "source": "manual:inventory_override",
+                    "source_field": "user_confirmed_current_snapshot", "warehouse": "",
+                    "store": str(override.get("scope", {}).get("store_id", "")), "batch_id": "",
+                    "as_of": str(override.get("confirmed_at") or collected_at), "available_from": "",
+                    "sku_key": sku_key, "override": {
+                        "value": override["value"], "source": override.get("source", "user"),
+                        "confirmed_at": override.get("confirmed_at", ""),
+                        "reason": override.get("reason", ""), "scope": override.get("scope", {}),
+                    },
+                })
 
         # Identical aggregate rows can be returned by multiple pages.  Remove only
         # exact duplicates; never merge different quantities silently.
@@ -376,16 +419,18 @@ def build_plan_evidence(snapshot: dict, request: dict, today: date | None = None
     history = build_history_evidence(snapshot, request)
     _notify_stage(stage_callback, "historical_sales", "completed")
     _notify_stage(stage_callback, "plan_calculation", "running")
-    problems = [*inventory["problems"], *history["problems"]]
+    blocking_problems = [*inventory["problems"], *history["problems"]]
+    review_problems = []
     current_month = f"{today.year:04d}-{today.month:02d}"
     if months and months[0] <= current_month:
         current_actuals = history.get("actual_values_by_sku", {})
         missing_actual = [key for key in history.get("values_by_sku", {})
                           if current_month not in current_actuals.get(key, {})]
         if missing_actual:
-            problems.append("规划期包含已开始月份，但当前月每个SKU尚无完整同口径已发生销量与数据截止日")
+            review_problems.append("规划期包含已开始月份；当前月实际销量缺少完整日期/截止日，保留整月预测目标，不编造已发生销量")
+    problems = [*blocking_problems, *review_problems]
     sku_plan = []
-    if not problems:
+    if not blocking_problems:
         mapping_by_key = {_identity(row): row for row in snapshot.get("sku_map", [])}
         inventory_by_key = {row["sku_key"]: row for row in inventory["sku_details"]}
         for sku_key, available in inventory["sku_totals"].items():
@@ -408,7 +453,7 @@ def build_plan_evidence(snapshot: dict, request: dict, today: date | None = None
                 capacities.append(capacity)
             allocations, unallocated = _capacity_constrained(desired, capacities)
             if unallocated:
-                problems.append(f"{sku_key} 有 {unallocated} 件目标因到货时点限制无法分配")
+                blocking_problems.append(f"{sku_key} 有 {unallocated} 件目标因到货时点限制无法分配")
             mapping = mapping_by_key.get(sku_key, {})
             sku_plan.append({
                 "sku_key": sku_key, "asin": mapping.get("asin", ""), "sku": mapping.get("sku", ""),
@@ -418,18 +463,21 @@ def build_plan_evidence(snapshot: dict, request: dict, today: date | None = None
                 "monthly": [{"month": month, "target_units": units, "seasonality_basis": basis[index]}
                             for index, (month, units) in enumerate(zip(months, allocations))],
             })
-    if problems:
+    if blocking_problems:
         sku_plan = []
     monthly = []
     for month in months:
         value = (sum(next(row["target_units"] for row in item["monthly"] if row["month"] == month)
                      for item in sku_plan) if sku_plan else None)
         monthly.append({"month": month, "target_units": value})
+    problems = [*blocking_problems, *review_problems]
     ready = bool(sku_plan) and not problems
     result = {
         "status": "ready" if ready else "needs_review", "generated_by": "deterministic_host_engine_v1",
         "inventory": inventory, "history": history, "monthly_plan": monthly,
         "sku_plan": sku_plan, "problems": list(dict.fromkeys(problems)),
+        "blocking_problems": list(dict.fromkeys(blocking_problems)),
+        "review_problems": list(dict.fromkeys(review_problems)),
         "sell_through": request["sell_through"],
     }
     _notify_stage(stage_callback, "plan_calculation", "completed")

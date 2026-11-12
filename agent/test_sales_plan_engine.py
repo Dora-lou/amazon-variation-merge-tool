@@ -141,6 +141,37 @@ class InventoryEvidenceTests(unittest.TestCase):
         self.assertEqual(evidence["status"], "needs_review")
         self.assertIsNone(evidence["inventory_total"])
 
+    def test_missing_marketplace_is_accepted_only_with_verified_scope_provenance(self):
+        snapshot = complete_snapshot()
+        mapping = snapshot["sku_map"][0]
+        mapping.update({"store_id": "2104", "_scope_marketplace": "US"})
+        for row in (snapshot["sources"]["lingxing"]["records"]["inventory_snapshot"] +
+                    snapshot["sources"]["lingxing"]["records"]["replenishment_inventory"]):
+            row["store_id"] = "2104"
+            row["_scope_provenance"] = {
+                "source": "amazon_sc_seller_list+scoped_lingxing_request", "marketplace": "US",
+                "store_id": "2104", "parent_asin": "B099999999", "child_asins": [row["asin"]],
+            }
+        evidence = build_inventory_evidence(snapshot)
+        self.assertEqual(evidence["status"], "ready")
+        self.assertTrue(evidence["sku_details"][0]["records"][0].get("scope_provenance"))
+
+    def test_verified_scope_rejects_other_marketplace_and_asin(self):
+        snapshot = complete_snapshot()
+        mapping = snapshot["sku_map"][0]
+        mapping.update({"store_id": "2104", "_scope_marketplace": "US"})
+        row = snapshot["sources"]["lingxing"]["records"]["inventory_snapshot"][0]
+        row.update({"store_id": "2104", "site": "CA"})
+        evidence = build_inventory_evidence(snapshot)
+        self.assertEqual(evidence["status"], "needs_review")
+        self.assertIsNone(evidence["inventory_total"])
+
+        row.pop("site")
+        row["asin"] = "B000000001"
+        evidence = build_inventory_evidence(snapshot)
+        self.assertEqual(evidence["status"], "needs_review")
+        self.assertIsNone(evidence["inventory_total"])
+
 
 class HistoryAndPlanTests(unittest.TestCase):
     def test_plan_engine_reports_calculation_stages(self):
@@ -182,6 +213,8 @@ class HistoryAndPlanTests(unittest.TestCase):
         plan = build_plan_evidence(complete_snapshot(), REQUEST, today=date(2027, 11, 4))
         self.assertEqual(plan["status"], "needs_review")
         self.assertTrue(any("已开始月份" in problem for problem in plan["problems"]))
+        self.assertTrue(plan["sku_plan"])
+        self.assertTrue(all(row["target_units"] is not None for row in plan["monthly_plan"]))
 
     def test_future_arrival_cannot_support_earlier_months(self):
         snapshot = complete_snapshot()
