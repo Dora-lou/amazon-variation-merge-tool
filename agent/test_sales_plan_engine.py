@@ -60,7 +60,7 @@ class InventoryEvidenceTests(unittest.TestCase):
     def test_all_seven_components_produce_sku_total(self):
         evidence = build_inventory_evidence(complete_snapshot())
         self.assertEqual(evidence["status"], "ready")
-        self.assertEqual(evidence["inventory_total"], 90)
+        self.assertEqual(evidence["inventory_total"], 75)
         self.assertEqual(set(evidence["sku_details"][0]["components"]), {
             "fba_available", "fba_transfer_pending", "fba_inbound", "actual_transit",
             "planned_inbound", "awd_available", "awd_standard_transit",
@@ -87,13 +87,14 @@ class InventoryEvidenceTests(unittest.TestCase):
         self.assertEqual(evidence["status"], "ready")
         self.assertEqual(evidence["inventory_total"], 0)
 
-    def test_unbatched_transit_overlap_blocks_total(self):
+    def test_plan_inbound_is_audit_only_when_unbatched(self):
         snapshot = complete_snapshot()
         for row in snapshot["sources"]["lingxing"]["records"]["replenishment_inventory"]:
             row["batch_id"] = ""
         evidence = build_inventory_evidence(snapshot)
-        self.assertEqual(evidence["status"], "needs_review")
-        self.assertTrue(any("无法排除重复" in problem for problem in evidence["problems"]))
+        self.assertEqual(evidence["status"], "ready")
+        self.assertEqual(evidence["inventory_total"], 75)
+        self.assertEqual(evidence["sku_details"][0]["components"]["planned_inbound"], 5)
 
     def test_same_batch_is_counted_once(self):
         snapshot = complete_snapshot()
@@ -101,8 +102,44 @@ class InventoryEvidenceTests(unittest.TestCase):
         rows[0]["batch_id"] = rows[1]["batch_id"] = "SAME-BATCH"
         evidence = build_inventory_evidence(snapshot)
         self.assertEqual(evidence["status"], "ready")
-        self.assertEqual(evidence["inventory_total"], 85)
+        self.assertEqual(evidence["inventory_total"], 75)
         self.assertEqual(evidence["sku_details"][0]["components"]["planned_inbound"], 0)
+
+    def test_scoped_awd_override_keeps_raw_value_and_changes_only_planning_value(self):
+        snapshot = complete_snapshot()
+        snapshot["request_identity"] = {"store_id":"2104", "site":"US", "asin":"B099999999"}
+        snapshot["inventory_overrides"] = {"awd_standard_transit": {
+            "value": 0, "source":"user_confirmed_current_snapshot", "confirmed_at":"2027-10-31T00:00:00Z",
+            "reason":"confirmed", "scope":{"store_id":"2104", "marketplace":"US", "parent_asin":"B099999999"},
+        }}
+        snapshot["sources"]["lingxing"]["family_scope"]["parent_asin"] = "B099999999"
+        evidence = build_inventory_evidence(snapshot)
+        self.assertEqual(evidence["status"], "ready")
+        detail = evidence["sku_details"][0]
+        self.assertEqual(detail["components"]["awd_standard_transit"], 0)
+        overridden = [row for row in detail["records"] if row["component"] == "awd_standard_transit"]
+        self.assertEqual(overridden[0]["raw_quantity"], 5)
+        self.assertEqual(overridden[0]["override"]["scope"]["store_id"], "2104")
+
+    def test_scoped_awd_override_does_not_apply_to_other_store(self):
+        snapshot = complete_snapshot()
+        snapshot["request_identity"] = {"store_id":"2095", "site":"US", "asin":"B099999999"}
+        snapshot["inventory_overrides"] = {"awd_standard_transit": {
+            "value": 0, "source":"user", "confirmed_at":"2027-10-31T00:00:00Z",
+            "scope":{"store_id":"2104", "marketplace":"US", "parent_asin":"B099999999"},
+        }}
+        snapshot["sources"]["lingxing"]["family_scope"]["parent_asin"] = "B099999999"
+        evidence = build_inventory_evidence(snapshot)
+        self.assertEqual(evidence["sku_details"][0]["components"]["awd_standard_transit"], 5)
+        self.assertEqual(evidence["inventory_total"], 75)
+
+    def test_store_scoped_mapping_does_not_accept_other_store_inventory(self):
+        snapshot = complete_snapshot()
+        snapshot["sku_map"][0]["store_id"] = "2104"
+        snapshot["sources"]["lingxing"]["records"]["inventory_snapshot"][0]["store_id"] = "2095"
+        evidence = build_inventory_evidence(snapshot)
+        self.assertEqual(evidence["status"], "needs_review")
+        self.assertIsNone(evidence["inventory_total"])
 
 
 class HistoryAndPlanTests(unittest.TestCase):
@@ -136,7 +173,7 @@ class HistoryAndPlanTests(unittest.TestCase):
         snapshot = complete_snapshot(two_skus=True)
         plan = build_plan_evidence(snapshot, REQUEST, today=date(2027, 10, 1))
         self.assertEqual(plan["status"], "ready")
-        self.assertEqual([row["target_units"] for row in plan["sku_plan"]], [86, 124])
+        self.assertEqual([row["target_units"] for row in plan["sku_plan"]], [71, 109])
         for row in plan["sku_plan"]:
             self.assertLessEqual(row["target_units"], row["planning_inventory"])
             self.assertEqual(sum(month["target_units"] for month in row["monthly"]), row["target_units"])

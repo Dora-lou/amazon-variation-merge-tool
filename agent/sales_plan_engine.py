@@ -17,7 +17,15 @@ INVENTORY_COMPONENTS = (
     "fba_available", "fba_transfer_pending", "fba_inbound",
     "actual_transit", "planned_inbound", "awd_available", "awd_standard_transit",
 )
-TRANSIT_COMPONENTS = {"fba_inbound", "actual_transit", "planned_inbound", "awd_standard_transit"}
+# The seven fields remain in the audit contract. Only these five fields are
+# additive planning inventory under the confirmed rule. The afn_inbound_* states
+# and stock_up_num remain lifecycle/reference fields because real_transit is the
+# selected FBA-in-transit basis.
+PLANNING_COMPONENTS = (
+    "fba_available", "fba_transfer_pending", "actual_transit",
+    "awd_available", "awd_standard_transit",
+)
+PLANNING_TRANSIT_COMPONENTS = {"actual_transit", "awd_standard_transit"}
 COMPONENT_LABELS = {
     "fba_available": "FBA可售", "fba_transfer_pending": "FBA待调仓",
     "fba_inbound": "FBA入库中", "actual_transit": "FBA实际在途",
@@ -68,13 +76,27 @@ def _matches_mapping(record: dict, mapping: dict) -> bool:
     for key in ("asin", "sku", "msku", "fnsku"):
         if record.get(key) and mapping.get(key):
             comparable.append(str(record[key]).upper() == str(mapping[key]).upper())
-    return bool(comparable) and all(comparable)
+    if not comparable or not all(comparable):
+        return False
+    for record_key, mapping_key in (("store_id", "store_id"), ("store", "store")):
+        if mapping.get(mapping_key):
+            if not record.get(record_key):
+                return False
+            if str(record[record_key]).upper() != str(mapping[mapping_key]).upper():
+                return False
+    expected_marketplace = mapping.get("marketplace") or mapping.get("site")
+    observed_marketplace = record.get("marketplace") or record.get("site")
+    if expected_marketplace:
+        if not observed_marketplace or str(observed_marketplace).upper() != str(expected_marketplace).upper():
+            return False
+    return True
 
 
 def _component_values(row: dict, source: str) -> list[tuple[str, int | float, str]]:
     values = []
     if source == "inventory_snapshot":
-        direct = ("fba_available", "fba_transfer_pending", "awd_available", "awd_standard_transit")
+        direct = ("fba_available", "fba_transfer_pending", "actual_transit",
+                  "planned_inbound", "awd_available", "awd_standard_transit")
         for field in direct:
             number = _number(row.get(field))
             if number is not None:
@@ -98,13 +120,35 @@ def _component_values(row: dict, source: str) -> list[tuple[str, int | float, st
     return values
 
 
+def _scoped_inventory_override(snapshot: dict, component: str) -> dict | None:
+    """Return an explicitly recorded, scope-bound human confirmation only."""
+    overrides = snapshot.get("inventory_overrides", {})
+    if not isinstance(overrides, dict):
+        return None
+    override = overrides.get(component)
+    if not isinstance(override, dict) or _number(override.get("value")) is None:
+        return None
+    scope = override.get("scope", {})
+    identity = snapshot.get("request_identity", {})
+    family = snapshot.get("sources", {}).get("lingxing", {}).get("family_scope", {})
+    if not isinstance(scope, dict) or not isinstance(identity, dict):
+        return None
+    if str(scope.get("store_id", "")) != str(identity.get("store_id", "")):
+        return None
+    if str(scope.get("marketplace", "")).upper() != str(identity.get("site", "")).upper():
+        return None
+    if str(scope.get("parent_asin", "")).upper() != str(family.get("parent_asin", "")).upper():
+        return None
+    return override
+
+
 def build_inventory_evidence(snapshot: dict) -> dict:
     sources = snapshot.get("sources", {})
     lingxing = sources.get("lingxing", {})
     mappings = list(snapshot.get("sku_map") or lingxing.get("records", {}).get("listing_and_sku_mapping", []))
     records = lingxing.get("records", {})
     collected_at = lingxing.get("collected_at") or snapshot.get("collected_at") or ""
-    details, problems, sku_totals = [], [], {}
+    details, problems, audit_warnings, sku_totals = [], [], [], {}
 
     if lingxing.get("family_scope", {}).get("mapping_status") != "complete_candidate":
         problems.append("父子体与SKU映射未完整验证")
@@ -121,7 +165,7 @@ def build_inventory_evidence(snapshot: dict) -> dict:
                 if not _matches_mapping(row, mapping):
                     continue
                 for component, quantity, source_field in _component_values(row, source_name):
-                    candidates.append({
+                    item = {
                         "component": component, "label": COMPONENT_LABELS[component],
                         "quantity": quantity, "source": f"lingxing:{source_name}",
                         "source_field": source_field,
@@ -131,7 +175,17 @@ def build_inventory_evidence(snapshot: dict) -> dict:
                         "as_of": str(row.get("snapshot_date") or row.get("status_date") or collected_at),
                         "available_from": str(row.get("arrival_date") or ""),
                         "sku_key": sku_key,
-                    })
+                    }
+                    override = _scoped_inventory_override(snapshot, component)
+                    if override is not None:
+                        item["raw_quantity"] = quantity
+                        item["quantity"] = override["value"]
+                        item["override"] = {
+                            "value": override["value"], "source": override.get("source", "user"),
+                            "confirmed_at": override.get("confirmed_at", ""),
+                            "reason": override.get("reason", ""), "scope": override.get("scope", {}),
+                        }
+                    candidates.append(item)
 
         # Identical aggregate rows can be returned by multiple pages.  Remove only
         # exact duplicates; never merge different quantities silently.
@@ -178,7 +232,7 @@ def build_inventory_evidence(snapshot: dict) -> dict:
 
         positive_unbatched_transit = {
             row["component"] for row in unbatched
-            if row["component"] in TRANSIT_COMPONENTS and row["quantity"] > 0
+            if row["component"] in PLANNING_TRANSIT_COMPONENTS and row["quantity"] > 0
         }
         dedupe_verified = len(positive_unbatched_transit) <= 1
         if not dedupe_verified:
@@ -189,22 +243,23 @@ def build_inventory_evidence(snapshot: dict) -> dict:
         stores = {row["store"] for row in accepted if row.get("store")}
         if len(stores) > 1:
             problems.append(f"{sku_key} 库存包含多个店铺，不能跨店铺汇总")
-        dated_components = TRANSIT_COMPONENTS | {"fba_transfer_pending"}
+        dated_components = PLANNING_TRANSIT_COMPONENTS | {"fba_transfer_pending"}
         for row in accepted:
             if row["component"] in dated_components and row["quantity"] > 0 and not row.get("available_from"):
-                problems.append(f"{sku_key} 的{row['label']}缺少预计可售/到货日期")
+                audit_warnings.append(f"{sku_key} 的{row['label']}缺少预计可售/到货日期")
         dates = {row["as_of"] for row in accepted if row.get("as_of")}
         date_aligned = len(dates) <= 1
         if not date_aligned:
             problems.append(f"{sku_key} 库存记录统计时间不一致")
-        complete = all(component_totals[name] is not None for name in INVENTORY_COMPONENTS)
-        total = (round(sum(component_totals.values()))
+        complete = all(component_totals[name] is not None for name in PLANNING_COMPONENTS)
+        total = (round(sum(component_totals[name] for name in PLANNING_COMPONENTS))
                  if complete and dedupe_verified and date_aligned else None)
         sku_totals[sku_key] = total
         details.append({
             "asin": mapping.get("asin", ""), "sku": mapping.get("sku", ""),
             "msku": mapping.get("msku", ""), "fnsku": mapping.get("fnsku", ""),
-            "sku_key": sku_key, "components": component_totals, "planning_inventory": total,
+            "sku_key": sku_key, "components": component_totals, "planning_components": list(PLANNING_COMPONENTS),
+            "planning_inventory": total,
             "dedupe_verified": dedupe_verified, "date_aligned": date_aligned,
             "records": accepted,
         })
@@ -214,7 +269,8 @@ def build_inventory_evidence(snapshot: dict) -> dict:
         "status": "ready" if ready else "needs_review", "components": list(INVENTORY_COMPONENTS),
         "sku_details": details, "sku_totals": sku_totals,
         "inventory_total": sum(sku_totals.values()) if ready else None,
-        "problems": list(dict.fromkeys(problems)), "as_of": collected_at,
+        "problems": list(dict.fromkeys(problems)),
+        "audit_warnings": list(dict.fromkeys(audit_warnings)), "as_of": collected_at,
     }
 
 
@@ -225,6 +281,7 @@ def build_history_evidence(snapshot: dict, request: dict) -> dict:
     months = _month_range(request["start_month"], request["end_month"])
     required = [_prior_year(month) for month in months]
     values: dict[str, dict[str, int | float]] = defaultdict(dict)
+    actual_values: dict[str, dict[str, int | float]] = defaultdict(dict)
     stores, problems = set(), []
     for mapping in mappings:
         key = _identity(mapping)
@@ -253,10 +310,27 @@ def build_history_evidence(snapshot: dict, request: dict) -> dict:
     coverage = lingxing.get("queries", {}).get("historical_sales", {}).get("coverage", {})
     if coverage.get("status") != "complete":
         problems.append("领星历史销量查询未覆盖全部去年同期自然月")
+    # A started planning month needs a separate, current-period observation.  It
+    # is deliberately not substituted for last year's seasonality basis and is
+    # never inferred from a missing row.  The host collector may expose daily or
+    # monthly recent rows; normalize only their period key here.
+    recent_rows = lingxing.get("records", {}).get("recent_sales", [])
+    for mapping in mappings:
+        key = _identity(mapping)
+        if not key:
+            continue
+        for row in recent_rows:
+            if not _matches_mapping(row, mapping):
+                continue
+            period, units = str(row.get("period") or ""), _number(row.get("sales_units"))
+            if period and units is not None:
+                actual_values[key][period[:7]] = actual_values[key].get(period[:7], 0) + units
     ready = bool(mappings) and bool(values) and not problems
     return {
         "status": "ready" if ready else "needs_review", "required_months": required,
         "values_by_sku": dict(values), "stores": sorted(stores),
+        "actual_values_by_sku": dict(actual_values),
+        "actual_source": "lingxing:query_product_performance_asin_lists(recent)" if actual_values else "",
         "source": "lingxing:query_product_performance_asin_lists",
         "date_type": "purchase", "grain": "natural_month_sku", "problems": list(dict.fromkeys(problems)),
     }
@@ -305,7 +379,11 @@ def build_plan_evidence(snapshot: dict, request: dict, today: date | None = None
     problems = [*inventory["problems"], *history["problems"]]
     current_month = f"{today.year:04d}-{today.month:02d}"
     if months and months[0] <= current_month:
-        problems.append("规划期包含已开始月份，但尚无同口径已发生销量与数据截止日")
+        current_actuals = history.get("actual_values_by_sku", {})
+        missing_actual = [key for key in history.get("values_by_sku", {})
+                          if current_month not in current_actuals.get(key, {})]
+        if missing_actual:
+            problems.append("规划期包含已开始月份，但当前月每个SKU尚无完整同口径已发生销量与数据截止日")
     sku_plan = []
     if not problems:
         mapping_by_key = {_identity(row): row for row in snapshot.get("sku_map", [])}

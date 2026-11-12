@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Amazon Operations Workspace shared context",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "default_store", "product_mappings", "decisions", "pending_verifications"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "default_store": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["store_id", "marketplace", "status"],
+      "properties": {
+        "store_id": {"type": "string", "minLength": 1},
+        "marketplace": {"type": "string", "minLength": 1},
+        "status": {"enum": ["confirmed", "temporary", "needs_review"]},
+        "store_name": {"type": "string"},
+        "confirmed_at": {"type": "string"},
+        "confirmed_by": {"type": "string"}
+      }
+    },
+    "product_mappings": {"type": "array", "items": {"type": "object"}},
+    "decisions": {"type": "array", "items": {"type": "object"}},
+    "pending_verifications": {"type": "array", "items": {"type": "object"}}
+  }
+}

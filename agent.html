@@ -26,12 +26,13 @@ nav{display:flex;flex-wrap:wrap;gap:4px;padding:5px;border:1px solid #dfe7ed;bac
 <section class="panel"><h2>创建销售计划</h2><p class="sub">先连接这台电脑上的 Agent，再填写产品和计划范围。</p>
 <form id="planForm">
 <div class="fields">
+<div class="field"><label for="marketplace">Marketplace</label><select id="marketplace"><option value="US">美国站 US</option></select></div>
+<div class="field"><label for="storeChoice">领星店铺</label><select id="storeChoice" required><option value="">请先刷新并选择店铺</option></select><span class="hint" id="storeStatus">未确认店铺，不能生成销售计划</span></div>
 <div class="field full"><label for="productChoice">从当前浏览器的商品库选择（可选）</label><select id="productChoice"><option value="">手动填写 ASIN / 暂无本地商品</option></select><span class="hint">商品库保存在本浏览器；换电脑后请导入自己的商品库备份。</span></div>
 <div class="field"><label for="product">产品名称（可选）</label><input id="product" maxlength="100" placeholder="可留空，读取后显示领星真实名称"/></div>
 <div class="field"><label for="asin">父 ASIN 或目标 ASIN</label><input id="asin" required minlength="10" maxlength="10" autocapitalize="characters" placeholder="10 位 ASIN"/></div>
 <div class="field"><label for="startMonth">开始月份</label><input id="startMonth" required type="month"/></div>
 <div class="field"><label for="endMonth">结束月份</label><input id="endMonth" required type="month"/></div>
-<div class="field"><label for="site">站点</label><select id="site"><option value="US">美国站 US（首版）</option></select></div>
 <div class="field"><label for="goal">计划库存消化目标（%）</label><input id="goal" type="number" min="1" max="100" step="1" value="95" required/></div>
 <div class="field full"><label for="knowledgeBase">目标飞书知识库（可选）</label><input id="knowledgeBase" maxlength="100" placeholder="留空则使用当前销售计划 Skill 的默认知识库"/></div>
 <div class="field full"><label for="notes">补充要求（可选）</label><textarea id="notes" maxlength="1000" placeholder="例如：11 月销量高于 12 月；不补货；只参考已有库存。"></textarea></div>
@@ -41,19 +42,19 @@ nav{display:flex;flex-wrap:wrap;gap:4px;padding:5px;border:1px solid #dfe7ed;bac
 <div class="note">正式飞书计划不会被修改。Agent 发现库存字段重叠、SKU 映射缺失或成本不完整时，应标明待核对，不得凭空补数据。</div>
 </section>
 <aside class="panel"><h2>本机 Agent 连接</h2><p class="sub">在这台电脑启动 Agent 后，把终端显示的配对码填在这里。</p>
-<div class="connection"><div class="info-line"><span class="muted">后台地址</span><strong>127.0.0.1:8765</strong></div><div class="info-line"><span class="muted">运行状态</span><span class="chip" id="connectionState">尚未连接</span></div><div class="info-line"><span class="muted">Codex CLI</span><span id="codexState">—</span></div><div class="info-line"><span class="muted">飞书 CLI</span><span id="larkState">—</span></div><div class="info-line"><span class="muted">销售计划 Skill</span><span id="skillState">—</span></div>
+<div class="connection"><div class="info-line"><span class="muted">后台地址</span><strong>127.0.0.1:8765</strong></div><div class="info-line"><span class="muted">运行状态</span><span class="chip" id="connectionState">尚未连接</span></div><div class="info-line"><span class="muted">Agent 版本</span><span id="agentVersion">—</span></div><div class="info-line"><span class="muted">Codex CLI</span><span id="codexState">—</span></div><div class="info-line"><span class="muted">Codex 登录</span><span id="codexLoginState">—</span></div><div class="info-line"><span class="muted">Codex 模型服务</span><span id="codexModelState">—</span></div><div class="info-line"><span class="muted">飞书 CLI</span><span id="larkState">—</span></div><div class="info-line"><span class="muted">销售计划 Skill</span><span id="skillState">—</span></div><div class="info-line"><span class="muted">默认店铺</span><span id="defaultStoreState">未设置</span></div>
 <div class="field"><label for="pairKey">本机配对码</label><input id="pairKey" type="password" autocomplete="off" spellcheck="false" placeholder="粘贴本机终端显示的配对码"/></div>
-<div class="btn-row"><button class="btn primary" type="button" id="connectBtn">连接 Agent</button><button class="btn" type="button" id="disconnectBtn">断开</button></div>
+<div class="btn-row"><button class="btn primary" type="button" id="connectBtn">连接 Agent</button><button class="btn" type="button" id="disconnectBtn">断开</button><button class="btn" type="button" id="refreshStoresBtn" disabled>刷新店铺</button><button class="btn" type="button" id="setDefaultStoreBtn" disabled>设为默认店铺</button></div>
 <p class="hint">配对码只保存在本浏览器当前标签页的会话中，页面不会上传到 GitHub。首次使用前需要在电脑上启动 <code>agent/start-agent.bat</code>。</p>
 </div></aside>
 </div>
 <section id="results" class="panel" hidden aria-live="polite"><div class="result-head"><h2>销售计划预览</h2><span id="jobState" class="chip">未运行</span></div><p id="resultSummary" class="summary"></p><div class="facts" id="facts"></div>
 <h3>模块运行状态</h3><div id="moduleStates" class="status-grid"></div>
-<h3>商品与 SKU 映射</h3><div id="mapping"></div>
+<h3>商品与 SKU 映射</h3><div id="mapping"></div><div class="btn-row"><button type="button" class="btn" id="confirmMappingBtn" hidden>确认并保存当前映射</button><span class="hint" id="mappingStatus"></span></div>
 <h3>库存采集明细</h3><div id="inventoryDetails"></div>
 <h3>历史自然月销量</h3><div id="historyDetails"></div>
 <h3>月度计划</h3><div id="monthly"></div>
 <h3>SKU 月度分配</h3><div id="skuPlan"></div>
 <h3>SKU / 库存核对</h3><ul id="skuNotes"></ul><h3>需要关注的问题</h3><ul id="warnings"></ul><h3>数据来源与飞书位置</h3><ul id="sources"></ul><div class="alert">仅生成只读预览，当前没有「写入飞书」功能。只有“计划计算=ready”时月度和SKU目标才是确定数值。</div></section>
 <footer class="foot">个人工具代码可迁移；领星和飞书授权需在使用的电脑上重新配置。请勿将公司业务数据或凭证提交到公共 GitHub 仓库。</footer>
-</main><script src="./agent-ui.js" defer></script></body></html>
+</main><script src="./agent-ui.js?v=2026.11.12.1" defer></script></body></html>

@@ -1,0 +1,5 @@
+# Local recovery snapshots and runtime artifacts; never publish them.
+.audit-backup-*/
+.stability-backup-*/
+agent/diagnostics.jsonl
+agent/*.log

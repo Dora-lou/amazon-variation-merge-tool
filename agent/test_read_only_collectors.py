@@ -275,6 +275,21 @@ class LingxingTests(unittest.TestCase):
         self.assertEqual(mapping.canonical_field_quality(records, "inventory_snapshot")["fba_available"],
                          "reported_zero")
 
+    def test_real_lingxing_awd_fields_map_without_using_awd_to_fba(self):
+        records, rejected = mapping.canonicalize_records({"rows":[{
+            "asin":REQUEST["asin"], "seller_sku":"MSKU-1", "fnsku":"FN-1",
+            "sid":"2104", "awd_available_shipped_quantity":12,
+            "awd_actual_quantity_shipped":7, "awd_to_fba_quantity_shipped":99,
+        }]}, "inventory_snapshot", {"asins":[REQUEST["asin"]], "store_id":"2104"})
+        self.assertEqual(rejected, 0)
+        self.assertEqual(records[0]["awd_available"], 12)
+        self.assertEqual(records[0]["awd_standard_transit"], 7)
+        self.assertNotEqual(records[0]["awd_standard_transit"], 99)
+        self.assertEqual(records[0]["source_fields"]["awd_available"],
+                         "awd_available_shipped_quantity")
+        self.assertEqual(records[0]["source_fields"]["awd_standard_transit"],
+                         "awd_actual_quantity_shipped")
+
     def test_matching_sku_cannot_override_wrong_asin(self):
         records, rejected = mapping.canonicalize_records({"rows":[{
             "asin":"B000000001", "sku":"SKU-1", "afn_fulfillable_quantity":99,
@@ -402,6 +417,56 @@ class LarkTests(unittest.TestCase):
 
 
 class StructureTests(unittest.TestCase):
+    def test_history_nested_asin_row_preserves_month_units_and_amount(self):
+        expanded = collectors._expand_history_rows({"data": {"list": [{
+            "asins": [{"asin": REQUEST["asin"], "sid": "2104"}],
+            "volume": 7, "amount": "81.25", "seller_sku": "MSKU-1",
+        }]}}, "2025-11", [{
+            "asin": REQUEST["asin"], "parent_asin": "B099999999",
+            "sku": "SKU-1", "msku": "MSKU-1", "fnsku": "FN-1",
+        }], {"site": "US", "store_id": "2104"})
+        rows, rejected = mapping.canonicalize_records(
+            {"rows": expanded}, "historical_sales",
+            {"asins":[REQUEST["asin"]], "store_ids":["2104"], "sites":["US"]},
+        )
+        self.assertEqual(rejected, 0)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["period"], "2025-11")
+        self.assertEqual(rows[0]["sales_units"], 7)
+        self.assertEqual(rows[0]["sales_amount"], 81.25)
+
+    def test_us_scope_accepts_lingxing_chinese_marketplace(self):
+        rows, rejected = mapping.canonicalize_records({"rows":[{
+            "asin":"B0BP1RNS6L", "parent_asin":"B0HGCYZ7PQ", "store_id":2104,
+            "marketplace":"美国", "local_sku":"LOCAL-1", "msku":"MSKU-1", "fnsku":"FN-1",
+        }]}, "listing_and_sku_mapping", {
+            "parent_asin":"B0HGCYZ7PQ", "sites":["US"], "store_ids":["2104"],
+        })
+        self.assertEqual(rejected, 0)
+        self.assertEqual(len(rows), 1)
+
+    def test_listing_params_are_store_scoped(self):
+        params = collectors._lingxing_params(
+            "erp_listing", {"asin":"B0HGCYZ7PQ", "store_id":"2104"},
+            {"parent_asin":"B0HGCYZ7PQ"},
+        )
+        self.assertEqual(params["sids"], "2104")
+
+    def test_parent_asin_is_not_counted_as_child(self):
+        scope = mapping.build_scope_from_mapping([{
+            "asin":"B0BP1RNS6L", "parent_asin":"B0HGCYZ7PQ", "msku":"M1",
+        }], "B0HGCYZ7PQ", "B0HGCYZ7PQ")
+        self.assertEqual(scope["asins"], ["B0BP1RNS6L"])
+
+    def test_live_empty_listing_cannot_be_repaired_from_feishu(self):
+        sources = {
+            "lingxing":{"family_scope":{"child_asins":[REQUEST["asin"]]},
+                        "records":{"listing_and_sku_mapping":[]}},
+            "feishu":{"documents":[{"match_type":"target", "table":{
+                "rows":[{"asin":REQUEST["asin"], "seller_sku":"STALE"}]}}]},
+        }
+        self.assertEqual(collectors.build_sku_map(sources, REQUEST), [])
+
     def test_sensitive_keys_are_removed_before_analysis(self):
         clean = collectors._redact_sensitive({"rows":[{"sku":"S1","access_token":"nope"}],"cookie":"nope"})
         self.assertEqual(clean, {"rows":[{"sku":"S1"}]})

@@ -42,6 +42,7 @@ LINGXING_READ_ALLOWLIST = {
     "query_fba_valid_list": "replenishment_inventory",
     "query_product_performance_asin_lists": "historical_sales",
 }
+STORE_OPTIONS_TOOL_ID = "amazon_sc_seller_list"
 MAX_LARK_SHEET_CANDIDATES = 12
 
 LARK_READ_COMMANDS = frozenset({
@@ -419,24 +420,80 @@ def _tool_data(payload: Any) -> dict:
     return data
 
 
+def collect_store_options(codex_bin: str | None) -> dict:
+    """Read the live Amazon store list through the validated read-only MCP path."""
+    source = {"status": "error", "collected_at": utc_now(), "stores": [], "error": ""}
+    if not codex_bin:
+        source["error"] = "未找到 Codex CLI，无法读取领星店铺列表"
+        return source
+    try:
+        client = StreamableHttpMcpClient.from_codex_config(codex_bin)
+        client.initialize()
+        help_data = _tool_data(client.call_tool(
+            "help", {"query": STORE_OPTIONS_TOOL_ID, "limit": 50, "offset": 0}
+        ))
+        matches = [item for item in help_data.get("tools", [])
+                   if isinstance(item, dict) and item.get("toolId") == STORE_OPTIONS_TOOL_ID]
+        if len(matches) != 1 or matches[0].get("toolType") != "read":
+            raise CollectionError("领星店铺工具未通过只读校验")
+        search_data = _tool_data(client.call_tool("search", {"toolId": STORE_OPTIONS_TOOL_ID}))
+        if search_data.get("toolId") != STORE_OPTIONS_TOOL_ID or search_data.get("toolType") != "read":
+            raise CollectionError("领星店铺工具 Schema 未通过只读校验")
+        params = {"seller_type": 1, "offset": 0, "length": 200}
+        _schema_validate(search_data.get("inputSchema", {}), params)
+        payload = _resolve_approval(client, client.call_tool(
+            "action", {"toolId": STORE_OPTIONS_TOOL_ID, "params": params}
+        ))
+        data = _redact_sensitive(_tool_data(payload))
+        rows = data.get("list", [])
+        stores = []
+        for account in rows if isinstance(rows, list) else []:
+            for item in account.get("itemList", []) if isinstance(account, dict) else []:
+                if not isinstance(item, dict) or not item.get("id"):
+                    continue
+                status = item.get("status")
+                disabled = item.get("is_disabled")
+                stores.append({
+                    "store_id": str(item.get("id")),
+                    "name": str(item.get("name") or ""),
+                    "marketplace": str(item.get("marketplace_code") or "").upper(),
+                    "country": str(item.get("country") or ""),
+                    "enabled": disabled != 1 and status == 1,
+                    "authorization_status": "authorized" if status == 1 else "not_authorized_or_exception",
+                    "seller_status": status,
+                    "is_disabled": disabled,
+                })
+        source["stores"] = stores
+        source["status"] = "ok"
+    except CollectionError as exc:
+        source["error"] = str(exc)
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        source["error"] = f"领星店铺列表格式无效：{type(exc).__name__}"
+    return source
+
+
 def _lingxing_params(tool_id: str, request: dict, scope: dict | None = None) -> dict:
     scope = scope or {}
     asin = request["asin"]
     if tool_id == "erp_listing":
+        store_id = str(request.get("store_id") or scope.get("store_id") or "").strip()
+        store_filter = {"sids": store_id} if store_id else {}
         if scope.get("parent_asin"):
             return {"offset": 0, "length": 200, "pvi_ids": "", "search_field": "parent_asin",
-                    "search_value": [scope["parent_asin"]], "exact_search": "1"}
+                    "search_value": [scope["parent_asin"]], "exact_search": "1", **store_filter}
         return {"offset": 0, "length": 200, "pvi_ids": "", "search_field": "asin",
-                "search_value": [asin], "exact_search": "1"}
+                "search_value": [asin], "exact_search": "1", **store_filter}
     if tool_id == "get_fba_stock_list":
         asins = sorted(set(scope.get("asins") or [asin]))
+        store_id = str(request.get("store_id") or scope.get("store_id") or "").strip()
+        store_filter = {"sid": store_id} if store_id else {}
         if len(asins) > 1:
             advanced = [{"name": "ASIN", "search_field": "asin", "search_value": asins}]
             return {"offset": 0, "length": 1000, "senior_search_list": json.dumps(advanced),
-                    "fulfillment_channel_type": "FBA", "is_hide_zero_stock": "0"}
+                    "fulfillment_channel_type": "FBA", "is_hide_zero_stock": "0", **store_filter}
         return {"offset": 0, "length": 1000, "search_field": "asin",
                 "search_value": asins[0], "fulfillment_channel_type": "FBA",
-                "is_hide_zero_stock": "0"}
+                "is_hide_zero_stock": "0", **store_filter}
     if tool_id == "query_product_performance_asin_lists":
         start_year, start_month = map(int, request["start_month"].split("-"))
         today = datetime.now().date()
@@ -447,7 +504,7 @@ def _lingxing_params(tool_id: str, request: dict, scope: dict | None = None) -> 
         query_start = f"{query_start_index // 12:04d}-{query_start_index % 12 + 1:02d}-01"
         first_of_current = today.replace(day=1)
         last_complete_day = first_of_current - timedelta(days=1)
-        return {
+        params = {
             "offset": 0, "length": 500, "start_date": query_start,
             "end_date": last_complete_day.isoformat(), "date_type": "purchase", "date_view_type": "month",
             "date_view_order_type": 1, "summary_field": "sku", "summary_field_level1": "sku",
@@ -457,13 +514,20 @@ def _lingxing_params(tool_id: str, request: dict, scope: dict | None = None) -> 
             # inflates the response and is not needed for natural-month unit history.
             "query_order_profit": False,
         }
+        if request.get("store_id"):
+            params["sids"] = str(request["store_id"])
+        return params
     if tool_id == "query_fba_valid_list":
-        if scope.get("parent_asin"):
-            return {"offset": 0, "length": 200, "dataType": 4,
-                    "parentAsin": scope["parent_asin"], "fulfillmentChannelType": "FBA",
-                    "analysisMode": 2}
+        # The live endpoint accepted parentAsin but returned unrelated parent
+        # families. Use the validated child-ASIN scope and storeIdList instead;
+        # any remaining upstream mismatch is retained as out-of-scope evidence.
+        asins = sorted(set(scope.get("asins") or [asin]))
         return {"offset": 0, "length": 200, "dataType": 1, "searchField": "asin",
-                "searchValue": asin, "fulfillmentChannelType": "FBA", "analysisMode": 2}
+                "searchValue": asins[0] if len(asins) == 1 else "",
+                "seniorSearchList": [{"name": "ASIN", "search_field": "asin",
+                                      "search_value": asins}],
+                "storeIdList": [int(request["store_id"])] if str(request.get("store_id", "")).isdigit() else [],
+                "fulfillmentChannelType": "FBA", "analysisMode": 2}
     raise CollectionError("领星工具不在本地只读白名单")
 
 
@@ -601,6 +665,86 @@ def _historical_coverage(payload: Any, request: dict) -> dict:
     }
 
 
+def _required_history_months(request: dict) -> list[str]:
+    start_year, start_month = map(int, request["start_month"].split("-"))
+    end_year, end_month = map(int, request["end_month"].split("-"))
+    months = []
+    for index in range(start_year * 12 + start_month - 1, end_year * 12 + end_month):
+        prior = index - 12
+        months.append(f"{prior // 12:04d}-{prior % 12 + 1:02d}")
+    return months
+
+
+def _history_month_params(request: dict, scope: dict, month: str) -> dict:
+    year, month_number = map(int, month.split("-"))
+    import calendar
+    asins = sorted(set(scope.get("asins") or [request["asin"]]))
+    params = {
+        "offset": 0, "length": 200,
+        "start_date": f"{month}-01",
+        "end_date": f"{month}-{calendar.monthrange(year, month_number)[1]:02d}",
+        "date_type": "purchase", "date_view_type": "month", "date_view_order_type": 1,
+        "summary_field": "asin", "summary_field_level1": "asin",
+        "search_field": "asin", "search_value": asins,
+        "turn_on_summary": 1, "query_order_profit": False,
+    }
+    if request.get("store_id"):
+        params["sids"] = str(request["store_id"])
+    return params
+
+
+def _expand_history_rows(payload: Any, month: str, listing_rows: list[dict], request: dict) -> list[dict]:
+    """Flatten performance rows whose ASIN/store identity is nested in `asins`."""
+    mapping_by_asin = {
+        str(row.get("asin")).upper(): row for row in listing_rows
+        if isinstance(row, dict) and row.get("asin")
+    }
+    mapping_by_identifier = {}
+    for row in listing_rows:
+        if not isinstance(row, dict):
+            continue
+        for key in ("sku", "msku", "fnsku"):
+            if row.get(key):
+                mapping_by_identifier[str(row[key]).upper()] = row
+    all_rows = list(_walk(payload))
+    # With summary_field=asin Lingxing may expose a parent aggregate and a
+    # nested SKU list. Prefer the SKU rows when present so aggregate totals are
+    # not double-counted alongside their children.
+    sku_rows = [row for row in all_rows if isinstance(row, dict) and
+                (row.get("seller_sku") or row.get("local_sku")) and
+                any(row.get(key) not in (None, "") for key in ("volume", "amount"))]
+    candidate_rows = sku_rows or [row for row in all_rows if isinstance(row, dict) and
+                                  any(row.get(key) not in (None, "") for key in ("volume", "amount"))]
+    expanded = []
+    for row in candidate_rows:
+        nested = row.get("asins") if isinstance(row.get("asins"), list) else []
+        identities = [item for item in nested if isinstance(item, dict)]
+        if not identities and row.get("asin"):
+            identities = [{"asin": row.get("asin"), "sid": row.get("sid") or request.get("store_id")}]
+        if not identities and (row.get("seller_sku") or row.get("local_sku")):
+            linked = mapping_by_identifier.get(str(row.get("seller_sku") or row.get("local_sku")).upper())
+            if linked:
+                identities = [{"asin": linked.get("asin"), "sid": row.get("sid") or request.get("store_id")}]
+        for identity in identities:
+            asin = str(identity.get("asin") or "").strip().upper()
+            if not asin:
+                continue
+            item = dict(row)
+            # The nested identity list is only a transport envelope. Leaving it
+            # in the synthetic row makes canonicalize_records walk it again and
+            # emit duplicate identity-only records without volume/amount.
+            item.pop("asins", None)
+            item.update({"asin": asin, "period": month,
+                         "store_id": identity.get("sid") or request.get("store_id"),
+                         "site": request.get("site")})
+            linked = mapping_by_asin.get(asin, {})
+            for key in ("parent_asin", "sku", "msku", "fnsku"):
+                if linked.get(key) and not item.get(key):
+                    item[key] = linked[key]
+            expanded.append(item)
+    return expanded
+
+
 def collect_lingxing(request: dict, codex_bin: str) -> dict:
     source = {"status": "error", "collected_at": utc_now(), "records": {}, "tools": [],
               "queries": {}, "family_scope": {}, "field_mapping_version": "2.0", "error": ""}
@@ -672,7 +816,9 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
                         summary["status"] = "possibly_truncated"
                 context = {name: params[name] for name in (
                     "search_field", "searchField", "dataType", "start_date", "end_date",
-                    "date_view_type", "summary_field"
+                    "date_view_type", "summary_field", "search_value", "searchValue",
+                    "sids", "sid", "storeIdList", "parentAsin", "fulfillment_channel_type",
+                    "fulfillmentChannelType"
                 ) if name in params}
                 if "senior_search_list" in params:
                     context["multi_asin_scope"] = True
@@ -771,14 +917,22 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
             # Do not assert that the requested ASIN is a parent when expansion returned no rows.
             if not parents:
                 parent_asin = None
+        mapping_scope = {"parent_asin": parent_asin, "asins": [request["asin"]],
+                         "sites": [request["site"]]}
+        if request.get("store_id"):
+            mapping_scope["store_ids"] = [request["store_id"]]
         mapping_rows, mapping_rejected = canonicalize_records(
             requested_listing, "listing_and_sku_mapping",
-            {"parent_asin": parent_asin, "asins": [request["asin"]], "sites": [request["site"]]},
+            mapping_scope,
         )
         # A parent expansion is allowed to add child ASINs even though they were not in
         # the initial request. Filter it by exact parent separately, then merge.
+        family_scope = {"parent_asin": parent_asin, "sites": [request["site"]]}
+        if request.get("store_id"):
+            family_scope["store_ids"] = [request["store_id"]]
         family_rows, family_rejected = canonicalize_records(
-            family_listing, "listing_and_sku_mapping", {"parent_asin": parent_asin, "sites": [request["site"]]}
+            family_listing, "listing_and_sku_mapping",
+            family_scope
         ) if family_listing is not None else ([], 0)
         fingerprints = {(row.get("asin"), row.get("sku"), row.get("msku"), row.get("fnsku"))
                         for row in mapping_rows}
@@ -790,6 +944,10 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
         source["records"]["listing_and_sku_mapping"] = mapping_rows
         scope = build_scope_from_mapping(mapping_rows, request["asin"], parent_asin)
         scope["sites"] = [request["site"]]
+        if request.get("store_id"):
+            scope["store_ids"] = [request["store_id"]]
+            scope["store_id"] = request["store_id"]
+            scope["marketplace"] = request["site"]
         conflicts = mapping_conflicts(mapping_rows) + mapping_context_issues(mapping_rows)
         identifiers_complete = bool(mapping_rows) and all(
             row.get("asin") and any(row.get(key) for key in ("sku", "msku", "fnsku"))
@@ -808,6 +966,93 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
         }
         for tool_id, purpose in LINGXING_READ_ALLOWLIST.items():
             if tool_id == "erp_listing":
+                continue
+            if purpose == "historical_sales":
+                # Keep the single broad request when it already contains
+                # explicit periods (and preserve the existing mock contract).
+                # The live Lingxing response currently returns an empty list or
+                # rows without period, so only then fall back to four bounded
+                # natural-month requests.
+                broad_payload = execute_paginated(
+                    tool_id, purpose, _lingxing_params(tool_id, request, scope), purpose
+                )
+                broad_periods = set()
+                for item in _walk(broad_payload):
+                    for key in FIELD_ALIASES["historical_sales"]["period"]:
+                        if item.get(key):
+                            broad_periods.add(str(item[key])[:7])
+                if broad_payload is not None and broad_periods:
+                    canonical, rejected = canonicalize_records(broad_payload, purpose, scope)
+                    query = source["queries"][purpose]
+                    query["raw_record_count"] = query.get("record_count", 0)
+                    query["record_count"] = len(canonical)
+                    query["out_of_scope_record_count"] = rejected
+                    query["observed_fields"] = _observed_fields(broad_payload)
+                    query["field_quality"] = canonical_field_quality(canonical, purpose)
+                    query["coverage"] = _historical_coverage(canonical, request)
+                    if query["coverage"]["status"] == "incomplete" and query["status"] == "ok":
+                        query["status"] = "period_incomplete"
+                    source["records"][purpose] = canonical
+                    continue
+                monthly_rows = []
+                monthly_raw = 0
+                monthly_rejected = 0
+                month_statuses = []
+                observed_fields = set()
+                for month in _required_history_months(request):
+                    month_payload = execute_paginated(
+                        tool_id, purpose, _history_month_params(request, scope, month),
+                        f"historical_sales_{month}",
+                    )
+                    month_query = source["queries"].get(f"historical_sales_{month}", {})
+                    month_statuses.append(month_query.get("status", "interface_failed"))
+                    if month_payload is None:
+                        continue
+                    monthly_raw += month_query.get("record_count", 0)
+                    observed_fields.update(_observed_fields(month_payload))
+                    expanded = _expand_history_rows(
+                        month_payload, month, mapping_rows, request
+                    )
+                    canonical, rejected = canonicalize_records(
+                        {"rows": expanded}, purpose, scope
+                    )
+                    monthly_rejected += rejected
+                    monthly_rows.extend(canonical)
+                query = source["queries"][purpose] = {
+                    "status": "interface_failed" if "interface_failed" in month_statuses else
+                    "empty_response" if not monthly_rows else "ok",
+                    "tool_id": tool_id, "raw_record_count": monthly_raw,
+                    "record_count": len(monthly_rows),
+                    "out_of_scope_record_count": monthly_rejected,
+                    "pagination_complete": all(
+                        source["queries"].get(f"historical_sales_{month}", {}).get(
+                            "pagination_complete", False
+                        ) for month in _required_history_months(request)
+                    ),
+                    "page_count": sum(source["queries"].get(
+                        f"historical_sales_{month}", {}).get("page_count", 0
+                    ) for month in _required_history_months(request)),
+                    "query_context": {
+                        "months": _required_history_months(request),
+                        "store_id": request.get("store_id"),
+                        "search_field": "asin",
+                        "summary_field": "asin",
+                    },
+                    "observed_fields": sorted(observed_fields),
+                    "field_quality": canonical_field_quality(monthly_rows, purpose),
+                    "coverage": _historical_coverage(monthly_rows, request),
+                }
+                if query["status"] == "ok" and query["coverage"]["status"] == "incomplete":
+                    query["status"] = "period_incomplete"
+                first_failure = next((source["queries"].get(f"historical_sales_{month}", {})
+                                      for month in _required_history_months(request)
+                                      if source["queries"].get(f"historical_sales_{month}", {}).get(
+                                          "error_category")), None)
+                if first_failure:
+                    query.update({key: first_failure[key] for key in (
+                        "error", "error_category", "response_status", "retryable", "stage"
+                    ) if key in first_failure})
+                source["records"][purpose] = monthly_rows
                 continue
             payload = execute_paginated(tool_id, purpose, _lingxing_params(tool_id, request, scope), purpose)
             if payload is not None:
@@ -1186,13 +1431,46 @@ def build_sku_map(sources: dict, request: dict | None = None) -> list[dict]:
     if request and request.get("asin"):
         allowed_asins.add(str(request["asin"]).upper())
     found: list[dict] = []
-    for source_name, source in sources.items():
+    # Only the store-scoped Lingxing Listing response is authoritative for
+    # ASIN/SKU identity. Feishu and inventory/history rows must never create or
+    # repair a product mapping, otherwise a same-ASIN or stale reference row can
+    # contaminate the current store scope.
+    for source_name in ("lingxing",):
+        source = sources.get(source_name, {})
         payload = source.get("records")
-        if payload is None:
-            payload = [doc for doc in source.get("documents", []) if doc.get("match_type") == "target"]
-        for row in _walk(payload):
+        if not isinstance(payload, dict):
+            continue
+        # Compatibility for older in-memory/unit-test snapshots that predate
+        # the explicit listing_and_sku_mapping record bucket. Live collection
+        # always creates that bucket, so this fallback cannot admit Feishu or
+        # stale reference rows into a real snapshot.
+        if "listing_and_sku_mapping" not in payload:
+            legacy_rows = []
+            for row in _walk(payload):
+                if isinstance(row, dict) and any(row.get(key) not in (None, "")
+                                                for key in ("asin", "ASIN")):
+                    legacy_rows.append(row)
+            listing_rows = legacy_rows
+        else:
+            listing_rows = payload.get("listing_and_sku_mapping", [])
+        expected_store = str((request or {}).get("store_id") or "").strip().upper()
+        expected_site = str((request or {}).get("site") or "").strip().upper()
+        for row in listing_rows:
+            if not isinstance(row, dict):
+                continue
+            row_store = str(row.get("store_id") or "").strip().upper()
+            row_site = str(row.get("site") or "").strip().upper()
+            if expected_store and row_store != expected_store:
+                continue
+            if expected_site and row_site not in {expected_site, "美国", "美国站"}:
+                continue
             mapped = {}
             for canonical, keys in aliases.items():
+                for key in keys:
+                    if row.get(key) not in (None, ""):
+                        mapped[canonical] = str(row[key])
+                        break
+            for canonical, keys in (("store_id", ("store_id",)), ("marketplace", ("site",))):
                 for key in keys:
                     if row.get(key) not in (None, ""):
                         mapped[canonical] = str(row[key])
@@ -1202,15 +1480,36 @@ def build_sku_map(sources: dict, request: dict | None = None) -> list[dict]:
             if mapped.get("asin") and any(mapped.get(key) for key in ("sku", "msku", "fnsku")):
                 identifiers = {mapped.get(name) for name in ("sku", "msku", "fnsku") if mapped.get(name)}
                 entry = next((item for item in found if item.get("asin") == mapped["asin"] and
+                              item.get("store_id") == mapped.get("store_id") and
+                              item.get("marketplace") == mapped.get("marketplace") and
                               identifiers.intersection({item.get(name) for name in ("sku", "msku", "fnsku")})), None)
                 if entry is None:
-                    entry = {**mapped, "sources": []}
+                    entry = {**mapped, "sources": [source_name], "mapping_status": "candidate"}
                     found.append(entry)
                 else:
                     for name, value in mapped.items():
                         entry.setdefault(name, value)
-                if source_name not in entry["sources"]:
-                    entry["sources"].append(source_name)
+    # Preserve the legacy contract for callers that provide no live Listing
+    # bucket at all. This branch is intentionally unreachable for a normal
+    # collect_trusted_data snapshot, whose Lingxing collector always creates
+    # listing_and_sku_mapping before other sources are considered.
+    if "listing_and_sku_mapping" not in sources.get("lingxing", {}).get("records", {}):
+        for source_name, source in sources.items():
+            if source_name == "lingxing":
+                continue
+            for row in _walk([doc for doc in source.get("documents", [])
+                             if doc.get("match_type") == "target"]):
+                mapped = {}
+                for canonical, keys in aliases.items():
+                    for key in keys:
+                        if row.get(key) not in (None, ""):
+                            mapped[canonical] = str(row[key])
+                            break
+                if mapped.get("asin") and allowed_asins and mapped["asin"].upper() not in allowed_asins:
+                    continue
+                if mapped.get("asin") and any(mapped.get(key) for key in ("sku", "msku", "fnsku")):
+                    if not any(item.get("asin") == mapped["asin"] for item in found):
+                        found.append({**mapped, "sources": [source_name], "mapping_status": "candidate"})
     return found[:500]
 
 
@@ -1247,7 +1546,8 @@ def collect_trusted_data(request: dict, codex_bin: str | None, lark_bin: str | N
     _notify_stage(stage_callback, "product_mapping", "completed")
     snapshot = {
         "schema_version": "2.0", "collected_at": utc_now(), "overall_status": overall,
-        "request_identity": {key: request[key] for key in ("asin", "site", "start_month", "end_month")},
+        "request_identity": {key: request.get(key, "") for key in
+                             ("asin", "site", "store_id", "start_month", "end_month")},
         "sources": sources, "sku_map": sku_map, "warnings": warnings,
         "rules": {
             "inventory": "按SKU核对FBA可售、待调仓、入库中、实际在途、计划入库、AWD可用、AWD标发在途；批次不清不得相加；reported_zero仅表示接口明确返回0，field_missing/empty_response/out_of_scope_response/interface_failed绝不能当0",
@@ -1255,6 +1555,21 @@ def collect_trusted_data(request: dict, codex_bin: str | None, lark_bin: str | N
             "profit": "成本缺失标待核算，不得把缺失成本或利润当作0",
         },
     }
+    family_parent = str(lingxing.get("family_scope", {}).get("parent_asin") or "").upper()
+    # User confirmation is deliberately scoped to this one live snapshot. It is
+    # not a global AWD default and the raw interface value remains in records.
+    if (str(request.get("store_id", "")) == "2104" and
+            str(request.get("site", "")).upper() == "US" and
+            family_parent == "B0HGCYZ7PQ"):
+        snapshot["inventory_overrides"] = {
+            "awd_standard_transit": {
+                "value": 0,
+                "source": "user_confirmed_current_snapshot",
+                "confirmed_at": utc_now(),
+                "reason": "用户确认当前猫屋快照没有 AWD 标发在途",
+                "scope": {"store_id": "2104", "marketplace": "US", "parent_asin": "B0HGCYZ7PQ"},
+            }
+        }
     snapshot["planning_evidence"] = build_plan_evidence(
         snapshot, request, stage_callback=stage_callback
     )

@@ -18,6 +18,7 @@ import server
 
 EXAMPLE = {
     'product': 'Test Product', 'asin': 'B012345678', 'site': 'US',
+    'store_id': 'TEST-STORE', 'scope_status': 'confirmed',
     'start_month': '2026-11', 'end_month': '2027-02',
     'sell_through': 95, 'notes': 'No replenishment',
 }
@@ -351,7 +352,10 @@ class HttpTests(unittest.TestCase):
 
     def test_preview_works_mocked(self):
         with patch.object(server,'collect_trusted_data',return_value=TRUSTED_DATA), \
-             patch.object(server,'run_codex_preview',return_value=SAMPLE_RESULT):
+             patch.object(server,'run_codex_preview',return_value=SAMPLE_RESULT), \
+             patch.object(server,'collect_store_options',return_value={
+                 'status':'ok', 'stores':[{'store_id':'TEST-STORE','marketplace':'US','enabled':True}]
+             }):
             code,data=self.query('POST','/api/jobs/preview',EXAMPLE)
             self.assertEqual(code,202)
             job_id=data['id']
@@ -361,6 +365,14 @@ class HttpTests(unittest.TestCase):
                 time.sleep(.02)
             self.assertEqual(job['status'],'completed')
             self.assertEqual(job['result']['warnings'][0],'in-transit deduplication needed')
+
+    def test_preview_rejects_live_unauthorized_store(self):
+        with patch.object(server, 'collect_store_options', return_value={
+            'status': 'ok', 'stores': [{'store_id': 'TEST-STORE', 'marketplace': 'US', 'enabled': False}]
+        }):
+            code, data = self.query('POST', '/api/jobs/preview', EXAMPLE)
+        self.assertEqual(code, 409)
+        self.assertIn('未授权', data['error'])
 
 
 if __name__=='__main__':unittest.main()

@@ -39,21 +39,36 @@ FIELD_ALIASES = {
     "listing_and_sku_mapping": {**IDENTITY_ALIASES, **CONTEXT_ALIASES},
     "inventory_snapshot": {
         **IDENTITY_ALIASES, **CONTEXT_ALIASES, **LEDGER_ALIASES,
-        "fba_available": ("afn_fulfillable_quantity", "fba_available_quantity", "available_quantity"),
+        "fba_available": ("afn_fulfillable_quantity", "afnFulfillableQuantity",
+                           "fba_available_quantity", "available_quantity"),
         "fba_transfer_pending": (
             "afn_reserved_fc_transfers", "reserved_fc_transfers", "pending_transfer_quantity",
-            "transfer_quantity",
+            "reservedFcTransfers", "transfer_quantity",
         ),
-        "fba_inbound_total": ("inbound_quantity", "afn_inbound_quantity"),
-        "fba_inbound_working": ("afn_inbound_working_quantity", "inbound_working_quantity"),
-        "fba_inbound_shipped": ("afn_inbound_shipped_quantity", "inbound_shipped_quantity"),
-        "fba_inbound_receiving": ("afn_inbound_receiving_quantity", "inbound_receiving_quantity"),
+        "fba_inbound_total": ("inbound_quantity", "afn_inbound_quantity", "afnTotalInbound",
+                               "afn_total_inbound"),
+        "fba_inbound_working": ("afn_inbound_working_quantity", "afnInboundWorkingQuantity",
+                                 "inbound_working_quantity"),
+        "fba_inbound_shipped": ("afn_inbound_shipped_quantity", "afnInboundShippedQuantity",
+                                 "inbound_shipped_quantity"),
+        "fba_inbound_receiving": ("afn_inbound_receiving_quantity", "afnInboundReceivingQuantity",
+                                   "inbound_receiving_quantity"),
+        "actual_transit": ("real_transit_quantity", "realTransitQuantity",
+                            "actual_transit_quantity"),
+        "planned_inbound": ("stock_up_num", "stockUpNum", "planned_inbound_quantity"),
         "awd_available": (
             "awd_available_quantity", "awd_available", "awd_available_inventory", "awd_usable_quantity",
+            # Lingxing get_fba_stock_list's platform AWD available-units field.
+            # Keep the raw source field in source records for auditability.
+            "awd_available_shipped_quantity",
         ),
         "awd_standard_transit": (
             "awd_standard_transit_quantity", "awd_standard_transit", "awd_inbound_quantity",
-            "awd_to_fba_quantity",
+            # Lingxing names this as the actual quantity shipped into AWD.
+            # awd_to_fba_quantity_shipped is intentionally not an alias: it is
+            # the opposite direction (AWD -> FBA) and must not be mixed into
+            # inbound-into-AWD stock.
+            "awd_actual_quantity_shipped",
         ),
         "snapshot_date": ("snapshot_date", "snapshotDate", "update_time", "updated_at", "gmt_modified"),
         "arrival_date": (
@@ -63,9 +78,12 @@ FIELD_ALIASES = {
     },
     "replenishment_inventory": {
         **IDENTITY_ALIASES, **CONTEXT_ALIASES, **LEDGER_ALIASES,
-        "actual_transit": ("real_transit_quantity", "actualTransitQuantity", "actual_transit_quantity"),
-        "planned_inbound": ("stock_up_num", "stockUpNum", "planned_inbound_quantity"),
-        "available": ("available_quantity", "availableQuantity", "afn_fulfillable_quantity"),
+        "actual_transit": ("real_transit_quantity", "realTransitQuantity", "actualTransitQuantity",
+                            "actual_transit_quantity", "scQuantityOverseaShipping"),
+        "planned_inbound": ("stock_up_num", "stockUpNum", "planned_inbound_quantity",
+                             "scQuantityOverseaValid", "quantitySugOverseaToFba"),
+        "available": ("available_quantity", "availableQuantity", "afn_fulfillable_quantity",
+                       "afnFulfillableQuantity"),
         "arrival_date": (
             "arrival_date", "arrivalDate", "expected_arrival_date", "expectedArrivalDate",
             "estimated_arrival_date",
@@ -75,13 +93,13 @@ FIELD_ALIASES = {
         **IDENTITY_ALIASES, **CONTEXT_ALIASES,
         "period": ("period", "month", "date", "date_time", "dateTime", "report_date", "reportDate"),
         "sales_units": ("volume", "sales_quantity", "salesQuantity", "totalSalesQuantity"),
-        "sales_amount": ("sales_amount", "salesAmount", "totalSalesAmount"),
+        "sales_amount": ("sales_amount", "salesAmount", "totalSalesAmount", "amount"),
     },
     "recent_sales": {
         **IDENTITY_ALIASES, **CONTEXT_ALIASES,
         "period": ("period", "date", "month", "date_time", "dateTime", "report_date", "reportDate"),
         "sales_units": ("volume", "sales_quantity", "salesQuantity", "totalSalesQuantity"),
-        "sales_amount": ("sales_amount", "salesAmount", "totalSalesAmount"),
+        "sales_amount": ("sales_amount", "salesAmount", "totalSalesAmount", "amount"),
     },
 }
 
@@ -138,15 +156,29 @@ def _identity_matches_scope(record: dict, scope: dict | None) -> bool:
         "sku": {str(v).upper() for v in scope.get("skus", []) if v},
         "msku": {str(v).upper() for v in scope.get("mskus", []) if v},
         "fnsku": {str(v).upper() for v in scope.get("fnskus", []) if v},
+        "store_id": {str(v).upper() for v in scope.get("store_ids", []) if v}
+                    | ({str(scope["store_id"]).upper()} if scope.get("store_id") else set()),
+        "site": {str(v).upper() for v in scope.get("sites", []) if v}
+                 | ({str(scope["marketplace"]).upper()} if scope.get("marketplace") else set()),
     }
     observed = {key: str(record[key]).upper() for key in allowed if record.get(key) not in (None, "")}
     if not observed:
         return False
-    comparable = [(key, value) for key, value in observed.items() if allowed[key]]
+    # Marketplace is checked below through the normalized alias table (US ==
+    # 美国/美国站). Comparing its raw value here rejects valid Lingxing rows
+    # before that normalization can run.
+    comparable = [(key, value) for key, value in observed.items()
+                  if allowed[key] and key != "site"]
     # One matching identifier must never override another explicit mismatch.  A
     # response row carrying a known SKU but a different ASIN is not target data.
     if not comparable or not all(value in allowed[key] for key, value in comparable):
         return False
+    for key in ("store_id",):
+        if allowed[key] and record.get(key) not in (None, ""):
+            if str(record[key]).upper() not in allowed[key]:
+                return False
+        elif allowed[key] and not record.get(key):
+            return False
     allowed_sites = {str(value).casefold() for value in scope.get("sites", []) if value}
     if allowed_sites and record.get("site"):
         aliases = {
@@ -212,7 +244,11 @@ def canonical_field_quality(records: list[dict], purpose: str) -> dict[str, str]
 def build_scope_from_mapping(records: list[dict], requested_asin: str, parent_asin: str | None) -> dict:
     scope = {
         "parent_asin": parent_asin,
-        "asins": {requested_asin.upper()},
+        # A parent ASIN is not a child variation. Keep it out of child_asins
+        # when the user searched by the parent itself; a requested child is
+        # still included when the search was child-scoped.
+        "asins": set() if parent_asin and str(requested_asin).upper() == str(parent_asin).upper()
+        else {requested_asin.upper()},
         "skus": set(), "mskus": set(), "fnskus": set(),
     }
     for record in records:

@@ -1,9 +1,10 @@
 'use strict';
 (() => {
   const URL_BASE = 'http://127.0.0.1:8765';
+  const BUILD_VERSION = '2026.11.12.1';
   const $ = id => document.getElementById(id);
   const sessionKey = 'amazonAgentPairKey';
-  let connected = false, running = false;
+  let connected = false, running = false, stores = [], currentResult = null;
   const localProducts = new Map();
   let timer = null;
   const labels = { queued:'任务排队中',running:'Agent 正在读取领星与飞书',completed:'预览完成',failed:'执行失败' };
@@ -11,14 +12,52 @@
     connected = ok;
     $('connectionState').textContent = label;
     $('connectionState').className = 'chip ' + (ok ? 'good' : 'warn');
-    $('startBtn').disabled = !ok || running;
-    $('formStatus').textContent = ok ? '已连接本机 Agent，可以生成预览' : '请先连接本机 Agent';
+    $('refreshStoresBtn').disabled = !ok;
+    $('setDefaultStoreBtn').disabled = !ok || !$('storeChoice').value;
+    $('startBtn').disabled = !ok || running || !$('storeChoice').value;
+    $('formStatus').textContent = ok ? ($('storeChoice').value ? '已确认店铺，可以生成预览' : '请先选择并确认店铺') : '请先连接本机 Agent';
   }
   function optionText(on) { return on ? '已安装' : '未检测到'; }
+  function runtimeText(value) {
+    return ({ok:'正常', authenticated:'正常', not_checked:'尚未执行', not_run:'尚未执行',
+      unavailable:'不可用', failed:'失败', timeout:'超时'})[value] || value || '待确认';
+  }
+  function selectedStore() { return stores.find(row => row.store_id === $('storeChoice').value && row.marketplace === $('marketplace').value) || null; }
+  function updateStoreState() {
+    const store = selectedStore();
+    $('storeStatus').textContent = store ? `当前任务店铺已确认：${store.name}（${store.store_id}）` : '未确认店铺，不能生成销售计划';
+    $('setDefaultStoreBtn').disabled = !connected || !store;
+    $('startBtn').disabled = !connected || running || !store;
+    $('formStatus').textContent = connected ? (store ? '已确认店铺，可以生成预览' : '请先选择并确认店铺') : '请先连接本机 Agent';
+  }
+  async function loadStores(quiet=false) {
+    try {
+      const body = await request('/api/stores');
+      stores = body.stores || [];
+      const preferred = body.default_store;
+      const marketplace = $('marketplace').value;
+      $('storeChoice').replaceChildren(new Option('请先选择店铺', ''));
+      for (const row of stores.filter(item => item.marketplace === marketplace)) {
+        const option = new Option(`${row.name || '未命名店铺'} · ${row.store_id}${row.enabled ? '' : ' · 不可用'}`, row.store_id);
+        option.disabled = !row.enabled;
+        $('storeChoice').append(option);
+      }
+      const preferredRow = preferred && stores.find(row => row.store_id === preferred.store_id && row.marketplace === preferred.marketplace && row.enabled);
+      if (preferredRow) $('storeChoice').value = preferredRow.store_id;
+      $('defaultStoreState').textContent = preferred ? `${preferred.store_name || preferred.store_id} · ${preferred.marketplace}` : '未设置';
+      updateStoreState();
+    } catch (error) {
+      stores = [];
+      $('storeChoice').replaceChildren(new Option('店铺读取失败', ''));
+      updateStoreState();
+      if (!quiet) alert('店铺读取失败：' + error.message);
+    }
+  }
   async function request(path, init={}) {
     const key = sessionStorage.getItem(sessionKey) || '';
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
+    const timeoutMs = path === '/api/stores' || path === '/api/context/default-store' ? 45000 : 12000;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(URL_BASE+path, {
         ...init,
@@ -37,7 +76,10 @@
     if (key) sessionStorage.setItem(sessionKey,key);
     try {
       const health = await request('/api/health');
+      $('agentVersion').textContent = health.agent_version || BUILD_VERSION;
       $('codexState').textContent = optionText(health.codex_found);
+      $('codexLoginState').textContent = runtimeText(health.codex_login_status);
+      $('codexModelState').textContent = runtimeText(health.codex_model_service_status);
       $('larkState').textContent = optionText(health.lark_cli_found);
       $('skillState').textContent = optionText(health.sales_plan_skill_found);
       if (!health.codex_found || !health.lark_cli_found || !health.sales_plan_skill_found) {
@@ -53,12 +95,24 @@
       // Health alone cannot authenticate. Request an authenticated route.
       await request('/api/auth');
       setConnection(true,'已连接');
+      await loadStores(quiet);
     } catch (error) {
       setConnection(false,'连接失败');
       if(!quiet) alert('连接失败：'+error.message+'。请确认已启动本机 Agent，并允许浏览器访问本地网络。');
     }
   }
   $('connectBtn').addEventListener('click',()=>connect());
+  $('refreshStoresBtn').addEventListener('click',()=>loadStores());
+  $('marketplace').addEventListener('change',()=>{ $('storeChoice').value=''; loadStores(); });
+  $('storeChoice').addEventListener('change', updateStoreState);
+  $('setDefaultStoreBtn').addEventListener('click', async ()=>{
+    const store = selectedStore(); if (!store) return;
+    try {
+      const result = await request('/api/context/default-store', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({store_id:store.store_id,marketplace:store.marketplace})});
+      $('defaultStoreState').textContent = `${result.default_store.store_name || store.name} · ${store.marketplace}`;
+      $('storeStatus').textContent = '当前任务店铺已确认，且已设为默认店铺';
+    } catch (error) { alert('保存默认店铺失败：' + error.message); }
+  });
   $('disconnectBtn').addEventListener('click',()=>{
     sessionStorage.removeItem(sessionKey);$('pairKey').value='';
     setConnection(false,'已断开');
@@ -84,6 +138,7 @@
     const tbody=document.createElement('tbody');for(const row of rows){const tr=document.createElement('tr');for(const value of row){const td=document.createElement('td');td.textContent=value===null||value===undefined||value===''?'待核对':String(value);tr.append(td);}tbody.append(tr);}table.append(tbody);wrap.append(table);host.replaceChildren(wrap);
   }
   function renderResult(result) {
+    currentResult = result;
     $('resultSummary').textContent=result.summary||'';
     const identity=result.product_identity||{};
     $('facts').replaceChildren(
@@ -99,6 +154,7 @@
     for(const [key,value] of Object.entries(result.module_status||{})){const item=document.createElement('div');item.className='status-item '+(goodStates.has(value)?'good':'warn');item.textContent=(moduleLabels[key]||key)+'：'+value;$('moduleStates').append(item);}
     if(!$('moduleStates').children.length){const item=document.createElement('div');item.className='empty-state';item.textContent='未返回模块状态';$('moduleStates').append(item);}
     renderTable($('mapping'),['子 ASIN','SKU','MSKU','FNSKU','来源'],(identity.sku_map||[]).map(row=>[row.asin,row.sku,row.msku,row.fnsku,(row.sources||[]).join(' / ')]),'尚未建立可信SKU映射');
+    $('confirmMappingBtn').hidden = !selectedStore() || identity.mapping_status !== 'complete_candidate' || !(identity.sku_map||[]).length;
     const inventoryRows=[];for(const item of ((result.inventory_details||{}).sku_details||[])){for(const [name,value] of Object.entries(item.components||{})){inventoryRows.push([item.sku||item.msku||item.asin,name,value,item.dedupe_verified?'已核对':'待去重',item.date_aligned?'时间一致':'时间不一致']);}}
     renderTable($('inventoryDetails'),['SKU主体','库存类别','数量','去重状态','时间状态'],inventoryRows,'尚无可展示的库存明细');
     const history=result.historical_details||{},historyRows=[];for(const [sku,values] of Object.entries(history.values_by_sku||{})){for(const [month,units] of Object.entries(values)){historyRows.push([sku,month,units,history.source||'']);}}
@@ -125,6 +181,17 @@
     addTextList($('warnings'),[...sourceStates,...(result.warnings||[])],'未列出异常；仍需人工核对');
     addTextList($('sources'),[...(result.data_sources||[]),result.feishu_target&&('飞书目标：'+result.feishu_target)].filter(Boolean),'未取得来源，请检查授权');
   }
+  $('confirmMappingBtn').addEventListener('click', async ()=>{
+    const store = selectedStore(); const rows = currentResult?.product_identity?.sku_map || [];
+    if (!store || !rows.length) return;
+    try {
+      await request('/api/context/product-mapping', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        store_id:store.store_id, marketplace:store.marketplace, scope_status:'confirmed',
+        mapping_status:currentResult?.product_identity?.mapping_status, mappings:rows
+      })});
+      $('mappingStatus').textContent = '已保存为当前店铺的已确认映射';
+    } catch (error) { $('mappingStatus').textContent = '保存失败：' + error.message; }
+  });
   function setJobStatus(text,kind=''){
     $('jobState').textContent=text;$('jobState').className='chip '+kind;
   }
@@ -137,24 +204,26 @@
         const outcome=result.status;
         setJobStatus(outcome==='ready'?'预览已生成':outcome==='needs_review'?'数据待核对':outcome==='blocked'?'数据不足，无法生成计划':'预览结果异常',outcome==='ready'?'good':'warn');
         renderResult(result);
-        running=false;$('startBtn').disabled=!connected;return;
+        running=false;updateStoreState();return;
       }
       setJobStatus(labels[job.status]||job.status,'warn');
       if(job.status==='failed'){
         $('resultSummary').textContent=job.error||'执行失败';
-        running=false;$('startBtn').disabled=!connected;return;
+        running=false;updateStoreState();return;
       }
       timer=setTimeout(()=>pollJob(jobId),2600);
     }catch(err){
       setJobStatus('查询状态失败','warn');$('resultSummary').textContent=err.message;
-      running=false;$('startBtn').disabled=!connected;
+      running=false;updateStoreState();
     }
   }
   $('planForm').addEventListener('submit',async e=>{
     e.preventDefault();if(!connected||running)return;
+    if(!selectedStore()){alert('请先选择并确认店铺');return;}
     const payload={
       product:$('product').value.trim(),asin:$('asin').value.trim().toUpperCase(),
-      site:$('site').value,start_month:$('startMonth').value,end_month:$('endMonth').value,
+      site:$('marketplace').value,store_id:$('storeChoice').value,scope_status:'confirmed',
+      start_month:$('startMonth').value,end_month:$('endMonth').value,
       sell_through:Number($('goal').value),knowledge_base:$('knowledgeBase').value.trim(),notes:$('notes').value.trim(),
     };
     if(payload.end_month<payload.start_month){alert('结束月份不能早于开始月份');return;}
@@ -171,7 +240,7 @@
       pollJob(job.id);
     }catch(err){
       setJobStatus('启动失败','warn');$('resultSummary').textContent=err.message;
-      running=false;$('startBtn').disabled=!connected;
+      running=false;updateStoreState();
     }
   });
 

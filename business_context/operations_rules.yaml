@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "rules": {
+    "cross_store_data_mixing": {
+      "status": "confirmed",
+      "value": "forbidden",
+      "description": "禁止跨店铺自动合并商品、库存、销量和利润数据。"
+    },
+    "sales_plan_requires_confirmed_store": {
+      "status": "confirmed",
+      "value": true,
+      "description": "未确认唯一店铺和 Marketplace 时，不允许生成正式销售计划。"
+    },
+    "mapping_key": {
+      "status": "confirmed",
+      "value": ["store_id", "marketplace", "asin", "sku", "msku", "fnsku"]
+    },
+    "missing_data_policy": {
+      "status": "confirmed",
+      "value": "unknown_is_not_zero",
+      "description": "缺失、空响应、越界或接口失败不得转换为数字 0。"
+    },
+    "codex_write_boundary": {
+      "status": "confirmed",
+      "value": "read_only"
+    },
+    "supported_marketplaces": {
+      "status": "confirmed",
+      "value": ["US"]
+    }
+  }
+}
