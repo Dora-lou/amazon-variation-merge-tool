@@ -3,27 +3,27 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>亚马逊运营工具箱</title>
+<title>亚马逊运营工作台</title>
 <style>
 :root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#243447;background:#f4f7fb;font-size:14px;line-height:1.6;font-synthesis:none}
 *{box-sizing:border-box}body{margin:0}a{color:inherit;text-decoration:none}
 .shell{max-width:1180px;margin:0 auto;padding:28px 26px 54px}
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:22px;margin-bottom:40px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:22px;margin-bottom:30px}
 .brand{display:flex;align-items:center;gap:12px;min-width:0}
 .brand-mark{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#dff1e6;color:#23734b;font-size:20px;font-weight:850}
 .brand-name{font-size:14px;font-weight:800;color:#293d50}.brand-caption{font-size:11px;color:#8796a5;margin-top:2px}
 .module-nav{display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding:5px;border:1px solid #e2e8ef;background:#fff;border-radius:12px}
 .module-nav a{padding:9px 13px;border-radius:8px;color:#627386;font-weight:700;font-size:12px;white-space:nowrap}
 .module-nav a:hover{background:#f3f7f5;color:#2d6d4d}.module-nav a.active{background:#e7f3eb;color:#216b44}
-.hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(270px,.7fr);gap:22px;align-items:stretch;margin-bottom:26px}
-.hero-main{padding:36px 38px;border-radius:22px;background:linear-gradient(125deg,#203c35 0%,#2c5947 64%,#39745b 100%);color:#fff;position:relative;overflow:hidden}
+.hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(270px,.7fr);gap:22px;align-items:stretch;margin-bottom:22px}
+.hero-main{padding:32px 36px;border-radius:22px;background:linear-gradient(125deg,#203c35 0%,#2c5947 64%,#39745b 100%);color:#fff;position:relative;overflow:hidden}
 .hero-main:after{content:"";position:absolute;width:300px;height:300px;border:1px solid #ffffff18;border-radius:50%;right:-115px;top:-120px;box-shadow:0 0 0 36px #ffffff08,0 0 0 76px #ffffff05}
 .eyebrow{font-size:10px;letter-spacing:.16em;font-weight:850;color:#c0e4ce;margin-bottom:12px}
 h1{font-size:36px;line-height:1.22;letter-spacing:-.045em;margin:0;max-width:650px;position:relative;z-index:1}
 .hero-main p{font-size:14px;line-height:1.9;color:#d6e6dc;max-width:600px;margin:15px 0 0;position:relative;z-index:1}
 .hero-pill{display:inline-flex;align-items:center;gap:8px;margin-top:22px;padding:8px 12px;border-radius:999px;border:1px solid #ffffff2a;background:#ffffff0e;color:#eef8f1;font-size:11px;font-weight:700;position:relative;z-index:1}
 .hero-pill span{width:6px;height:6px;border-radius:50%;background:#a7dfb9}
-.hero-side{background:#fff;border:1px solid #e2e9ef;border-radius:22px;padding:25px 24px;display:flex;flex-direction:column;justify-content:center}
+.hero-side{background:#fff;border:1px solid #e2e9ef;border-radius:22px;padding:22px 24px;display:flex;flex-direction:column;justify-content:center}
 .hero-side h2{font-size:16px;margin:0;color:#2b4053;letter-spacing:-.02em}
 .hero-side>p{font-size:12px;color:#8492a1;margin:5px 0 17px}
 .flow-row{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid #edf1f4}
@@ -31,87 +31,106 @@ h1{font-size:36px;line-height:1.22;letter-spacing:-.045em;margin:0;max-width:650
 .flow-row strong{display:block;font-size:12px;color:#3c5063}.flow-row small{display:block;font-size:11px;color:#8a98a5;margin-top:2px}
 .section-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin:32px 0 15px}
 .section-heading h2{font-size:19px;letter-spacing:-.03em;margin:0;color:#26394c}.section-heading p{font-size:12px;color:#8291a0;margin:4px 0 0}
-.module-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-.module-card{display:flex;flex-direction:column;min-width:0;min-height:300px;background:#fff;border:1px solid #e1e8ef;border-radius:18px;padding:22px 22px 20px;box-shadow:0 5px 18px #26394c05;transition:transform .16s,border-color .16s,box-shadow .16s}
+.module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.module-card{display:flex;flex-direction:column;min-width:0;min-height:250px;background:#fff;border:1px solid #e1e8ef;border-radius:19px;padding:25px 27px 22px;box-shadow:0 6px 22px #26394c06;transition:transform .16s,border-color .16s,box-shadow .16s}
 .module-card:hover{transform:translateY(-3px);border-color:#c4d9ce;box-shadow:0 12px 28px #26394c0c}
 .card-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .card-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:14px}
-.knowledge .card-icon{background:#e4f3e9;color:#27734b}.tools .card-icon{background:#e6effb;color:#3969a8}.library .card-icon{background:#f0eafb;color:#7954a8}.agent .card-icon{background:#e2f5ec;color:#247b52}
+.knowledge .card-icon{background:#e4f3e9;color:#27734b}.tools .card-icon{background:#e6effb;color:#3969a8}.library .card-icon{background:#f0eafb;color:#7954a8}.skills .card-icon{background:#e5f2eb;color:#28724f}.agent .card-icon{background:#e2f5ec;color:#247b52}
 .card-no{font-size:11px;font-weight:850;letter-spacing:.12em;color:#a1adba}
-.module-card h3{font-size:18px;letter-spacing:-.025em;color:#293e51;margin:20px 0 7px}
-.module-card .desc{font-size:12px;color:#78899a;line-height:1.8;margin:0;min-height:44px}
-.tag-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:17px}
+.module-card h3{font-size:20px;letter-spacing:-.025em;color:#293e51;margin:15px 0 8px}
+.module-card .desc{font-size:13px;color:#78899a;line-height:1.8;margin:0;min-height:42px;max-width:410px}
+.tag-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
 .tag{padding:5px 8px;background:#f5f7f9;border:1px solid #edf0f3;border-radius:7px;font-size:10px;color:#66798a;font-weight:700}
-.card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:22px;color:#314b5d;font-size:12px;font-weight:800}
-.card-foot .arrow{display:grid;place-items:center;width:29px;height:29px;border:1px solid #e3e9ee;border-radius:9px;color:#5f7485;transition:transform .16s}
+.card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:19px;color:#314b5d;font-size:12px;font-weight:800}
+.card-foot .arrow{display:grid;place-items:center;width:34px;height:34px;border:1px solid #e3e9ee;border-radius:9px;color:#5f7485;transition:transform .16s}
 .module-card:hover .arrow{transform:translateX(3px)}
+.module-card:focus-visible{outline:3px solid #7aaf90;outline-offset:3px}
+.module-card.featured{border-color:#d2e5dc;background:linear-gradient(145deg,#ffffff 58%,#f2f9f5 100%)}
+.module-card.featured.tools{background:linear-gradient(145deg,#ffffff 58%,#f0f5fc 100%);border-color:#d6e4f3}
+.module-card.featured .card-no{color:#819ca0}
+.section-heading.secondary{margin-top:35px}
+.section-heading.secondary h2{font-size:17px;color:#53677b}
+.module-card.secondary-card{min-height:220px}
+.module-card.secondary-card h3{font-size:18px}
+.module-card.secondary-card .card-icon{width:44px;height:44px}
 .info-strip{display:flex;align-items:flex-start;gap:13px;padding:16px 18px;margin-top:20px;background:#edf4f1;border:1px solid #dceae2;border-radius:14px}
 .info-mark{display:grid;place-items:center;flex:0 0 27px;width:27px;height:27px;border-radius:8px;background:#dcece2;color:#3b7956;font-weight:850}
 .info-strip strong{display:block;color:#365a47;font-size:12px}.info-strip p{margin:3px 0 0;color:#698575;font-size:12px;line-height:1.7}
 .footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;color:#8b99a6;font-size:11px;margin-top:28px}
 @media(max-width:900px){.topbar{align-items:flex-start;flex-direction:column;margin-bottom:25px}.hero{grid-template-columns:1fr}.hero-main{padding:30px}.hero-side{padding:21px 23px}.module-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:600px){.shell{padding:18px 13px 35px}.module-nav{width:100%;gap:3px}.module-nav a{flex:1;text-align:center;padding:9px 5px;font-size:11px}.hero-main{padding:25px 22px;border-radius:17px}h1{font-size:30px}.hero-side{border-radius:17px}.module-grid{grid-template-columns:1fr}.module-card{min-height:0}.module-card .desc{min-height:0}.section-heading{margin-top:26px}.footer{display:block}.footer span{display:block;margin-top:5px}}
+@media(max-width:600px){.module-grid{grid-template-columns:1fr}.module-card.featured{min-height:0}.shell{padding:18px 13px 35px}.module-nav{width:100%;gap:3px}.module-nav a{flex:1;text-align:center;padding:9px 5px;font-size:11px}.hero-main{padding:25px 22px;border-radius:17px}h1{font-size:30px}.hero-side{border-radius:17px}.module-grid{grid-template-columns:1fr}.module-card{min-height:0}.module-card .desc{min-height:0}.section-heading{margin-top:26px}.footer{display:block}.footer span{display:block;margin-top:5px}}
+
+/* 统一主导航：独立横排，优先展示常用工具与 Skills */
+.topbar,.site-header,header:has(> nav){flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:17px!important;margin-bottom:26px!important}
+.topbar .brand,.site-header .brand,header:has(> nav) .brand{align-self:flex-start}
+nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important;width:100%!important;padding:7px!important;margin:0!important;background:#fff!important;border:1px solid #e0e8ed!important;border-radius:16px!important;box-shadow:0 5px 20px rgba(35,53,72,.045)!important}
+nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;padding:13px 8px!important;min-height:47px!important;border:0!important;border-radius:11px!important;font-size:13px!important;font-weight:750!important;white-space:nowrap!important;text-decoration:none!important;color:#526677!important}
+nav[aria-label="工具模块"] a:hover,nav[aria-label="工具导航"] a:hover{background:#f0f6f3!important;color:#28734d!important}
+nav[aria-label="工具模块"] a.active,nav[aria-label="工具导航"] a.active{background:#e2f1e8!important;color:#216a46!important}
+nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:focus-visible{outline:2px solid #398e63!important;outline-offset:2px!important}
+@media(max-width:650px){nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:flex!important;overflow-x:auto!important;gap:5px!important;scrollbar-width:thin}nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{flex:0 0 auto!important;padding:11px 13px!important;min-height:43px!important}}
+
 </style>
+<link rel="stylesheet" href="./workspace-shell.css?v=workspace-brand-20261105-3"/>
 </head>
 <body>
 <main class="shell">
-<header class="topbar">
-  <a class="brand" href="./index.html" aria-label="亚马逊运营工具箱首页">
-    <span class="brand-mark">O</span><span><span class="brand-name">亚马逊运营工具箱</span><span class="brand-caption" style="display:block">Amazon Operations Workspace</span></span>
-  </a>
-  <nav class="module-nav" aria-label="工具模块">
-      <a href="./index.html" class="active" aria-current="page">首页</a>
-      <a href="./variation-guide.html">知识库</a>
-      <a href="./tools.html" id="navTools">运营工具中心</a>
-      <a href="./listing.html?view=library" id="navLibrary">商品库</a>
-      <a href="./agent.html">AI Agent</a>
-    </nav>
-</header>
-<section class="hero" aria-labelledby="pageTitle">
-  <div class="hero-main">
+<header class="workspace-header"><a class="workspace-brand" href="./index.html" aria-label="亚马逊运营工作台首页"><span class="workspace-logo" aria-hidden="true">O</span><span><span class="workspace-name">亚马逊运营工作台</span><span class="workspace-sub">Amazon Operations Workspace</span></span></a><nav class="workspace-nav" aria-label="工具模块">
+<a href="./index.html" class="active" aria-current="page">首页</a>
+<a href="./tools.html" id="navTools">运营工具中心</a>
+<a href="./skills.html">AI Skills</a>
+<a href="./variation-guide.html">知识库</a>
+<a href="./listing.html?view=library" id="navLibrary">商品库</a>
+</nav></header>
+<section class="hero workspace-home-hero" aria-labelledby="pageTitle">
+  <div class="hero-main workspace-intro">
     <div class="eyebrow">AMAZON OPERATIONS WORKSPACE</div>
-    <h1 id="pageTitle">让运营操作更清晰，<br/>让重复工作更简单。</h1>
-    <p>把操作知识、表格生成、商品资料和 AI Agent 分开管理。日常工具继续本地使用，需要自动读取领星、生成销售计划时进入 AI Agent。</p>
-    <div class="hero-pill"><span></span>四个模块 · 各司其职 · 互相配合</div>
+    <h1 id="pageTitle">让运营工作更简单</h1>
+    <p>集中管理运营工具与 AI Skills，简化日常操作，提高工作效率。</p>
+    <div class="hero-pill"><span></span>常用工具优先 · AI Skills 集中管理</div>
   </div>
   <aside class="hero-side">
-    <h2>四个模块如何配合</h2>
-    <p>按任务进入，不必在一个页面里找所有功能。</p>
-    <div class="flow-row"><span class="flow-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v18H7.5A2.5 2.5 0 0 1 5 17.5z"/><path d="M5 5H3v15h14M9 7h7M9 11h7"/></svg></span><span><strong>知识库</strong><small>先查方法和操作步骤</small></span></div>
-    <div class="flow-row"><span class="flow-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18M15 9v12"/></svg></span><span><strong>运营工具中心</strong><small>选择任务，生成上传文件</small></span></div>
-    <div class="flow-row"><span class="flow-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></span><span><strong>商品库</strong><small>统一保存商品资料和类目模板</small></span></div>
-    <div class="flow-row"><span class="flow-icon">✧</span><span><strong>AI Agent</strong><small>读取领星与飞书，生成计划预览</small></span></div>
+    <h2>从这里开始</h2>
+    <p>选择任务入口，减少重复查找。</p>
+    <div class="flow-row"><span class="flow-icon">▦</span><span><strong>运营工具中心</strong><small>变体合并、Listing 修改等</small></span></div>
+    <div class="flow-row"><span class="flow-icon">✦</span><span><strong>AI Skills</strong><small>销售计划与后续自建技能</small></span></div>
+    <div class="flow-row"><span class="flow-icon">▤</span><span><strong>知识库</strong><small>操作方法与使用说明</small></span></div>
+    <div class="flow-row"><span class="flow-icon">▱</span><span><strong>商品库</strong><small>ASIN、MSKU 与类目模板</small></span></div>
   </aside>
 </section>
-<div class="section-heading"><div><h2>选择你要使用的模块</h2><p>每个入口只负责一类任务，后续可以继续扩展。</p></div></div>
-<section class="module-grid" aria-label="工具模块">
-  <a class="module-card knowledge" href="./variation-guide.html">
-    <div class="card-top"><span class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 5H2v17h15M8 7h8M8 11h8"/></svg></span><span class="card-no">MODULE 01</span></div>
-    <h3>知识库</h3><p class="desc">集中整理亚马逊后台操作方法。先看解决方案，再决定是否需要使用表格工具。</p>
+<div class="section-heading"><div><h2>开始工作</h2><p>最常使用的工具和 AI Skills，放在最前面。</p></div></div>
+<section class="module-grid" aria-label="主要功能入口">
+  <a class="module-card tools featured" href="./tools.html">
+    <div class="card-top"><span class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18M15 9v12"/></svg></span><span class="card-no">MAIN 01</span></div>
+    <h3>运营工具中心</h3><p class="desc">合并变体、修改 Listing、生成批量上传模板。常用的运营操作都从这里进入。</p>
+    <div class="tag-row"><span class="tag">合并变体</span><span class="tag">修改 Listing</span><span class="tag">后续可扩展</span></div>
+    <div class="card-foot"><span>进入运营工具中心</span><span class="arrow">→</span></div>
+  </a>
+  <a class="module-card skills featured" href="./skills.html">
+    <div class="card-top"><span class="card-icon" aria-hidden="true">✦</span><span class="card-no">MAIN 02</span></div>
+    <h3>AI Skills</h3><p class="desc">统一收集自建 Codex Skills。填写任务信息，生成完整指令，再交给 Codex 执行。</p>
+    <div class="tag-row"><span class="tag">销售计划</span><span class="tag">Codex Skill</span><span class="tag">持续扩展</span></div>
+    <div class="card-foot"><span>进入 Skills 目录</span><span class="arrow">→</span></div>
+  </a>
+</section>
+<div class="section-heading secondary"><div><h2>资料与管理</h2><p>知识和商品资料集中整理，需要时再打开。</p></div></div>
+<section class="module-grid" aria-label="资料管理入口">
+  <a class="module-card knowledge secondary-card" href="./variation-guide.html">
+    <div class="card-top"><span class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 5H2v17h15M8 7h8M8 11h8"/></svg></span><span class="card-no">RESOURCE 01</span></div>
+    <h3>知识库</h3><p class="desc">后台操作方法、问题处理步骤与实用说明，随时查阅。</p>
     <div class="tag-row"><span class="tag">合并变体</span><span class="tag">拆分变体</span><span class="tag">FBA 发货</span></div>
     <div class="card-foot"><span>进入知识库</span><span class="arrow">→</span></div>
   </a>
-  <a class="module-card tools" href="./tools.html">
-    <div class="card-top"><span class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18M15 9v12"/></svg></span><span class="card-no">MODULE 02</span></div>
-    <h3>运营工具中心</h3><p class="desc">按任务选择工具，生成符合亚马逊类目模板结构的 Excel 上传文件。</p>
-    <div class="tag-row"><span class="tag">合并变体</span><span class="tag">修改 Listing</span><span class="tag">后续可扩展</span></div>
-    <div class="card-foot"><span>选择表格工具</span><span class="arrow">→</span></div>
-  </a>
-  <a class="module-card library" href="./listing.html?view=library">
-    <div class="card-top"><span class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></span><span class="card-no">MODULE 03</span></div>
-    <h3>商品库</h3><p class="desc">统一维护父 ASIN、子 ASIN、MSKU 和类目模板，为前面的表格工具提供资料。</p>
+  <a class="module-card library secondary-card" href="./listing.html?view=library">
+    <div class="card-top"><span class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></span><span class="card-no">RESOURCE 02</span></div>
+    <h3>商品库</h3><p class="desc">保存 ASIN、MSKU 和类目模板，让商品资料集中管理。</p>
     <div class="tag-row"><span class="tag">商品资料</span><span class="tag">类目模板库</span><span class="tag">备份与恢复</span></div>
     <div class="card-foot"><span>管理商品资料</span><span class="arrow">→</span></div>
   </a>
-  <a class="module-card agent" href="./agent.html">
-    <div class="card-top"><span class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="7" width="16" height="13" rx="3"/><path d="M12 3v4M9 3h6M8 13h1M15 13h1M9 17h6"/></svg></span><span class="card-no">MODULE 04</span></div>
-    <h3>AI Agent</h3><p class="desc">复用本地 Codex、领星 MCP 与飞书 Skill，自动读取数据并生成销售计划预览。</p>
-    <div class="tag-row"><span class="tag">销售计划</span><span class="tag">只读预览</span><span class="tag">可迁移</span></div>
-    <div class="card-foot"><span>进入销售计划 Agent</span><span class="arrow">→</span></div>
-  </a>
 </section>
-<div class="info-strip"><span class="info-mark">i</span><div><strong>资料与隐私提醒</strong><p>商品库和类目模板保存在当前浏览器中，换电脑前请在「商品库」中下载 ZIP 备份。销售计划 Agent 需在使用的电脑启动独立本地服务；当前版本仅提供计划预览，不修改飞书。</p></div></div>
-<footer class="footer"><span>亚马逊运营工具箱 · 内部运营辅助工具</span><span><a href="./使用说明.txt" download="亚马逊运营工具箱-新手使用说明.txt">新手使用说明（TXT）</a></span></footer>
+<div class="info-strip"><span class="info-mark">i</span><div><strong>资料与隐私提醒</strong><p>商品库和类目模板保存在当前浏览器中，换电脑前请在「商品库」中下载 ZIP 备份。AI Skills 页面仅作为 Codex 技能的管理入口，实际执行在 Codex 中完成。</p></div></div>
+<footer class="footer"><span>亚马逊运营工作台 · 内部运营辅助工具</span><span><a href="./使用说明.txt" download="亚马逊运营工作台-新手使用说明.txt">新手使用说明（TXT）</a></span></footer>
 </main>
 </body>
 </html>

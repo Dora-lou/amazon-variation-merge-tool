@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<script>if(new URLSearchParams(window.location.search).get('view')==='library'){document.documentElement.classList.add('library-mode');document.title='商品库｜亚马逊运营工具箱';}</script>
-<title>亚马逊运营工具箱｜Listing 修改</title>
+<script>if(new URLSearchParams(window.location.search).get('view')==='library'){document.documentElement.classList.add('library-mode');document.title='商品库｜亚马逊运营工作台';}</script>
+<title>亚马逊运营工作台｜Listing 修改</title>
 <style>
 :root{font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:#213042;background:#f5f7fb;font-size:14px}
 *{box-sizing:border-box}body{margin:0}.shell{max-width:1120px;margin:0 auto;padding:32px 22px 70px}
@@ -32,20 +32,32 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
 .submodule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}.submodule{border:1px solid #e1e7ef;border-radius:12px;padding:16px;min-width:0}.submodule h3{margin-bottom:8px}.pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 4px 2px}.pagination-info{font-size:12px;color:#68798a}.pagination-buttons{display:flex;gap:8px;align-items:center}.pagination-buttons button{padding:7px 11px;font-size:12px}.pagination-buttons .page-number{font-weight:750;color:#267651}
 .table-wrap{overflow:auto;border:1px solid #e2e8ef;border-radius:10px;margin-top:12px}table{border-collapse:collapse;width:100%;min-width:700px}th,td{border-bottom:1px solid #e6ebf1;padding:10px;text-align:left;vertical-align:top}th{white-space:nowrap;background:#f8fafc;font-size:12px;color:#5a6c7e}td{font-size:13px}tr:last-child td{border:0}.data-table button{margin:2px;padding:6px 9px;font-size:12px}.danger{color:#a33a47}.quiet{border:0;background:transparent;padding:4px 8px}.footer{font-size:12px;color:#788593;margin-top:22px}
 @media(max-width:700px){.shell{padding:20px 12px}.field-grid,.three-grid,.bullet-grid,.child-list,.submodule-grid{grid-template-columns:1fr}section{padding:17px}.advanced-row{grid-template-columns:1fr}}
+
+/* 统一主导航：独立横排，优先展示常用工具与 Skills */
+.topbar,.site-header,header:has(> nav){flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:17px!important;margin-bottom:26px!important}
+.topbar .brand,.site-header .brand,header:has(> nav) .brand{align-self:flex-start}
+nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important;width:100%!important;padding:7px!important;margin:0!important;background:#fff!important;border:1px solid #e0e8ed!important;border-radius:16px!important;box-shadow:0 5px 20px rgba(35,53,72,.045)!important}
+nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;padding:13px 8px!important;min-height:47px!important;border:0!important;border-radius:11px!important;font-size:13px!important;font-weight:750!important;white-space:nowrap!important;text-decoration:none!important;color:#526677!important}
+nav[aria-label="工具模块"] a:hover,nav[aria-label="工具导航"] a:hover{background:#f0f6f3!important;color:#28734d!important}
+nav[aria-label="工具模块"] a.active,nav[aria-label="工具导航"] a.active{background:#e2f1e8!important;color:#216a46!important}
+nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:focus-visible{outline:2px solid #398e63!important;outline-offset:2px!important}
+@media(max-width:650px){nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:flex!important;overflow-x:auto!important;gap:5px!important;scrollbar-width:thin}nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{flex:0 0 auto!important;padding:11px 13px!important;min-height:43px!important}}
+
 </style>
+<link rel="stylesheet" href="./workspace-shell.css?v=workspace-brand-20261105-3"/>
 </head>
 <body>
 <main class="shell">
-  <div class="eyebrow" id="pageEyebrow">LISTING EDITOR</div>
+  <header class="workspace-header"><a class="workspace-brand" href="./index.html" aria-label="亚马逊运营工作台首页"><span class="workspace-logo" aria-hidden="true">O</span><span><span class="workspace-name">亚马逊运营工作台</span><span class="workspace-sub">Amazon Operations Workspace</span></span></a><nav class="workspace-nav" aria-label="工具模块">
+<a href="./index.html">首页</a>
+<a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
+<a href="./skills.html">AI Skills</a>
+<a href="./variation-guide.html">知识库</a>
+<a href="./listing.html?view=library" id="navLibrary">商品库</a>
+</nav></header><div class="workspace-intro"><div class="eyebrow" id="pageEyebrow">LISTING EDITOR</div>
   <h1 id="pageTitle">修改 Listing</h1>
-  <p id="pageDescription">选择类目模板和商品，勾选要修改的字段，再生成上传表格。商品资料和类目模板在「商品库」统一维护。</p>
-  <nav class="module-nav" aria-label="工具模块">
-    <a href="./index.html">首页</a>
-    <a href="./variation-guide.html">知识库</a>
-    <a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
-    <a href="./listing.html?view=library" id="navLibrary">商品库</a>
-    <a href="./agent.html">AI Agent</a>
-    </nav>
+  <p id="pageDescription">选择商品与字段，快速生成 Listing 批量修改表格。</p></div>
+  
   <div class="page-tabs">
     <button id="openListingTab" class="active" type="button">修改商品信息</button>
     <button id="openLibraryTab" type="button">打开商品库</button>
@@ -194,13 +206,13 @@ a{color:#267651}.module-nav,.page-tabs{display:flex;gap:9px;flex-wrap:wrap;margi
       </section>
     </div>
   </div>
-  <p class="footer"><a href="./使用说明.txt" download="亚马逊运营工具箱-新手使用说明.txt">下载新手使用说明（TXT）</a><br/>Excel 在浏览器本地处理；不登录亚马逊、不连接卖家后台、不向网站服务器上传文件。资料库保存在当前浏览器，可通过 ZIP 备份迁移。</p>
+  <p class="footer"><a href="./使用说明.txt" download="亚马逊运营工作台-新手使用说明.txt">下载新手使用说明（TXT）</a><br/>Excel 在浏览器本地处理；不登录亚马逊、不连接卖家后台、不向网站服务器上传文件。资料库保存在当前浏览器，可通过 ZIP 备份迁移。</p>
 </main>
 <script>
 if(new URLSearchParams(window.location.search).get('view')==='library'){
   document.getElementById('pageEyebrow').textContent='PRODUCT LIBRARY';
   document.getElementById('pageTitle').textContent='商品库';
-  document.getElementById('pageDescription').textContent='统一维护商品资料、类目模板，并在这里完成完整备份与恢复。运营工具中心会从这里读取对应资料。';
+  document.getElementById('pageDescription').textContent='集中维护商品资料、类目模板与备份，随时调用。';
   document.getElementById('navLibrary').classList.add('active');
   document.getElementById('navTools').classList.remove('active');
 }

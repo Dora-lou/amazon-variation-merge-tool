@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>运营工具中心｜亚马逊运营工具箱</title>
+<title>运营工具中心｜亚马逊运营工作台</title>
 <style>
 :root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#243447;background:#f4f7fb;font-size:14px;line-height:1.6}
 *{box-sizing:border-box}body{margin:0}a{color:inherit;text-decoration:none}
@@ -22,20 +22,29 @@
 .footer{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;font-size:11px;color:#8b99a6;margin-top:27px}
 @media(max-width:850px){.topbar{flex-direction:column;align-items:flex-start}.tool-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.shell{padding:18px 13px 35px}.module-nav{width:100%;gap:3px}.module-nav a{flex:1;text-align:center;padding:9px 5px;font-size:11px}.hero{padding:25px 22px;border-radius:17px}h1{font-size:28px}.tool-card{padding:20px;min-height:0}.footer{display:block}.footer span{display:block;margin-top:5px}}
+
+/* 统一主导航：独立横排，优先展示常用工具与 Skills */
+.topbar,.site-header,header:has(> nav){flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:17px!important;margin-bottom:26px!important}
+.topbar .brand,.site-header .brand,header:has(> nav) .brand{align-self:flex-start}
+nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important;width:100%!important;padding:7px!important;margin:0!important;background:#fff!important;border:1px solid #e0e8ed!important;border-radius:16px!important;box-shadow:0 5px 20px rgba(35,53,72,.045)!important}
+nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;padding:13px 8px!important;min-height:47px!important;border:0!important;border-radius:11px!important;font-size:13px!important;font-weight:750!important;white-space:nowrap!important;text-decoration:none!important;color:#526677!important}
+nav[aria-label="工具模块"] a:hover,nav[aria-label="工具导航"] a:hover{background:#f0f6f3!important;color:#28734d!important}
+nav[aria-label="工具模块"] a.active,nav[aria-label="工具导航"] a.active{background:#e2f1e8!important;color:#216a46!important}
+nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:focus-visible{outline:2px solid #398e63!important;outline-offset:2px!important}
+@media(max-width:650px){nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:flex!important;overflow-x:auto!important;gap:5px!important;scrollbar-width:thin}nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{flex:0 0 auto!important;padding:11px 13px!important;min-height:43px!important}}
+
 </style>
+<link rel="stylesheet" href="./workspace-shell.css?v=workspace-brand-20261105-3"/>
 </head>
 <body><main class="shell">
-<header class="topbar">
-<a class="brand" href="./index.html"><span class="brand-mark">O</span><span><span class="brand-name">亚马逊运营工具箱</span><span class="brand-caption" style="display:block">Amazon Operations Workspace</span></span></a>
-<nav class="module-nav" aria-label="工具模块">
-      <a href="./index.html">首页</a>
-      <a href="./variation-guide.html">知识库</a>
-      <a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
-      <a href="./listing.html?view=library" id="navLibrary">商品库</a>
-      <a href="./agent.html">AI Agent</a>
-    </nav>
-</header>
-<section class="hero"><div class="eyebrow">OPERATIONS TOOLS</div><h1>运营工具中心</h1><p>按任务选择对应工具。变体与 Listing 工具生成 Excel 上传文件；销售计划 Agent 则读取领星和飞书数据，生成只读计划预览。</p></section>
+<header class="workspace-header"><a class="workspace-brand" href="./index.html" aria-label="亚马逊运营工作台首页"><span class="workspace-logo" aria-hidden="true">O</span><span><span class="workspace-name">亚马逊运营工作台</span><span class="workspace-sub">Amazon Operations Workspace</span></span></a><nav class="workspace-nav" aria-label="工具模块">
+<a href="./index.html">首页</a>
+<a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
+<a href="./skills.html">AI Skills</a>
+<a href="./variation-guide.html">知识库</a>
+<a href="./listing.html?view=library" id="navLibrary">商品库</a>
+</nav></header>
+<section class="hero workspace-intro"><div class="eyebrow">OPERATIONS TOOLS</div><h1>运营工具中心</h1><p>变体管理、Listing 编辑与表格生成，集中处理日常运营任务。</p></section>
 <div class="section-heading"><h2>选择要处理的任务</h2><p>先选功能，再按页面步骤填写，不需要在一个页面里切换不同任务。</p></div>
 <section class="tool-grid" aria-label="表格工具列表">
 <a class="tool-card" href="./merge.html">
@@ -50,13 +59,7 @@
 <div class="tool-points"><span class="tool-point"><i class="dot"></i>选择类目模板</span><span class="tool-point"><i class="dot"></i>按父 ASIN 选择商品并确认 MSKU</span><span class="tool-point"><i class="dot"></i>填写字段并生成上传表格</span></div>
 <div class="tool-foot"><span>打开 Listing 修改工具</span><span class="arrow">→</span></div>
 </a>
-<a class="tool-card agent" href="./agent.html">
-<div class="tool-top"><span class="tool-icon"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="7" width="16" height="13" rx="3"/><path d="M12 3v4M9 13h1M15 13h1M9 17h6"/></svg></span><span class="tool-label">TOOL 03 · AGENT</span></div>
-<h3>销售计划 Agent</h3><p>自动读取领星库存与历史销量，按现有 Skill 规则生成销售计划草稿。第一版仅供核对，不写入飞书。</p>
-<div class="tool-points"><span class="tool-point"><i class="dot"></i>从本地商品库选择 ASIN</span><span class="tool-point"><i class="dot"></i>连接这台电脑的 Codex Agent</span><span class="tool-point"><i class="dot"></i>预览月度目标、库存口径与异常</span></div>
-<div class="tool-foot"><span>打开销售计划 Agent</span><span class="arrow">→</span></div>
-</a>
 </section>
-<div class="notice"><span style="font-size:17px;color:#46805d">i</span><div><strong>使用提醒</strong><p>变体及 Listing 工具只生成文件，不会自动上传到亚马逊。AI Agent 当前仅生成销售计划预览，不自动修改飞书。使用前请启动本机服务并检查数据口径。</p></div></div>
-<footer class="footer"><span>亚马逊运营工具箱 · 运营工具中心</span><span><a href="./使用说明.txt" download="亚马逊运营工具箱-新手使用说明.txt">新手使用说明（TXT）</a></span></footer>
+<div class="notice"><span style="font-size:17px;color:#46805d">i</span><div><strong>使用提醒</strong><p>变体及 Listing 工具只生成文件，不会自动上传到亚马逊。销售计划等 AI 分析请在「AI Skills」中复制指令，再由 Codex 运行。</p></div></div>
+<footer class="footer"><span>亚马逊运营工作台 · 运营工具中心</span><span><a href="./使用说明.txt" download="亚马逊运营工作台-新手使用说明.txt">新手使用说明（TXT）</a></span></footer>
 </main></body></html>

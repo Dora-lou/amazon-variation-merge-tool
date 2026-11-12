@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>合并变体｜亚马逊运营工具箱</title>
+<title>合并变体｜亚马逊运营工作台</title>
 <style>
 :root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#243447;background:#f4f7fb;font-size:14px;line-height:1.55;font-synthesis:none}
 *{box-sizing:border-box}
@@ -116,31 +116,34 @@ td input{min-width:125px;padding:10px}
  .export-actions{align-items:stretch;flex-direction:column}
  #generate{width:100%}
 }
+
+/* 统一主导航：独立横排，优先展示常用工具与 Skills */
+.topbar,.site-header,header:has(> nav){flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:17px!important;margin-bottom:26px!important}
+.topbar .brand,.site-header .brand,header:has(> nav) .brand{align-self:flex-start}
+nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important;width:100%!important;padding:7px!important;margin:0!important;background:#fff!important;border:1px solid #e0e8ed!important;border-radius:16px!important;box-shadow:0 5px 20px rgba(35,53,72,.045)!important}
+nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;padding:13px 8px!important;min-height:47px!important;border:0!important;border-radius:11px!important;font-size:13px!important;font-weight:750!important;white-space:nowrap!important;text-decoration:none!important;color:#526677!important}
+nav[aria-label="工具模块"] a:hover,nav[aria-label="工具导航"] a:hover{background:#f0f6f3!important;color:#28734d!important}
+nav[aria-label="工具模块"] a.active,nav[aria-label="工具导航"] a.active{background:#e2f1e8!important;color:#216a46!important}
+nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:focus-visible{outline:2px solid #398e63!important;outline-offset:2px!important}
+@media(max-width:650px){nav[aria-label="工具模块"],nav[aria-label="工具导航"]{display:flex!important;overflow-x:auto!important;gap:5px!important;scrollbar-width:thin}nav[aria-label="工具模块"] a,nav[aria-label="工具导航"] a{flex:0 0 auto!important;padding:11px 13px!important;min-height:43px!important}}
+
 </style>
+<link rel="stylesheet" href="./workspace-shell.css?v=workspace-brand-20261105-3"/>
 </head>
 <body>
 <main class="shell">
-  <header class="site-header">
-    <div class="brand">
-      <div class="brand-mark" aria-hidden="true">V</div>
-      <div>
-        <div class="brand-name">亚马逊运营工具箱</div>
-        <div class="brand-caption">让重复的表格操作更简单</div>
-      </div>
-    </div>
-    <nav class="module-nav" aria-label="工具模块">
-      <a href="./index.html">首页</a>
-      <a href="./variation-guide.html">知识库</a>
-      <a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
-      <a href="./listing.html?view=library" id="navLibrary">商品库</a>
-      <a href="./agent.html">AI Agent</a>
-    </nav>
-  </header>
+  <header class="workspace-header"><a class="workspace-brand" href="./index.html" aria-label="亚马逊运营工作台首页"><span class="workspace-logo" aria-hidden="true">O</span><span><span class="workspace-name">亚马逊运营工作台</span><span class="workspace-sub">Amazon Operations Workspace</span></span></a><nav class="workspace-nav" aria-label="工具模块">
+<a href="./index.html">首页</a>
+<a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
+<a href="./skills.html">AI Skills</a>
+<a href="./variation-guide.html">知识库</a>
+<a href="./listing.html?view=library" id="navLibrary">商品库</a>
+</nav></header>
 
-  <div class="hero">
+  <div class="hero workspace-intro">
     <div class="eyebrow">Variation Merge</div>
     <h1>合并独立子体</h1>
-    <p class="hero-copy">将<strong>多个已经上架、目前互相独立的商品</strong>，整理成一个新父体下的变体。先选对应类目模板，再填写父体和每个子体的信息，最后下载上传表格。</p>
+    <p class="hero-copy">将已上架的独立子体整理至新父体，生成符合类目要求的上传表格。</p>
   </div>
 
   <div class="steps" aria-label="操作步骤">
@@ -276,7 +279,7 @@ td input{min-width:125px;padding:10px}
     </section>
   </div>
 
-  <p class="footer"><a href="./使用说明.txt" download="亚马逊运营工具箱-新手使用说明.txt">下载新手使用说明（TXT）</a><br/>Excel 文件在当前浏览器本地处理，不会上传到本网站。</p>
+  <p class="footer"><a href="./使用说明.txt" download="亚马逊运营工作台-新手使用说明.txt">下载新手使用说明（TXT）</a><br/>Excel 文件在当前浏览器本地处理，不会上传到本网站。</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="./engine.js"></script>
