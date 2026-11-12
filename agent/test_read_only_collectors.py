@@ -99,13 +99,14 @@ class LingxingTests(unittest.TestCase):
         self.assertEqual(error.http_status, 429)
         self.assertNotIn("hidden", str(error))
 
-    def test_business_failure_is_classified_without_message_content(self):
+    def test_business_failure_preserves_safe_upstream_message(self):
         details = collectors._business_failure_details({
             "success":False, "code":422, "msg":"contains sensitive business details"
         })
-        self.assertEqual(details, {
-            "error_category":"validation", "response_status":422, "retryable":False
-        })
+        self.assertEqual(details["error_category"], "validation")
+        self.assertEqual(details["response_status"], 422)
+        self.assertFalse(details["retryable"])
+        self.assertEqual(details["error_message"], "contains sensitive business details")
 
     def test_approval_status_is_polled_without_approving(self):
         class ApprovalClient:
@@ -248,6 +249,32 @@ class LingxingTests(unittest.TestCase):
         self.assertEqual(params["summary_field"], "sku")
         self.assertEqual(params["search_field"], "parent_asin")
         self.assertFalse(params["query_order_profit"])
+
+    def test_monthly_fallback_is_parent_and_store_scoped(self):
+        params = collectors._history_month_params(
+            {**REQUEST, "store_id": "2104"},
+            {"parent_asin": "B099999999", "asins": [REQUEST["asin"]]},
+            "2025-11",
+        )
+        self.assertEqual(params["summary_field"], "sku")
+        self.assertEqual(params["search_field"], "parent_asin")
+        self.assertEqual(params["search_value"], ["B099999999"])
+        self.assertEqual(params["sids"], "2104")
+
+    def test_recent_sales_is_store_scoped(self):
+        params = collectors._lingxing_recent_sales_params(
+            {**REQUEST, "store_id": "2104"},
+            {"parent_asin": "B099999999"},
+        )
+        self.assertEqual(params["sids"], "2104")
+
+    def test_replenishment_omits_live_500_triggering_advanced_filter(self):
+        params = collectors._lingxing_params(
+            "query_fba_valid_list", {**REQUEST, "store_id": "2104"},
+            {"asins": [REQUEST["asin"]]},
+        )
+        self.assertNotIn("seniorSearchList", params)
+        self.assertEqual(params["storeIdList"], [2104])
 
     def test_out_of_scope_rows_are_not_exposed_as_target_data(self):
         class OtherProductMcp(FakeMcp):

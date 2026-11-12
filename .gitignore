@@ -3,3 +3,4 @@
 .stability-backup-*/
 agent/diagnostics.jsonl
 agent/*.log
+agent/phase2-evidence/

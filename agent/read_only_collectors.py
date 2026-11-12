@@ -522,10 +522,12 @@ def _lingxing_params(tool_id: str, request: dict, scope: dict | None = None) -> 
         # families. Use the validated child-ASIN scope and storeIdList instead;
         # any remaining upstream mismatch is retained as out-of-scope evidence.
         asins = sorted(set(scope.get("asins") or [asin]))
+        # The live schema accepts seniorSearchList, but the current endpoint returns
+        # HTTP-level success=false/code=500 for this field.  The equivalent validated
+        # scope is storeIdList + searchField/searchValue, which returns a reliable
+        # empty response when no replenishment rows exist.
         return {"offset": 0, "length": 200, "dataType": 1, "searchField": "asin",
                 "searchValue": asins[0] if len(asins) == 1 else "",
-                "seniorSearchList": [{"name": "ASIN", "search_field": "asin",
-                                      "search_value": asins}],
                 "storeIdList": [int(request["store_id"])] if str(request.get("store_id", "")).isdigit() else [],
                 "fulfillmentChannelType": "FBA", "analysisMode": 2}
     raise CollectionError("领星工具不在本地只读白名单")
@@ -543,6 +545,7 @@ def _lingxing_recent_sales_params(request: dict, scope: dict) -> dict:
         "search_field": "parent_asin" if scope.get("parent_asin") else "asin",
         "search_value": [scope.get("parent_asin") or request["asin"]],
         "turn_on_summary": 1, "query_order_profit": False,
+        "sids": str(request["store_id"]) if request.get("store_id") else "",
     }
 
 
@@ -585,9 +588,11 @@ def _business_failure_details(payload: Any) -> dict:
         "validation" if status in (400, 404, 422) else
         "upstream" if status is not None and status >= 500 else "business_response_error"
     )
+    message = _find_named_value(payload, {"msg", "message", "error_message"})
     return {
         "error_category": category, "response_status": status,
         "retryable": category in ("rate_limited", "upstream"),
+        "error_message": str(message)[:500] if message not in (None, "") else None,
     }
 
 
@@ -684,8 +689,11 @@ def _history_month_params(request: dict, scope: dict, month: str) -> dict:
         "start_date": f"{month}-01",
         "end_date": f"{month}-{calendar.monthrange(year, month_number)[1]:02d}",
         "date_type": "purchase", "date_view_type": "month", "date_view_order_type": 1,
-        "summary_field": "asin", "summary_field_level1": "asin",
-        "search_field": "asin", "search_value": asins,
+        # Verified live behavior: ASIN aggregation returned an empty response for
+        # the same scope, while SKU aggregation with parent_asin returned rows.
+        "summary_field": "sku", "summary_field_level1": "sku",
+        "search_field": "parent_asin" if scope.get("parent_asin") else "asin",
+        "search_value": [scope.get("parent_asin")] if scope.get("parent_asin") else asins,
         "turn_on_summary": 1, "query_order_profit": False,
     }
     if request.get("store_id"):
@@ -734,7 +742,12 @@ def _expand_history_rows(payload: Any, month: str, listing_rows: list[dict], req
             # in the synthetic row makes canonicalize_records walk it again and
             # emit duplicate identity-only records without volume/amount.
             item.pop("asins", None)
-            item.update({"asin": asin, "period": month,
+            period_value = month or next(
+                (row.get(key) for key in FIELD_ALIASES["recent_sales"]["period"]
+                 if row.get(key) not in (None, "")),
+                None,
+            )
+            item.update({"asin": asin, "period": period_value,
                          "store_id": identity.get("sid") or request.get("store_id"),
                          "site": request.get("site")})
             linked = mapping_by_asin.get(asin, {})
@@ -805,6 +818,7 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
                     source["queries"][query_key] = {
                         "status": "interface_failed", "stage": "action_response",
                         "tool_id": tool_id, "error": "领星业务接口返回失败状态",
+                        "request_params": params,
                         **_business_failure_details(clean),
                     }
                     return None
@@ -823,7 +837,8 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
                 if "senior_search_list" in params:
                     context["multi_asin_scope"] = True
                 source["queries"][query_key] = {
-                    **summary, "tool_id": tool_id, "query_context": context
+                    **summary, "tool_id": tool_id, "query_context": context,
+                    "request_params": params,
                 }
                 if tool_id not in source["tools"]:
                     source["tools"].append(tool_id)
@@ -831,7 +846,7 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
             except CollectionError as exc:
                 source["queries"][query_key] = {
                     "status": "interface_failed", "stage": "action", "tool_id": tool_id,
-                    "error": str(exc), **_failure_details(exc),
+                    "error": str(exc), "request_params": params, **_failure_details(exc),
                 }
                 return None
 
@@ -881,6 +896,7 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
                 "status": status, "record_count": total, "field_quality": combined_quality,
                 "pagination_complete": complete, "page_count": len(pages), "tool_id": tool_id,
                 "query_context": summaries[0].get("query_context", {}) if summaries else {},
+                "request_params": summaries[0].get("request_params", params) if summaries else params,
             }
             first_error = next((item.get("error") for item in summaries if item.get("error")), None)
             if first_error:
@@ -1035,8 +1051,8 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
                     "query_context": {
                         "months": _required_history_months(request),
                         "store_id": request.get("store_id"),
-                        "search_field": "asin",
-                        "summary_field": "asin",
+                        "search_field": "parent_asin" if request.get("parent_asin") else "asin",
+                        "summary_field": "sku",
                     },
                     "observed_fields": sorted(observed_fields),
                     "field_quality": canonical_field_quality(monthly_rows, purpose),
@@ -1088,7 +1104,13 @@ def collect_lingxing(request: dict, codex_bin: str) -> dict:
             _lingxing_recent_sales_params(request, scope), "recent_sales",
         )
         if recent_payload is not None:
-            canonical, rejected = canonicalize_records(recent_payload, "recent_sales", scope)
+            expanded_recent = _expand_history_rows(
+                recent_payload, "", mapping_rows, request
+            )
+            canonical, rejected = canonicalize_records(
+                {"rows": expanded_recent} if expanded_recent else recent_payload,
+                "recent_sales", scope,
+            )
             query = source["queries"]["recent_sales"]
             query["raw_record_count"] = query.get("record_count", 0)
             query["record_count"] = len(canonical)
