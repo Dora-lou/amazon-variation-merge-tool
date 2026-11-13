@@ -366,6 +366,15 @@
 
   function makeInstruction(config, task) {
     const profile = config.product_profiles[task.asin] || {};
+    const registryPrefix = task.store_id + '|' + task.marketplace + '|' + task.asin + '|';
+    const scopedRegistry = Object.fromEntries(
+      Object.entries(config.campaign_registry || {}).filter(([key]) => key.startsWith(registryPrefix))
+    );
+    const scopedHistory = (config.execution_history || []).filter(item =>
+      item && String(item.asin || '').toUpperCase() === task.asin &&
+      String(item.store_id || '') === task.store_id &&
+      String(item.marketplace || '') === task.marketplace
+    );
     const payload = {
       schema_version: config.schema_version,
       config_file_path: '%LOCALAPPDATA%\\AmazonOperationsWorkspace\\context\\ads_relaunch_config.json',
@@ -381,8 +390,8 @@
       global_settings: config.global_settings,
       global_negative_rules: config.global_negative_rules,
       product_profile: profile,
-      campaign_registry: config.campaign_registry || {},
-      execution_history: config.execution_history || []
+      campaign_registry: scopedRegistry,
+      execution_history: scopedHistory
     };
     const json = JSON.stringify(payload, null, 2);
     return [
