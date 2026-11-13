@@ -377,6 +377,7 @@
     );
     const payload = {
       schema_version: config.schema_version,
+      config_updated_at: config.updated_at || null,
       config_file_path: '%LOCALAPPDATA%\\AmazonOperationsWorkspace\\context\\ads_relaunch_config.json',
       store: { store_id: task.store_id, store_name: task.store_name, marketplace: task.marketplace },
       task: {
