@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Amazon Ads Search Term Relaunch Config",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "updated_at": { "type": "string" },
+    "global_settings": {
+      "type": "object",
+      "properties": {
+        "marketplace": { "type": "string", "default": "US" },
+        "report_days": { "type": "integer", "minimum": 1 },
+        "duplicate_impression_days": { "type": "integer", "minimum": 1, "default": 7 },
+        "execution_interval_days": { "type": "integer", "minimum": 1, "default": 7, "description": "Preferred repeat-run cadence; does not itself schedule a task." },
+        "match_types": {
+          "type": "array",
+          "items": { "enum": ["exact", "phrase", "broad"] },
+          "uniqueItems": true
+        },
+        "campaign_structure": {
+          "enum": [
+            "exact_separate_phrase_broad_shared",
+            "exact_separate_phrase_broad_separate",
+            "one_campaign_multi_groups",
+            "separate_campaign_per_match"
+          ]
+        },
+        "campaign_keyword_limit": { "type": "integer", "minimum": 1 },
+        "budgets": {
+          "type": "object",
+          "description": "Budget is per Campaign, not total across all Campaigns."
+        },
+        "bidding_strategy": { "type": "string" },
+        "bid_coefficients": {
+          "type": "object",
+          "properties": {
+            "exact": { "type": "number", "exclusiveMinimum": 0 },
+            "phrase": { "type": "number", "exclusiveMinimum": 0 },
+            "broad": { "type": "number", "exclusiveMinimum": 0 }
+          },
+          "required": ["exact", "phrase", "broad"]
+        },
+        "min_bid": { "type": ["number", "null"], "minimum": 0 },
+        "max_bid": { "type": ["number", "null"], "minimum": 0 },
+        "default_bid": { "type": ["number", "null"], "minimum": 0 },
+        "campaign_naming": { "type": "object" },
+        "group_naming": { "type": "object" }
+      },
+      "required": [
+        "marketplace", "report_days", "duplicate_impression_days",
+        "match_types", "campaign_structure", "campaign_keyword_limit",
+        "budgets", "bidding_strategy", "bid_coefficients"
+      ]
+    },
+    "product_profiles": {
+      "type": "object",
+      "description": "Object keys are 10-character ASINs.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "product_name": { "type": "string" },
+          "product_short_name": { "type": "string" },
+          "budgets": {
+            "type": "object",
+            "description": "Optional per-ASIN Campaign budget overrides; empty values inherit global Campaign budgets."
+          },
+          "match_order_bands": {
+            "type": "object",
+            "properties": {
+              "exact": { "$ref": "#/$defs/orderBand" },
+              "phrase": { "$ref": "#/$defs/orderBand" },
+              "broad": { "$ref": "#/$defs/orderBand" }
+            }
+          },
+          "excluded_source_campaigns": { "type": "array", "items": { "type": "string" } },
+          "negative_keywords": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "keyword": { "type": "string" },
+                "match_type": { "enum": ["EXACT", "PHRASE"] }
+              },
+              "required": ["keyword", "match_type"]
+            }
+          },
+          "negative_product_asins": { "type": "array", "items": { "type": "string" } },
+          "target_acos": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "global_negative_rules": {
+      "type": "object",
+      "properties": {
+        "negative_keywords": { "type": "array" },
+        "negative_product_asins": { "type": "array" }
+      }
+    },
+    "campaign_registry": { "type": "object" },
+    "execution_history": { "type": "array" }
+  },
+  "$defs": {
+    "orderBand": {
+      "type": "object",
+      "properties": {
+        "min_orders": { "type": "integer", "minimum": 0 },
+        "max_orders": { "type": ["integer", "null"], "minimum": 0 }
+      },
+      "required": ["min_orders", "max_orders"]
+    }
+  }
+}

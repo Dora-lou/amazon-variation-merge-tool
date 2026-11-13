@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Sales-plan Agent: localhost-only preview service; no Feishu write endpoints.
+"""Local Amazon Operations Agent.
 
-Data is collected by a host-side, fixed read-only layer before Codex starts.
-No credentials or business records are persisted by this service.
+Sales-plan and Listing data collection remains host-side and read-only. The
+service also persists non-secret Ads Relaunch preferences and Skill Campaign
+registry metadata locally; it exposes no Amazon Ads or Feishu business-write
+endpoint. Actual Ads creation is performed by the installed Codex Skill via
+the user's authorized Lingxing MCP connection.
 """
 from __future__ import annotations
 
@@ -32,6 +35,7 @@ from version import BUILD_VERSION
 from listing_collectors import collect_listing_data
 from listing_engine import LISTING_SCHEMA, make_listing_prompt, validate_listing_result
 from listing_lark import create_test_workbook
+from ads_relaunch_store import load_ads_config, save_ads_config
 
 HOST = "127.0.0.1"
 PORT = int(os.getenv("AMAZON_AGENT_PORT", "8765"))
@@ -45,6 +49,7 @@ ASIN_RE = re.compile(r"^[A-Z0-9]{10}$")
 MONTH_RE = re.compile(r"^20\d{2}-(0[1-9]|1[0-2])$")
 RUN_TIMEOUT_SECONDS = 900
 MAX_BODY_BYTES = 8192
+MAX_ADS_CONFIG_BYTES = 250_000
 CODEX_PROBE_TIMEOUT_SECONDS = 20
 # Keep model input well below the upstream 4 MiB request ceiling and leave room
 # for the schema, instructions, and transport metadata. Raw collectors may hold
@@ -256,6 +261,7 @@ def resolve_codex_bin() -> str | None:
 def check_ready() -> dict:
     skill = Path.home() / ".codex" / "skills" / "feishu-amazon-sales-plan" / "SKILL.md"
     listing_skill = Path.home() / ".codex" / "skills" / "amazon-listing-writer" / "SKILL.md"
+    ads_relaunch_skill = Path.home() / ".codex" / "skills" / "amazon-ads-search-term-relaunch" / "SKILL.md"
     context = load_context()
     codex_bin = resolve_codex_bin()
     return {
@@ -273,6 +279,7 @@ def check_ready() -> dict:
         "lark_cli_found": bool(resolve_lark_cli()),
         "sales_plan_skill_found": skill.is_file(),
         "listing_writer_skill_found": listing_skill.is_file(),
+        "amazon_ads_relaunch_skill_found": ads_relaunch_skill.is_file(),
         "xiyou_configured": _mcp_enabled(resolve_codex_bin(), "xydc-mcp"),
         "collector_mode": "host_read_only_allowlist",
         "shared_rules_found": bool(load_rules().get("rules")),
@@ -1006,6 +1013,11 @@ class AgentHandler(BaseHTTPRequestHandler):
             self._send(200, check_ready(), origin)
         elif path == "/api/auth":
             self._send(200, {"paired": True}, origin) if self._authorized() else self._send(401, {"error": "配对码无效"}, origin)
+        elif path == "/api/ads/config":
+            if not self._authorized():
+                self._send(401, {"error": "配对码无效"}, origin)
+                return
+            self._send(200, {"config": load_ads_config()}, origin)
         elif path == "/api/stores":
             if not self._authorized():
                 self._send(401, {"error": "配对码无效"}, origin)
@@ -1038,6 +1050,20 @@ class AgentHandler(BaseHTTPRequestHandler):
             self._send(401, {"error": "配对码无效"}, origin)
             return
         path = urlsplit(self.path).path
+        if path == "/api/ads/config":
+            try:
+                content_len = int(self.headers.get("Content-Length", "0"))
+                if not 1 <= content_len <= MAX_ADS_CONFIG_BYTES:
+                    raise ValueError("广告配置请求大小不符合限制")
+                data = json.loads(self.rfile.read(content_len).decode("utf-8"))
+                config = data.get("config") if isinstance(data, dict) and "config" in data else data
+                saved = save_ads_config(config)
+                self._send(200, {"config": saved}, origin)
+            except (UnicodeError, json.JSONDecodeError, ValueError) as exc:
+                self._send(400, {"error": str(exc)}, origin)
+            except OSError:
+                self._send(500, {"error": "广告配置保存失败，请检查本机 Agent 的本地存储权限"}, origin)
+            return
         if path == "/api/context/default-store":
             try:
                 content_len = int(self.headers.get("Content-Length", "0"))
@@ -1077,7 +1103,7 @@ class AgentHandler(BaseHTTPRequestHandler):
                 self._send(400, {"error": str(exc)}, origin)
             return
         if path != "/api/jobs/preview":
-            self._send(404, {"error": "仅支持计划预览，当前版本禁止写入飞书"}, origin)
+            self._send(404, {"error": "接口不存在或当前版本不支持该操作"}, origin)
             return
         try:
             content_len = int(self.headers.get("Content-Length", "0"))
@@ -1126,11 +1152,12 @@ def main():
     except Exception:
         instance_lock.release()
         raise
-    print("\n亚马逊销售计划 Agent · 本机预览版", flush=True)
+    print("\n亚马逊运营 Agent · 本机服务", flush=True)
     print(f"地址： http://{HOST}:{PORT}（只允许本机访问）", flush=True)
     print("配对码（仅输入你自己打开的运营工具箱网页，勿分享）：", flush=True)
     print(state.pair_key, flush=True)
-    print("当前版本只查询与预览，不提供飞书写入接口。", flush=True)
+    print("销售计划/Listing 仍为只读采集；广告配置仅保存在本机，不通过此服务写入 Amazon 或飞书。", flush=True)
+    print("广告创建由 Codex 中的 Ads Relaunch Skill 通过已授权领星 MCP 执行。", flush=True)
     print("关闭此终端即停止 Agent。\n", flush=True)
     try:
         httpd.serve_forever(poll_interval=0.25)

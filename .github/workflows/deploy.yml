@@ -23,6 +23,8 @@ jobs:
           node --check engine.js
           node --check app.js
           node --check listing.js
+          node --check agent-ui.js
+          node --check ads-relaunch-ui.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

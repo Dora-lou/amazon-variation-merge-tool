@@ -342,6 +342,30 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(self.query('GET','/api/auth')[0],200)
         self.assertEqual(self.query('GET','/api/auth',key='bad')[0],401)
 
+    def test_ads_config_get_requires_pairing(self):
+        status, _ = self.query('GET', '/api/ads/config', key='bad')
+        self.assertEqual(status, 401)
+
+    def test_ads_config_get_returns_local_preferences(self):
+        expected = {'schema_version': '1.0', 'global_settings': {'report_days': 30}}
+        with patch.object(server, 'load_ads_config', return_value=expected):
+            status, data = self.query('GET', '/api/ads/config')
+        self.assertEqual(status, 200)
+        self.assertEqual(data['config'], expected)
+
+    def test_ads_config_post_persists_preferences(self):
+        expected = {'schema_version': '1.0', 'global_settings': {'report_days': 45}}
+        with patch.object(server, 'save_ads_config', return_value=expected) as save:
+            status, data = self.query('POST', '/api/ads/config', {'config': expected})
+        self.assertEqual(status, 200)
+        self.assertEqual(data['config'], expected)
+        save.assert_called_once_with(expected)
+
+    def test_ads_config_post_rejects_invalid_payload(self):
+        status, data = self.query('POST', '/api/ads/config', {'config': []})
+        self.assertEqual(status, 400)
+        self.assertIn('广告配置', data['error'])
+
     def test_reject_untrusted_origin(self):
         status,_=self.query('GET','/api/auth',origin='https://attacker.example')
         self.assertEqual(status,403)
