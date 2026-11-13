@@ -455,7 +455,7 @@
 
   function exportConfig() {
     try {
-      const config = collectPersistentConfig();
+      const config = { ...savedConfig, ...collectPersistentConfig() };
       const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
