@@ -151,6 +151,12 @@ textarea{min-height:82px;resize:vertical}.help{font-size:11px;color:#8a9aa7;line
 <div class="fields">
 <div class="field"><label for="productName">产品名称（可自动读取）</label><input id="productName" maxlength="120" placeholder="留空时由 Skill 从可信产品资料读取"/></div>
 <div class="field"><label for="productShortName">产品简称（用于广告命名）</label><input id="productShortName" maxlength="40" placeholder="例如：八角围栏；首次可填写，后续自动记忆"/></div>
+<div class="field full"><label>该 ASIN 专属 Campaign 日预算（USD，可选）</label><span class="help">留空继承上方全局默认预算；填写后只覆盖当前 ASIN 对应的 Campaign。</span></div>
+<div class="field"><label for="productBudgetExact">精准 Campaign 专属预算</label><input id="productBudgetExact" type="number" min="0.01" step="0.01" placeholder="留空继承全局"/></div>
+<div class="field"><label for="productBudgetPhraseBroad">词组+广泛 Campaign 专属预算</label><input id="productBudgetPhraseBroad" type="number" min="0.01" step="0.01" placeholder="留空继承全局"/></div>
+<div class="field"><label for="productBudgetPhrase">词组 Campaign 专属预算</label><input id="productBudgetPhrase" type="number" min="0.01" step="0.01" placeholder="留空继承全局"/></div>
+<div class="field"><label for="productBudgetBroad">广泛 Campaign 专属预算</label><input id="productBudgetBroad" type="number" min="0.01" step="0.01" placeholder="留空继承全局"/></div>
+<div class="field"><label for="productBudgetAll">共用 Campaign 专属预算</label><input id="productBudgetAll" type="number" min="0.01" step="0.01" placeholder="留空继承全局"/></div>
 <div class="field full"><label for="profileExcludedCampaigns">该 ASIN 默认排除的来源广告（每行一个）</label><textarea id="profileExcludedCampaigns" placeholder="只排除数据来源，不影响全 ASIN 重复投放检查"></textarea></div>
 <div class="field full"><label for="profileNegativeKeywords">该 ASIN 否定关键词（每行：关键词 | exact 或 phrase）</label><textarea id="profileNegativeKeywords" placeholder="human heating pad | exact&#10;electric blanket | phrase"></textarea></div>
 <div class="field full"><label for="profileNegativeAsins">该 ASIN 否定商品 ASIN（每行一个）</label><textarea id="profileNegativeAsins" placeholder="B0XXXXXXXXX"></textarea></div>
