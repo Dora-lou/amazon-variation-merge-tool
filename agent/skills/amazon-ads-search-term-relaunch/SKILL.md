@@ -158,12 +158,13 @@ description: 从领星广告搜索词报告中，为指定 Amazon ASIN 挖掘已
 - 最近用户配置的去重天数内（默认 7 天）至少有 1 次展示
 
 如果任一层级关闭，或在去重窗口内没有展示，则该组合不属于“当前有效投放”，可以进入重新测试候选；但不得修改原有非 Skill 广告。重新测试时只能添加到本 Skill 管理的 Campaign，或创建新的 Skill Campaign。
+- 若相同关键词+匹配方式已存在于某个 Skill Campaign 但当前不活跃，不得在同一个 Campaign/Ad Group 内再添加一条重复 Target；优先放入另一个未包含该组合且有容量的 Skill Campaign，没有合适容器时创建新的序号 Campaign。原有不活跃 Target 保留，不删除、不修改。
 
 若现有广告状态、展示数据或关键词匹配类型无法可靠读取，标记为待核对，不要把未知状态当成已启用或未启用。
 
 ## 五、广告结构与 Campaign Pool
 
-Campaign 日预算按每个 Campaign 单独设置。优先使用当前 ASIN 的 product_profiles[ASIN].budgets 中对应 Campaign Pool 的非空值；该值为空时继承 global_settings.budgets。不同 Campaign 不共享总预算口径；Phrase + Broad 共用一个 Campaign 时使用该共享 Campaign 的一个日预算。没有可用预算时不要自行编造，停止创建该 Campaign 并说明缺少配置。
+Campaign 日预算按每个 Campaign 单独设置。优先使用当前 ASIN 的 product_profiles[ASIN].budgets 中对应 Campaign Pool 的非空值；该值为空或为 null 时继承 global_settings.budgets。不同 Campaign 不共享总预算口径；Phrase + Broad 共用一个 Campaign 时使用该共享 Campaign 的一个日预算。没有可用预算时不要自行编造，停止创建该 Campaign 并说明缺少配置。
 
 默认结构：
 
@@ -181,7 +182,7 @@ Campaign 日预算按每个 Campaign 单独设置。优先使用当前 ASIN 的 
 - 未满时优先追加到已有 Skill Campaign；达到上限后才创建下一个 Campaign。
 - 一批候选词超过剩余容量时，先填满已有 Campaign，再创建下一个序号 Campaign。
 - Phrase + Broad 共用 Campaign 时，两个 Ad Group 的关键词数量合计计算 Campaign 容量。
-- 新 Campaign 的序号在同一个 Pool 内递增；日期为新建当天。
+- 新 Campaign 的序号在同一个 Pool 内递增；日期为新建当天。 创建前检查名称唯一性；如果下一个序号名称已被非 Skill Campaign 占用，不得复用该广告，继续递增序号直到找到未占用名称。
 - 已有 Campaign 后续追加关键词时，不更改原 Campaign 名称、序号和日期。
 - 如果一个 Campaign 达到上限，创建下一 Campaign；不要因为本次运行而每次新建 Campaign。
 - 如果用户手动开启了本 Skill Campaign，后续追加的新关键词应 ENABLED，Campaign 保持原 ENABLED 状态，使新词立即具备投放资格。
@@ -201,7 +202,7 @@ Phrase + Broad 共用 Campaign 示例：
 
 命名由配置中的产品简称、广告代码、投放类型前缀、Pool 序号、匹配方式标签和创建日期组成。用户可修改这些字段。若超出平台名称长度限制，优先缩短产品简称，不能删除序号、匹配方式和日期来制造不唯一名称。
 
-Ad Group 默认使用对应匹配方式中文标签：精准、词组、广泛。用户可修改标签。
+Ad Group 使用 group_naming 中对应匹配方式的独立名称：精准、词组、广泛。用户可修改，不能把 Ad Group 名称与 Campaign 名称标签混为一项。日期使用 campaign_naming.date_format，默认 YYYYMMDD；支持 YYYYMMDD 和 YYYY-MM-DD。遇到不支持的格式时使用 YYYYMMDD 并在结果中提示。
 
 Campaign 名称中的匹配标签按实际被选中的匹配方式动态生成：Phrase 和 Broad 同时共用一个 Campaign 时使用词组+广泛标签；如果只选其中一种，使用该匹配方式自己的标签；一个 Campaign 包含多种匹配方式时，按 Exact、Phrase、Broad 顺序连接实际选中的标签。
 
@@ -209,7 +210,7 @@ Campaign 名称中的匹配标签按实际被选中的匹配方式动态生成�
 
 - 实际历史 CPC 是主要依据：base_cpc = 目标 ASIN + 搜索词在允许来源中的总花费 / 总点击量。
 - 领星建议竞价是参考，用于合理性检查和缺少 CPC 时的备用依据；不得直接把建议竞价当成必须出价。
-- 如果实际 CPC 可用，优先从实际 CPC 得到基础竞价；结合建议竞价区间检查是否异常。
+- 如果实际 CPC 可用，优先从实际 CPC 得到基础竞价；结合建议竞价区间检查是否异常。 报表日期按目标 Marketplace 的广告账户时区解释，不能混用本机时区和 Amazon 报表时区。
 - 如果实际 CPC 不可用，优先使用领星建议竞价；若搜索词报表未包含建议竞价，先查看当前领星 MCP 是否提供按关键词查询建议竞价的能力，有则按真实 schema 查询；没有时再使用用户配置的默认 Bid。三者都缺失时，不得编造竞价，该关键词进入待核对，不创建。
 - 对同一个词，不同匹配方式的 Bid 必须递减。默认系数可配置：
   - Exact：100%
