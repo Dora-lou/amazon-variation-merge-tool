@@ -46,6 +46,8 @@ description: 从领星广告搜索词报告中，为指定 Amazon ASIN 挖掘已
 
 配置优先级：
 
+- execution_interval_days 是用户希望重复运行的间隔记录，不代表本 Skill 已创建系统定时任务；除非用户另行明确要求并配置调度器，不得声称任务会自动定时执行。
+
 1. 本次任务明确覆盖项
 2. 对应 ASIN 的 product_profiles[ASIN]
 3. global_settings
@@ -198,6 +200,8 @@ Phrase + Broad 共用 Campaign 示例：
 命名由配置中的产品简称、广告代码、投放类型前缀、Pool 序号、匹配方式标签和创建日期组成。用户可修改这些字段。若超出平台名称长度限制，优先缩短产品简称，不能删除序号、匹配方式和日期来制造不唯一名称。
 
 Ad Group 默认使用对应匹配方式中文标签：精准、词组、广泛。用户可修改标签。
+
+Campaign 名称中的匹配标签按实际被选中的匹配方式动态生成：Phrase 和 Broad 同时共用一个 Campaign 时使用词组+广泛标签；如果只选其中一种，使用该匹配方式自己的标签；一个 Campaign 包含多种匹配方式时，按 Exact、Phrase、Broad 顺序连接实际选中的标签。
 
 ## 六、初始 Bid 计算
 
