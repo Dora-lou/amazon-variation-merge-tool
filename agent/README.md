@@ -28,7 +28,7 @@
 
 1. 从你控制的 GitHub 仓库下载完整项目代码（`git clone` 或 `Code → Download ZIP`）。不要只保存网页文件。
 2. 安装 Python 3.10+ 和飞书 `lark-cli`，在当前 Windows 用户中登录 Codex 与飞书 `user` 身份。**支持自动发现 Windows Codex 桌面版** `%LOCALAPPDATA%\OpenAI\Codex\bin\*\codex.exe`，无需将带版本号的目录添加到 PATH；也支持独立安装的 Codex CLI。
-3. 在 Codex 中注册并验证 `yb-lingxing` MCP；确认自己的 `~/.codex/skills/feishu-amazon-sales-plan/SKILL.md` 可读取。执行 `powershell -ExecutionPolicy Bypass -File .\agent\install-skill.ps1`，脚本会安装项目附带的销售计划和 Amazon Ads Relaunch 两个 Skill；已有同名 Skill 默认保留不覆盖。需要更新项目附带版本时，先核对差异，再使用 `-UpdateExisting`。
+3. 在 Codex 中注册并验证 `yb-lingxing` MCP；确认自己的 `~/.codex/skills/feishu-amazon-sales-plan/SKILL.md` 可读取。执行 `powershell -ExecutionPolicy Bypass -File .\agent\install-skill.ps1`，脚本会安装项目附带的销售计划和 Amazon Ads Relaunch 两个 Skill；已有同名 Skill 默认保留不覆盖。需要单独更新广告 Skill 时使用 `-UpdateAdsSkill`；更新销售计划 Skill 时使用 `-UpdateSalesPlanSkill`，避免覆盖另一项已定制的 Skill。
 4. 双击项目里的 `agent/start-agent.bat`。如果电脑没有安装 Python Launcher，也可以在项目根目录执行 `python agent/server.py`。
 5. 终端会显示一段随机**本机配对码**，只粘贴到你自己打开的 [销售计划 Agent 网页](https://dora-lou.github.io/amazon-variation-merge-tool/agent.html) 中，点击「连接 Agent」。
 6. 在网页选择现有商品库的父 ASIN 或手动输入 ASIN，填写月份、目标和要求，点击「生成只读预览」。页面会列出领星、飞书各自的读取状态。
