@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>广告出单词二次投放｜亚马逊运营工作台</title>
+<link rel="stylesheet" href="./workspace-shell.css?v=workspace-brand-20261105-3"/>
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#253a4b;background:#f4f7fb;font-size:14px;line-height:1.65}
+*{box-sizing:border-box}body{margin:0}a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}
+.shell{max-width:1220px;margin:auto;padding:28px 26px 60px}
+.workspace-header{margin-bottom:25px}
+.hero{padding:30px 34px;border-radius:20px;background:linear-gradient(120deg,#203c35,#317154);color:#fff}
+.eyebrow{font-size:10px;letter-spacing:.15em;font-weight:850;color:#c4e5cf}
+h1{font-size:30px;letter-spacing:-.04em;margin:6px 0}.hero p{color:#d7e9df;font-size:13px;margin:7px 0 0;max-width:850px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:17px;margin-top:18px;align-items:start}
+.panel{background:#fff;border:1px solid #e0e8ed;border-radius:16px;padding:21px;min-width:0;box-shadow:0 4px 18px #243b4b08}
+.panel h2{font-size:16px;margin:0 0 5px}.sub{font-size:12px;color:#7f91a0;margin:0 0 15px}
+.section{border:1px solid #e5ebef;border-radius:13px;padding:16px;margin-top:14px}.section h3{font-size:13px;margin:0 0 12px;color:#315b45}.section p.help{margin:0 0 10px}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{display:flex;flex-direction:column;gap:5px;min-width:0}.field.full{grid-column:1/-1}
+label{font-size:12px;font-weight:750;color:#43596a}
+input,select,textarea{width:100%;border:1px solid #d3dfe6;border-radius:9px;padding:9px 10px;background:#fff;color:#293e50;outline:none}
+input:focus,select:focus,textarea:focus{border-color:#5c9a76;box-shadow:0 0 0 3px #4d996b19}
+textarea{min-height:82px;resize:vertical}.help{font-size:11px;color:#8a9aa7;line-height:1.55}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row>*{min-width:0}
+.checks{display:flex;gap:9px;flex-wrap:wrap}.check{display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #dfe8e3;border-radius:9px;background:#f8fbf9;font-size:12px;font-weight:700}.check input{width:auto;margin:0}
+.band-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.band{border:1px solid #e4ebef;border-radius:10px;padding:10px}.band strong{display:block;font-size:12px;margin-bottom:8px}.band .row{flex-wrap:nowrap}.band input{min-width:0;padding:8px}
+.btn{border:1px solid #d4e0e7;background:#fff;color:#3c5868;border-radius:9px;padding:10px 13px;font-weight:750;font-size:12px;cursor:pointer}.btn:hover{background:#f5f8f9}.btn.primary{background:#28724f;border-color:#28724f;color:#fff}.btn:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+.status{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;background:#f1f4f6;color:#65798a;font-size:11px;font-weight:750}.status.good{background:#e6f3eb;color:#26734c}.status.warn{background:#fff4e4;color:#9e6828}
+.preview{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7faf8;border:1px solid #dfe9e3;border-radius:11px;padding:14px;margin-top:13px;max-height:440px;overflow:auto;font-size:11px;color:#3b5446}
+.notice{padding:12px 13px;background:#f2f7f4;border:1px solid #dfebe3;border-radius:10px;font-size:11px;color:#62796b;margin-top:12px}
+.side-list{display:grid;gap:10px}.side-item{padding:12px;border:1px solid #e5ebef;border-radius:10px}.side-item strong{display:block;font-size:12px}.side-item span{display:block;color:#8494a2;font-size:11px;margin-top:3px}
+.side-actions{display:grid;gap:8px;margin-top:12px}.side-actions .btn{width:100%}
+#fileImport{display:none}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.side-panel{order:-1}}
+@media(max-width:620px){.shell{padding:17px 12px 40px}.hero{padding:24px 20px}h1{font-size:25px}.panel{padding:16px}.fields{grid-template-columns:1fr}.field.full{grid-column:auto}.band-grid{grid-template-columns:1fr}.workspace-nav{overflow-x:auto}}
+</style>
+</head>
+<body>
+<main class="shell">
+<header class="workspace-header">
+<a class="workspace-brand" href="./index.html" aria-label="亚马逊运营工作台首页"><span class="workspace-logo" aria-hidden="true">O</span><span><span class="workspace-name">亚马逊运营工作台</span><span class="workspace-sub">Amazon Operations Workspace</span></span></a>
+<nav class="workspace-nav" aria-label="工具模块">
+<a href="./index.html">首页</a><a href="./tools.html">运营工具中心</a><a href="./skills.html" class="active">AI Skills</a><a href="./variation-guide.html">知识库</a><a href="./listing.html?view=library">商品库</a>
+</nav>
+</header>
+<section class="hero">
+<div class="eyebrow">AMAZON ADS · SEARCH TERM RELAUNCH</div>
+<h1>广告出单词二次投放</h1>
+<p>设置一次全局规则和 ASIN 专属记忆。输入 ASIN 后，生成完整 Codex 指令，由 Skill 从领星提取真实搜索词、分层筛选并创建/复用 SP 关键词广告。新 Campaign 默认暂停，原有非 Skill 广告只读不修改。</p>
+</section>
+<div class="layout">
+<section class="panel">
+<h2>广告任务与前置规则</h2>
+<p class="sub">先连接本机 Agent 读取/保存持久配置；没有必要的信息会自动沿用已保存规则。</p>
+
+<div class="section">
+<h3>01 · 本机配置连接</h3>
+<div class="fields">
+<div class="field"><label for="pairKey">本机 Agent 配对码</label><input id="pairKey" type="password" autocomplete="off" placeholder="粘贴 start-agent.bat 终端显示的配对码"/></div>
+<div class="field"><label>连接状态</label><div class="row"><span id="connectionState" class="status warn">尚未连接</span><button type="button" class="btn" id="connectBtn">连接并读取配置</button></div></div>
+<div class="field"><label for="storeChoice">领星店铺</label><select id="storeChoice"><option value="">连接后读取店铺</option></select></div>
+<div class="field"><label>Marketplace</label><input id="marketplaceDisplay" value="US" readonly/><span class="help" id="storeHint">优先使用已保存的默认店铺</span></div>
+</div>
+<div class="actions"><button type="button" class="btn" id="setDefaultStoreBtn" disabled>将所选店铺设为默认</button><span id="skillInstallState" class="help">Skill 安装状态待检查</span></div>
+</div>
+
+<form id="adsForm">
+<div class="section">
+<h3>02 · 本次任务</h3>
+<div class="fields">
+<div class="field"><label for="asin">目标 ASIN <span style="color:#26734c">必填</span></label><input id="asin" maxlength="10" minlength="10" placeholder="10 位 ASIN" required autocapitalize="characters"/></div>
+<div class="field"><label for="reportDaysOverride">本次统计周期（天）</label><input id="reportDaysOverride" type="number" min="1" placeholder="留空使用全局设置"/></div>
+<div class="field full"><label for="extraExcludedCampaigns">本次额外排除的来源广告名称（选填）</label><textarea id="extraExcludedCampaigns" placeholder="每行一个 Campaign 名称；只排除出单词数据来源，不影响重复投放检查"></textarea></div>
+<div class="field full"><label for="taskNotes">本次特殊要求（选填）</label><textarea id="taskNotes" placeholder="例如：这次只处理精准词；某些词不要投放；其他临时说明"></textarea></div>
+</div>
+</div>
+
+<div class="section">
+<h3>03 · 全局数据与投放规则</h3>
+<div class="fields">
+<div class="field"><label for="reportDays">默认统计周期（天，自定义）</label><input id="reportDays" type="number" min="1" value="30" required/><span class="help">例如 30 表示近30天，不限制为预设的 3/7/14/30 天选项</span></div>
+<div class="field"><label for="duplicateDays">有效投放去重窗口（天）</label><input id="duplicateDays" type="number" min="1" value="7" required/><span class="help">Campaign、Ad Group、Keyword 均启用，且窗口内至少有1次曝光，才视为已有效投放</span></div>
+<div class="field"><label for="campaignLimit">每个 Campaign 最大关键词数</label><input id="campaignLimit" type="number" min="1" placeholder="自定义，例如 50" required/><span class="help">按整个 Campaign 统计，包含其下所有 Ad Group；不同匹配方式分别计数</span></div>
+<div class="field"><label for="executionInterval">建议再次运行间隔（天）</label><input id="executionInterval" type="number" min="1" value="7"/><span class="help">写入执行计划供后续调度使用；本页面本身不创建系统定时任务</span></div>
+<div class="field full"><label>本次启用的匹配方式（可多选）</label><div class="checks">
+<label class="check"><input type="checkbox" name="matchType" value="exact" checked/>精准 Exact</label>
+<label class="check"><input type="checkbox" name="matchType" value="phrase" checked/>词组 Phrase</label>
+<label class="check"><input type="checkbox" name="matchType" value="broad" checked/>广泛 Broad</label>
+</div></div>
+<div class="field full"><label for="campaignStructure">广告结构</label><select id="campaignStructure">
+<option value="exact_separate_phrase_broad_shared">精准独立 Campaign；词组+广泛共用 Campaign（默认）</option>
+<option value="exact_separate_phrase_broad_separate">精准、词组、广泛分别创建 Campaign</option>
+<option value="one_campaign_multi_groups">一个 Campaign，按匹配方式拆分 Ad Group</option>
+<option value="separate_campaign_per_match">每种匹配方式独立 Campaign</option>
+</select></div>
+</div>
+</div>
+
+<div class="section">
+<h3>04 · 各匹配方式订单区间</h3>
+<p class="help">每种匹配方式独立设置最低/最高订单量，边界包含在内。区间允许重叠，同一个词可以同时进入精准、词组和广泛。</p>
+<div class="band-grid">
+<div class="band"><strong>精准 Exact</strong><div class="row"><input id="exactMin" type="number" min="0" placeholder="最低单"/><input id="exactMax" type="number" min="0" placeholder="最高单（可空）"/></div></div>
+<div class="band"><strong>词组 Phrase</strong><div class="row"><input id="phraseMin" type="number" min="0" placeholder="最低单"/><input id="phraseMax" type="number" min="0" placeholder="最高单（可空）"/></div></div>
+<div class="band"><strong>广泛 Broad</strong><div class="row"><input id="broadMin" type="number" min="0" placeholder="最低单"/><input id="broadMax" type="number" min="0" placeholder="最高单（可空）"/></div></div>
+</div>
+<p class="help" style="margin-top:9px">小样本正常参与，不额外设置最低点击量。相关性是硬性条件；ACOS、转化率用于候选词优先级。</p>
+</div>
+
+<div class="section">
+<h3>05 · Campaign 预算与竞价</h3>
+<div class="fields">
+<div class="field"><label for="budgetExact">精准独立 Campaign 日预算（USD）</label><input id="budgetExact" type="number" min="0.01" step="0.01" placeholder="例如 15"/></div>
+<div class="field"><label for="budgetPhraseBroad">词组+广泛共用 Campaign 日预算（USD）</label><input id="budgetPhraseBroad" type="number" min="0.01" step="0.01" placeholder="例如 15"/></div>
+<div class="field"><label for="budgetPhrase">词组独立 Campaign 日预算（USD）</label><input id="budgetPhrase" type="number" min="0.01" step="0.01" placeholder="仅分开 Campaign 时使用"/></div>
+<div class="field"><label for="budgetBroad">广泛独立 Campaign 日预算（USD）</label><input id="budgetBroad" type="number" min="0.01" step="0.01" placeholder="仅分开 Campaign 时使用"/></div>
+<div class="field"><label for="budgetAll">全部匹配方式共用 Campaign 日预算（USD）</label><input id="budgetAll" type="number" min="0.01" step="0.01" placeholder="一个 Campaign 多个 Ad Group 时使用"/></div>
+<div class="field"><label for="biddingStrategy">Campaign 竞价策略</label><select id="biddingStrategy" required><option value="">请选择默认策略</option><option value="dynamic_down_only">动态竞价 - 只降低</option><option value="dynamic_up_and_down">动态竞价 - 提高和降低</option><option value="fixed">固定竞价</option></select></div>
+<div class="field"><label for="exactCoeff">Exact Bid 系数</label><input id="exactCoeff" type="number" min="0.01" step="0.01" value="1.00"/></div>
+<div class="field"><label for="phraseCoeff">Phrase Bid 系数</label><input id="phraseCoeff" type="number" min="0.01" step="0.01" value="0.85"/></div>
+<div class="field"><label for="broadCoeff">Broad Bid 系数</label><input id="broadCoeff" type="number" min="0.01" step="0.01" value="0.70"/></div>
+<div class="field"><label for="minBid">最低 Bid（USD，可选）</label><input id="minBid" type="number" min="0.01" step="0.01" placeholder="留空不额外设下限"/></div>
+<div class="field"><label for="maxBid">最高 Bid（USD，可选）</label><input id="maxBid" type="number" min="0.01" step="0.01" placeholder="留空不额外设上限"/></div>
+<div class="field"><label for="defaultBid">历史 CPC 和建议竞价都缺失时的默认 Bid（USD）</label><input id="defaultBid" type="number" min="0.01" step="0.01" placeholder="可留空；缺失时该词待核对"/></div>
+<div class="field"><label for="targetAcos">目标 ACOS（%，可选）</label><input id="targetAcos" type="number" min="0" max="100" step="0.1" placeholder="只用于优先级判断"/></div>
+</div>
+<p class="help" style="margin-top:9px">Bid 以实际历史 CPC 为主要依据，领星建议竞价用于参考/校验。默认系数 Exact 100% &gt; Phrase 85% &gt; Broad 70%，程序会校验递减关系；不做后续自动调价。</p>
+</div>
+
+<div class="section">
+<h3>06 · Campaign 与 Ad Group 命名</h3>
+<div class="fields">
+<div class="field"><label for="campaignCode">广告代码</label><input id="campaignCode" value="SP-KW"/></div>
+<div class="field"><label for="campaignPrefix">投放名称前缀</label><input id="campaignPrefix" value="出单再投放"/></div>
+<div class="field"><label for="labelExact">精准 Campaign / Ad Group 标签</label><input id="labelExact" value="精准"/></div>
+<div class="field"><label for="labelPhrase">词组 Ad Group 标签</label><input id="labelPhrase" value="词组"/></div>
+<div class="field"><label for="labelBroad">广泛 Ad Group 标签</label><input id="labelBroad" value="广泛"/></div>
+<div class="field"><label for="labelPhraseBroad">词组+广泛 Campaign 标签</label><input id="labelPhraseBroad" value="词组+广泛"/></div>
+</div>
+<p class="help" style="margin-top:9px">默认格式：产品简称-SP-KW-出单再投放1-精准-YYYYMMDD。未满 Campaign 继续追加，不改原名称和日期；满额后新建下一个序号。</p>
+</div>
+
+<div class="section">
+<h3>07 · ASIN 专属记忆与否定规则</h3>
+<div class="fields">
+<div class="field"><label for="productName">产品名称（可自动读取）</label><input id="productName" maxlength="120" placeholder="留空时由 Skill 从可信产品资料读取"/></div>
+<div class="field"><label for="productShortName">产品简称（用于广告命名）</label><input id="productShortName" maxlength="40" placeholder="例如：八角围栏；首次可填写，后续自动记忆"/></div>
+<div class="field full"><label for="profileExcludedCampaigns">该 ASIN 默认排除的来源广告（每行一个）</label><textarea id="profileExcludedCampaigns" placeholder="只排除数据来源，不影响全 ASIN 重复投放检查"></textarea></div>
+<div class="field full"><label for="profileNegativeKeywords">该 ASIN 否定关键词（每行：关键词 | exact 或 phrase）</label><textarea id="profileNegativeKeywords" placeholder="human heating pad | exact&#10;electric blanket | phrase"></textarea></div>
+<div class="field full"><label for="profileNegativeAsins">该 ASIN 否定商品 ASIN（每行一个）</label><textarea id="profileNegativeAsins" placeholder="B0XXXXXXXXX"/></div>
+</div>
+</div>
+
+<div class="section">
+<h3>08 · 全局否定规则（所有 ASIN 适用）</h3>
+<div class="fields">
+<div class="field full"><label for="globalNegativeKeywords">全局否定关键词（每行：关键词 | exact 或 phrase）</label><textarea id="globalNegativeKeywords" placeholder="不适用于所有产品的通用搜索词 | phrase"></textarea></div>
+<div class="field full"><label for="globalNegativeAsins">全局否定商品 ASIN（每行一个）</label><textarea id="globalNegativeAsins" placeholder="B0XXXXXXXXX"></textarea></div>
+</div>
+</div>
+
+<div class="actions">
+<button type="button" class="btn primary" id="saveConfigBtn">保存全局与 ASIN 规则</button>
+<button type="button" class="btn" id="previewBtn">生成指令预览</button>
+<button type="submit" class="btn primary" id="copyBtn">生成并复制 Codex 指令</button>
+<button type="button" class="btn" id="exportBtn">导出配置备份</button>
+<button type="button" class="btn" id="importBtn">导入配置备份</button>
+<input id="fileImport" type="file" accept=".json,application/json"/>
+</div>
+<p id="formStatus" role="status" aria-live="polite" class="help" style="margin-top:10px;min-height:18px"></p>
+<pre id="instructionPreview" class="preview" hidden></pre>
+</form>
+</section>
+
+<aside class="panel side-panel">
+<h2>运行规则摘要</h2>
+<p class="sub">本 Skill 第一阶段只负责创建和追加广告。</p>
+<div class="side-list">
+<div class="side-item"><strong>关键词来源</strong><span>领星 Customer Search Term 广告归因订单；排除来源广告单独配置</span></div>
+<div class="side-item"><strong>相关性</strong><span>结合产品事实硬性筛选；不机械排除核心大词</span></div>
+<div class="side-item"><strong>重复检查</strong><span>关键词文本 + 匹配方式；Campaign / Group / Keyword 全启用且窗口内有曝光才跳过</span></div>
+<div class="side-item"><strong>Campaign 复用</strong><span>只复用 Skill Registry 中的 Campaign；未满追加，满了才创建下一组</span></div>
+<div class="side-item"><strong>广告状态</strong><span>新 Campaign PAUSED；Ad Group、Product Ad、Keyword ENABLED</span></div>
+<div class="side-item"><strong>原广告保护</strong><span>非 Skill 广告只读，绝不修改；第一阶段不自动调价或暂停</span></div>
+</div>
+<div class="notice">否定词、否定商品、排除来源广告和产品简称会按 ASIN 保存在本机 Agent 配置文件中。Skill 创建成功后也会把 Campaign ID 和执行记录写回同一配置文件，供后续复用。</div>
+<div class="side-actions"><a class="btn" href="./skills.html">返回 AI Skills</a><a class="btn" href="https://github.com/Dora-lou/amazon-variation-merge-tool/tree/main/agent/skills/amazon-ads-search-term-relaunch" target="_blank" rel="noopener noreferrer">查看 Skill 文件 ↗</a></div>
+</aside>
+</div>
+<footer style="margin-top:26px;color:#8b99a6;font-size:11px">亚马逊运营工作台 · 广告出单词二次投放 · 配置保存在本机，不包含领星或 Codex 凭证。</footer>
+</main>
+<script src="./ads-relaunch-ui.js?v=2026.11.13.1" defer></script>
+</body>
+</html>
