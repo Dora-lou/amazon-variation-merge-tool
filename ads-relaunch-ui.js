@@ -470,7 +470,11 @@
   async function importConfig(file) {
     const incoming = JSON.parse(await file.text());
     if (!incoming || typeof incoming !== 'object' || !incoming.global_settings) throw new Error('配置文件格式不正确');
+    const currentRegistry = savedConfig.campaign_registry || {};
+    const currentHistory = savedConfig.execution_history || [];
     savedConfig = { ...defaultConfig(), ...incoming };
+    if (!Object.prototype.hasOwnProperty.call(incoming, 'campaign_registry')) savedConfig.campaign_registry = currentRegistry;
+    if (!Object.prototype.hasOwnProperty.call(incoming, 'execution_history')) savedConfig.execution_history = currentHistory;
     renderConfig();
     if (connected) {
       await persistConfig(savedConfig, true);
