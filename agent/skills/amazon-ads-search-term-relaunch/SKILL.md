@@ -59,8 +59,8 @@ description: 从领星广告搜索词报告中，为指定 Amazon ASIN 挖掘已
 
 - global_settings：默认 Marketplace、统计天数、有效投放去重天数、匹配方式、广告结构、Campaign 关键词上限、预算、竞价策略、Bid 系数、Bid 上下限、命名模板。
 - product_profiles[ASIN]：产品名称/简称、产品事实、各匹配方式订单区间、ASIN 专属 Campaign 预算覆盖、来源排除广告、否定关键词、否定商品 ASIN、产品专属目标 ACOS 等。
-- campaign_registry：仅保存本 Skill 成功创建的 Campaign ID、Ad Group ID、店铺、Marketplace、ASIN、结构池、序号、创建日期、状态和容量。
-- execution_history：保存每次执行的摘要、发现词数、添加词数、跳过原因、Campaign IDs 和时间；不得保存 Token、Cookie、API Key 或原始认证头。
+- campaign_registry：仅保存本 Skill 成功创建的 Campaign ID、Ad Group ID、店铺、Marketplace、ASIN、结构池、序号、创建日期、状态和容量。Registry 对象键固定为 store_id|marketplace|ASIN|pool_key，便于前置程序按当前 ASIN 过滤。
+- execution_history：保存每次执行的摘要、store_id、marketplace、ASIN、发现词数、添加词数、跳过原因、Campaign IDs 和时间；不得保存 Token、Cookie、API Key 或原始认证头。
 
 否定关键词的格式为 {keyword, match_type}，其中 match_type 只允许 EXACT 或 PHRASE。否定商品为 ASIN。规则可以分为全局与 ASIN 专属；同一条规则不得重复创建。
 
@@ -210,7 +210,7 @@ Campaign 名称中的匹配标签按实际被选中的匹配方式动态生成�
 - 实际历史 CPC 是主要依据：base_cpc = 目标 ASIN + 搜索词在允许来源中的总花费 / 总点击量。
 - 领星建议竞价是参考，用于合理性检查和缺少 CPC 时的备用依据；不得直接把建议竞价当成必须出价。
 - 如果实际 CPC 可用，优先从实际 CPC 得到基础竞价；结合建议竞价区间检查是否异常。
-- 如果实际 CPC 不可用，优先使用领星建议竞价；建议竞价也不可用时使用用户配置的默认 Bid。三者都缺失时，不得编造竞价，该关键词进入待核对，不创建。
+- 如果实际 CPC 不可用，优先使用领星建议竞价；若搜索词报表未包含建议竞价，先查看当前领星 MCP 是否提供按关键词查询建议竞价的能力，有则按真实 schema 查询；没有时再使用用户配置的默认 Bid。三者都缺失时，不得编造竞价，该关键词进入待核对，不创建。
 - 对同一个词，不同匹配方式的 Bid 必须递减。默认系数可配置：
   - Exact：100%
   - Phrase：85%
@@ -219,7 +219,7 @@ Campaign 名称中的匹配标签按实际被选中的匹配方式动态生成�
 - 强制保证同一词 Exact Bid > Phrase Bid > Broad Bid。金额保留两位小数。四舍五入后若相等，按至少 $0.01 的递减关系修正；若因此低于用户最低 Bid 或无法同时满足上下限，停止该词的相关匹配方式投放并说明原因，不能违反递减规则。
 - 用户配置的最低 Bid、最高 Bid 和默认 Bid 必须执行。异常值不得越过上限。
 - 不要用目标 ACOS 自行创造一套未经配置的自动调价公式。目标 ACOS用于排序和合理性分析；第一阶段只计算创建时初始 Bid，不做后续动态调价。
-- Amazon Campaign bidding strategy 与关键词 Bid 是两个独立设置，按用户全局/本次配置填写。
+- Amazon Campaign bidding strategy 与关键词 Bid 是两个独立设置，按用户全局/本次配置填写。前置程序中的 dynamic_down_only、dynamic_up_and_down、fixed 是规范化配置值；调用领星 MCP 前必须映射为该工具 schema 实际接受的枚举，不能直接假定字符串相同。
 
 ## 七、否定投放
 
@@ -264,8 +264,8 @@ Campaign 名称中的匹配标签按实际被选中的匹配方式动态生成�
 
 至少写入：
 
-- campaign_registry：Campaign ID、名称、ASIN、店铺、Marketplace、结构池、序号、创建日期、状态、预算、Ad Group IDs、每个 Ad Group 的匹配方式与已添加关键词计数
-- execution_history：任务时间、ASIN、统计周期、来源排除广告、候选词数量、添加数量、跳过数量及原因、成功/失败 Campaign IDs
+- campaign_registry：以 store_id|marketplace|ASIN|pool_key 为键，保存 Campaign ID、名称、ASIN、店铺、Marketplace、结构池、序号、创建日期、状态、预算、Ad Group IDs、每个 Ad Group 的匹配方式与已添加关键词计数
+- execution_history：任务时间、store_id、marketplace、ASIN、统计周期、来源排除广告、候选词数量、添加数量、跳过数量及原因、成功/失败 Campaign IDs
 - 每个已添加关键词的唯一键、Keyword ID、匹配方式、Bid、来源搜索词数据周期、创建时间
 
 写入时：
