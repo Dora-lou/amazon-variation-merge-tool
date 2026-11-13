@@ -47,13 +47,13 @@ textarea{min-height:82px;resize:vertical}.help{font-size:11px;color:#8a9aa7;line
 </header>
 <section class="hero">
 <div class="eyebrow">AMAZON ADS · SEARCH TERM RELAUNCH</div>
-<h1>广告出单词二次投放</h1>
-<p>设置一次全局规则和 ASIN 专属记忆。输入 ASIN 后，生成完整 Codex 指令，由 Skill 从领星提取真实搜索词、分层筛选并创建/复用 SP 关键词广告。新 Campaign 默认暂停，原有非 Skill 广告只读不修改。</p>
+<h1>广告出单词二次投放 · 任务生成器</h1>
+<p>独立于销售计划的广告任务页面。填写本次 ASIN 与投放参数，系统自动合并全局规则和该 ASIN 的历史配置，生成完整 Codex 执行指令；复制后交给 Codex 调用已安装的广告 Skill。新 Campaign 默认暂停，原有非 Skill 广告只读不修改。</p>
 </section>
 <div class="layout">
 <section class="panel">
-<h2>广告任务与前置规则</h2>
-<p class="sub">先连接本机 Agent 读取/保存持久配置；没有必要的信息会自动沿用已保存规则。</p>
+<h2>填写任务参数，生成 Codex 指令</h2>
+<p class="sub">本页面只处理广告二次投放，不会读取或修改销售计划参数。连接本机 Agent 后，可自动读取该 ASIN 的历史设置。</p>
 
 <div class="section">
 <h3>01 · 本机配置连接</h3>
@@ -174,7 +174,7 @@ textarea{min-height:82px;resize:vertical}.help{font-size:11px;color:#8a9aa7;line
 <div class="actions">
 <button type="button" class="btn primary" id="saveConfigBtn">保存全局与 ASIN 规则</button>
 <button type="button" class="btn" id="previewBtn">生成指令预览</button>
-<button type="submit" class="btn primary" id="copyBtn">生成并复制 Codex 指令</button>
+<button type="submit" class="btn primary" id="copyBtn">生成并复制给 Codex</button>
 <button type="button" class="btn" id="exportBtn">导出配置备份</button>
 <button type="button" class="btn" id="importBtn">导入配置备份</button>
 <input id="fileImport" type="file" accept=".json,application/json"/>
