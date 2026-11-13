@@ -176,10 +176,11 @@
     $('labelPhrase').value = labels.phrase || '词组';
     $('labelBroad').value = labels.broad || '广泛';
     $('labelPhraseBroad').value = labels.phrase_broad || '词组+广泛';
+    $('dateFormat').value = naming.date_format || 'YYYYMMDD';
     const groupNaming = g.group_naming || {};
-    if (groupNaming.exact) $('labelExact').value = groupNaming.exact;
-    if (groupNaming.phrase) $('labelPhrase').value = groupNaming.phrase;
-    if (groupNaming.broad) $('labelBroad').value = groupNaming.broad;
+    $('groupNameExact').value = groupNaming.exact || '精准';
+    $('groupNamePhrase').value = groupNaming.phrase || '词组';
+    $('groupNameBroad').value = groupNaming.broad || '广泛';
     const matchTypes = new Set(g.match_types || ['exact', 'phrase', 'broad']);
     document.querySelectorAll('input[name="matchType"]').forEach(node => { node.checked = matchTypes.has(node.value); });
     const globalNeg = savedConfig.global_negative_rules || {};
@@ -233,7 +234,7 @@
       campaign_naming: {
         code: value('campaignCode') || 'SP-KW',
         prefix: value('campaignPrefix') || '出单再投放',
-        date_format: 'YYYYMMDD',
+        date_format: value('dateFormat') || 'YYYYMMDD',
         labels: {
           exact: value('labelExact') || '精准',
           phrase: value('labelPhrase') || '词组',
@@ -242,9 +243,9 @@
         }
       },
       group_naming: {
-        exact: value('labelExact') || '精准',
-        phrase: value('labelPhrase') || '词组',
-        broad: value('labelBroad') || '广泛'
+        exact: value('groupNameExact') || '精准',
+        phrase: value('groupNamePhrase') || '词组',
+        broad: value('groupNameBroad') || '广泛'
       }
     };
     const profiles = { ...(savedConfig.product_profiles || {}) };
