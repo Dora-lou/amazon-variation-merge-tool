@@ -332,7 +332,10 @@
       }
     });
     const budgetKeys = campaignBudgetGroups(g.match_types, g.campaign_structure);
-    const effectiveBudgets = { ...(g.budgets || {}), ...(profile.budgets || {}) };
+    const productBudgetOverrides = Object.fromEntries(
+      Object.entries(profile.budgets || {}).filter(([, amount]) => amount !== null && amount !== undefined)
+    );
+    const effectiveBudgets = { ...(g.budgets || {}), ...productBudgetOverrides };
     budgetKeys.forEach(key => {
       const amount = effectiveBudgets[key];
       if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
