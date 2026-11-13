@@ -12,6 +12,7 @@
         "marketplace": { "type": "string", "default": "US" },
         "report_days": { "type": "integer", "minimum": 1 },
         "duplicate_impression_days": { "type": "integer", "minimum": 1, "default": 7 },
+        "execution_interval_days": { "type": "integer", "minimum": 1, "default": 7, "description": "Preferred repeat-run cadence; does not itself schedule a task." },
         "match_types": {
           "type": "array",
           "items": { "enum": ["exact", "phrase", "broad"] },
