@@ -58,7 +58,7 @@ description: 从领星广告搜索词报告中，为指定 Amazon ASIN 挖掘已
 ### 配置结构
 
 - global_settings：默认 Marketplace、统计天数、有效投放去重天数、匹配方式、广告结构、Campaign 关键词上限、预算、竞价策略、Bid 系数、Bid 上下限、命名模板。
-- product_profiles[ASIN]：产品名称/简称、产品事实、各匹配方式订单区间、来源排除广告、否定关键词、否定商品 ASIN、产品专属目标 ACOS 等。
+- product_profiles[ASIN]：产品名称/简称、产品事实、各匹配方式订单区间、ASIN 专属 Campaign 预算覆盖、来源排除广告、否定关键词、否定商品 ASIN、产品专属目标 ACOS 等。
 - campaign_registry：仅保存本 Skill 成功创建的 Campaign ID、Ad Group ID、店铺、Marketplace、ASIN、结构池、序号、创建日期、状态和容量。
 - execution_history：保存每次执行的摘要、发现词数、添加词数、跳过原因、Campaign IDs 和时间；不得保存 Token、Cookie、API Key 或原始认证头。
 
@@ -162,6 +162,8 @@ description: 从领星广告搜索词报告中，为指定 Amazon ASIN 挖掘已
 若现有广告状态、展示数据或关键词匹配类型无法可靠读取，标记为待核对，不要把未知状态当成已启用或未启用。
 
 ## 五、广告结构与 Campaign Pool
+
+Campaign 日预算按每个 Campaign 单独设置。优先使用当前 ASIN 的 product_profiles[ASIN].budgets 中对应 Campaign Pool 的非空值；该值为空时继承 global_settings.budgets。不同 Campaign 不共享总预算口径；Phrase + Broad 共用一个 Campaign 时使用该共享 Campaign 的一个日预算。没有可用预算时不要自行编造，停止创建该 Campaign 并说明缺少配置。
 
 默认结构：
 
