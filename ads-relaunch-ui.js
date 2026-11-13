@@ -208,12 +208,12 @@
   function collectPersistentConfig() {
     const g = {
       marketplace: selectedStore()?.marketplace || $('marketplaceDisplay').value || 'US',
-      report_days: Number(value('reportDays')),
-      duplicate_impression_days: Number(value('duplicateDays')),
-      execution_interval_days: Number(value('executionInterval') || 7),
+      report_days: optionalNumber('reportDays'),
+      duplicate_impression_days: optionalNumber('duplicateDays'),
+      execution_interval_days: optionalNumber('executionInterval') ?? 7,
       match_types: checkedMatchTypes(),
       campaign_structure: value('campaignStructure'),
-      campaign_keyword_limit: Number(value('campaignLimit')),
+      campaign_keyword_limit: optionalNumber('campaignLimit'),
       budgets: {
         exact: optionalNumber('budgetExact'),
         phrase_broad: optionalNumber('budgetPhraseBroad'),
