@@ -37,6 +37,7 @@ def default_ads_config() -> dict:
             "marketplace": "US",
             "report_days": 30,
             "duplicate_impression_days": 7,
+            "execution_interval_days": 7,
             "match_types": ["exact", "phrase", "broad"],
             "campaign_structure": "exact_separate_phrase_broad_shared",
             "campaign_keyword_limit": None,
