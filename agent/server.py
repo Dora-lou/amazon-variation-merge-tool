@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Sales-plan Agent: localhost-only preview service; no Feishu write endpoints.
+"""Local Amazon Operations Agent.
 
-Data is collected by a host-side, fixed read-only layer before Codex starts.
-No credentials or business records are persisted by this service.
+Sales-plan and Listing data collection remains host-side and read-only. The
+service also persists non-secret Ads Relaunch preferences and Skill Campaign
+registry metadata locally; it exposes no Amazon Ads or Feishu business-write
+endpoint. Actual Ads creation is performed by the installed Codex Skill via
+the user's authorized Lingxing MCP connection.
 """
 from __future__ import annotations
 
@@ -1149,11 +1152,12 @@ def main():
     except Exception:
         instance_lock.release()
         raise
-    print("\n亚马逊销售计划 Agent · 本机预览版", flush=True)
+    print("\n亚马逊运营 Agent · 本机服务", flush=True)
     print(f"地址： http://{HOST}:{PORT}（只允许本机访问）", flush=True)
     print("配对码（仅输入你自己打开的运营工具箱网页，勿分享）：", flush=True)
     print(state.pair_key, flush=True)
-    print("当前版本只查询与预览，不提供飞书写入接口。", flush=True)
+    print("销售计划/Listing 仍为只读采集；广告配置仅保存在本机，不通过此服务写入 Amazon 或飞书。", flush=True)
+    print("广告创建由 Codex 中的 Ads Relaunch Skill 通过已授权领星 MCP 执行。", flush=True)
     print("关闭此终端即停止 Agent。\n", flush=True)
     try:
         httpd.serve_forever(poll_interval=0.25)
