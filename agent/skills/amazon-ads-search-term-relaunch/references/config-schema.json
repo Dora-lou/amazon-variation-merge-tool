@@ -61,6 +61,10 @@
         "properties": {
           "product_name": { "type": "string" },
           "product_short_name": { "type": "string" },
+          "budgets": {
+            "type": "object",
+            "description": "Optional per-ASIN Campaign budget overrides; empty values inherit global Campaign budgets."
+          },
           "match_order_bands": {
             "type": "object",
             "properties": {
