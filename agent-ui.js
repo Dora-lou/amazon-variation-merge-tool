@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   const URL_BASE = 'http://127.0.0.1:8765';
-  const BUILD_VERSION = '2026.11.12.1';
+  const BUILD_VERSION = '2026.11.13.1';
   const $ = id => document.getElementById(id);
   const sessionKey = 'amazonAgentPairKey';
   let connected = false, running = false, stores = [], currentResult = null;
