@@ -273,7 +273,7 @@ Campaign 名称中的匹配标签按实际被选中的匹配方式动态生成�
 - 只更新本次相关 ASIN/Pool 的状态
 - 使用 UTF-8 JSON、原子写入（临时文件写完后替换）
 - 不保存 Token、Cookie、API Key、认证头或完整 MCP 响应
-- 写入后重新读取并校验 JSON；失败时在执行结果中明确说明持久化未成功
+- 写入后重新读取并校验 JSON；失败时在执行结果中明确说明持久化未成功，并输出完整的 ADS_RELAUNCH_CONFIG_UPDATE JSON（包含需要更新的 Registry/History），供用户通过前置程序的“导入配置备份”恢复；不得声称记忆已保存。
 
 ## 十、结果报告
 
