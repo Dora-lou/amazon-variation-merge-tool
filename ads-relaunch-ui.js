@@ -194,6 +194,12 @@
     const profile = (savedConfig.product_profiles || {})[asin] || {};
     $('productName').value = profile.product_name || '';
     $('productShortName').value = profile.product_short_name || '';
+    const productBudgets = profile.budgets || {};
+    setNumber('productBudgetExact', productBudgets.exact);
+    setNumber('productBudgetPhraseBroad', productBudgets.phrase_broad);
+    setNumber('productBudgetPhrase', productBudgets.phrase);
+    setNumber('productBudgetBroad', productBudgets.broad);
+    setNumber('productBudgetAll', productBudgets.all);
     $('exactMin').value = profile.match_order_bands?.exact?.min_orders ?? '';
     $('exactMax').value = profile.match_order_bands?.exact?.max_orders ?? '';
     $('phraseMin').value = profile.match_order_bands?.phrase?.min_orders ?? '';
@@ -255,6 +261,13 @@
         ...(profiles[asin] || {}),
         product_name: value('productName'),
         product_short_name: value('productShortName'),
+        budgets: {
+          exact: optionalNumber('productBudgetExact'),
+          phrase_broad: optionalNumber('productBudgetPhraseBroad'),
+          phrase: optionalNumber('productBudgetPhrase'),
+          broad: optionalNumber('productBudgetBroad'),
+          all: optionalNumber('productBudgetAll')
+        },
         match_order_bands: {
           exact: { min_orders: optionalNumber('exactMin'), max_orders: optionalNumber('exactMax') },
           phrase: { min_orders: optionalNumber('phraseMin'), max_orders: optionalNumber('phraseMax') },
@@ -319,8 +332,9 @@
       }
     });
     const budgetKeys = campaignBudgetGroups(g.match_types, g.campaign_structure);
+    const effectiveBudgets = { ...(g.budgets || {}), ...(profile.budgets || {}) };
     budgetKeys.forEach(key => {
-      const amount = g.budgets[key];
+      const amount = effectiveBudgets[key];
       if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
         throw new Error('请填写 ' + ({ exact: '精准 Campaign', phrase_broad: '词组+广泛 Campaign', phrase: '词组 Campaign', broad: '广泛 Campaign', all: '共用 Campaign' })[key] + ' 的日预算');
       }
