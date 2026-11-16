@@ -396,7 +396,7 @@
     };
     const json = JSON.stringify(payload, null, 2);
     return [
-      '请调用我本机已安装的 amazon-ads-search-term-relaunch Skill，立即执行本次 Amazon SP 关键词出单词二次投放任务。不是只做方案或预览；请按下面的配置真实创建/追加广告。新建 Campaign 必须保持 PAUSED。',
+      '请调用我本机已安装的 amazon-ads-search-term-relaunch Skill，先读取数据并生成完整可审核的本次 Amazon SP 关键词出单词二次投放预览。除非我在当前任务中明确回复“确认执行”，否则不得创建、追加、启用、改预算、改竞价或向广告后台写入；得到明确确认后才按下面的配置真实执行。新建 Campaign 必须保持 PAUSED。',
       '',
       '【本次任务范围】',
       '- ASIN：' + task.asin,
@@ -422,7 +422,7 @@
       '7. 新建 Campaign PAUSED；Ad Group、Product Ad、Keyword ENABLED。若追加到已手动开启的 Skill Campaign，保持 Campaign 已启用并让新关键词正常启用。',
       '8. 不修改任何非 Skill 创建并登记的原有广告；不添加/修改原广告否定词；不做自动调价、自动暂停或其他后续优化。',
       '9. 完成后把成功创建的 Campaign/Ad Group/Keyword ID、关键词、匹配方式、Bid、预算、状态和执行记录写回本机配置文件；保留用户设置。',
-      '10. 汇报创建成功/失败、各匹配方式关键词数量、重复跳过原因、Campaign Pool 复用情况及配置持久化结果。只有必要的 ASIN/SKU 或数据口径无法确认时才向我提问。'
+      '10. 先输出完整预览和待确认项并等待当前任务中的明确人工确认；确认后再汇报创建成功/失败、各匹配方式关键词数量、重复跳过原因、Campaign Pool 复用情况及配置持久化结果。只有必要的 ASIN/SKU 或数据口径无法确认时才向我提问。'
     ].join('\n');
   }
 

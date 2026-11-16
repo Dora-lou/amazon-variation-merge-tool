@@ -73,6 +73,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 
 </style>
 <link rel="stylesheet" href="./workspace-shell.css?v=workspace-brand-20261105-3"/>
+<link rel="stylesheet" href="./ai-chat.css"/>
 </head>
 <body>
 <main class="shell">
@@ -82,6 +83,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 <a href="./skills.html">AI Skills</a>
 <a href="./variation-guide.html">知识库</a>
 <a href="./listing.html?view=library" id="navLibrary">商品库</a>
+<a href="./ai-chat.html">AI 对话</a>
 </nav></header>
 <section class="hero workspace-home-hero" aria-labelledby="pageTitle">
   <div class="hero-main workspace-intro">
@@ -98,6 +100,17 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
     <div class="flow-row"><span class="flow-icon">▤</span><span><strong>知识库</strong><small>操作方法与使用说明</small></span></div>
     <div class="flow-row"><span class="flow-icon">▱</span><span><strong>商品库</strong><small>ASIN、MSKU 与类目模板</small></span></div>
   </aside>
+</section>
+<section class="chat-card home-chat" aria-label="AI 运营助手">
+  <div class="chat-toolbar">
+    <div><strong>AI 运营助手</strong><span id="connectionStatus">正在检查本地后端…</span></div>
+    <div class="chat-toolbar-actions"><span class="model-badge">DeepSeek · deepseek-flash</span><button id="newChat" type="button" class="secondary-button">新建对话</button></div>
+  </div>
+  <div id="messages" class="messages" aria-live="polite"><div class="empty-state"><span class="empty-icon">✦</span><strong>欢迎使用 AI 运营助手</strong><p>可以从一个运营问题开始。当前对话不会读取商品库、销售计划、Skills 或 MCP 数据。</p></div></div>
+  <form id="chatForm" class="composer">
+    <textarea id="prompt" rows="3" maxlength="12000" placeholder="输入你的运营问题…（Enter 发送，Shift + Enter 换行）" required></textarea>
+    <div class="composer-foot"><span id="errorMessage" class="error" role="alert"></span><button id="sendButton" type="submit" class="send-button">发送 <span>↗</span></button></div>
+  </form>
 </section>
 <div class="section-heading"><div><h2>开始工作</h2><p>最常使用的工具和 AI Skills，放在最前面。</p></div></div>
 <section class="module-grid" aria-label="主要功能入口">
@@ -132,5 +145,6 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 <div class="info-strip"><span class="info-mark">i</span><div><strong>资料与隐私提醒</strong><p>商品库和类目模板保存在当前浏览器中，换电脑前请在「商品库」中下载 ZIP 备份。AI Skills 页面仅作为 Codex 技能的管理入口，实际执行在 Codex 中完成。</p></div></div>
 <footer class="footer"><span>亚马逊运营工作台 · 内部运营辅助工具</span><span><a href="./使用说明.txt" download="亚马逊运营工作台-新手使用说明.txt">新手使用说明（TXT）</a></span></footer>
 </main>
+<script src="./ai-chat.js"></script>
 </body>
 </html>
