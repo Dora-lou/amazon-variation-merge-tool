@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SQR 搜索查询分析｜亚马逊运营工作台</title>
+<link rel="stylesheet" href="./workspace-shell.css?v=workspace-brand-20261105-3"/>
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#243447;background:#f4f7fa;font-size:14px;line-height:1.6}
+*{box-sizing:border-box}body{margin:0}.shell{max-width:1240px;margin:0 auto;padding:22px 28px 58px}
+.hero{padding:30px 34px;border-radius:19px;background:linear-gradient(125deg,#183b56,#2f6581);color:#fff;position:relative;overflow:hidden;margin-top:20px}
+.hero:after{content:"";position:absolute;width:270px;height:270px;right:-70px;top:-125px;border:1px solid #ffffff25;border-radius:50%;box-shadow:0 0 0 35px #ffffff09,0 0 0 70px #ffffff06}
+.eyebrow{font-size:10px;letter-spacing:.17em;font-weight:850;color:#c6deed;margin-bottom:9px}
+h1{font-size:29px;line-height:1.25;letter-spacing:-.035em;margin:0;position:relative;z-index:1}
+.hero p{max-width:760px;color:#d8e6ef;font-size:13px;line-height:1.85;margin:10px 0 0;position:relative;z-index:1}
+.panel{background:#fff;border:1px solid #e1e8ef;border-radius:16px;padding:22px 24px;margin-top:17px;box-shadow:0 5px 20px rgba(35,53,72,.035)}
+.panel-heading{display:flex;align-items:flex-start;gap:12px;margin-bottom:17px}
+.step{display:grid;place-items:center;flex:0 0 33px;height:33px;border-radius:10px;background:#e8f0f6;color:#2f6382;font-weight:850}
+h2{font-size:17px;line-height:1.35;margin:0;color:#263c50}h3{font-size:14px;margin:0;color:#31485d}
+.subtitle{font-size:12px;color:#7c8d9c;margin:4px 0 0;line-height:1.7}
+.upload-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(230px,.8fr);gap:15px;align-items:end}
+label{display:block;font-size:12px;font-weight:750;color:#445a6d;margin:0 0 7px}
+input,select{font:inherit;width:100%;border:1px solid #d3dde6;border-radius:9px;padding:11px 12px;background:#fff;color:#243447;outline:none}
+input:focus,select:focus{border-color:#5485a7;box-shadow:0 0 0 3px #5485a71a}
+input[type=file]{padding:10px;background:#fafcfd}
+input::file-selector-button{margin-right:10px;padding:7px 10px;border:1px solid #d6e0e9;border-radius:7px;background:#f1f5f8;color:#41576b;font:inherit;font-size:12px;cursor:pointer}
+button{font:inherit;font-weight:750;border:1px solid #d1dce6;border-radius:9px;padding:10px 15px;background:#fff;color:#40566b;cursor:pointer}
+button:hover{background:#f4f7fa;border-color:#bdcbd8}button:disabled{cursor:not-allowed;opacity:.5}
+button.primary{background:#2e6385;border-color:#2e6385;color:#fff}button.primary:hover{background:#24526f}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:15px}
+.file-help,.muted{font-size:12px;color:#8392a0;line-height:1.7;margin:6px 0 0}
+.status{padding:11px 13px;border-radius:10px;font-size:12px;line-height:1.7;margin-top:13px;background:#eef5fa;border:1px solid #d9e8f2;color:#3b6584}
+.status.success{background:#edf7f0;border-color:#d8ebdf;color:#34734f}.status.error{background:#fff1f1;border-color:#f1d2d2;color:#a33d45}
+.hidden{display:none!important}
+.meta-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.meta-chip{display:inline-flex;align-items:center;padding:5px 10px;border:1px solid #e1e8ee;border-radius:20px;background:#f7f9fb;color:#5d7182;font-size:11px;font-weight:700}
+.kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+.kpi{padding:14px 15px;border:1px solid #e3eaf0;border-radius:12px;background:linear-gradient(145deg,#fff,#f8fafc);min-width:0}
+.kpi span{display:block;color:#7d8c99;font-size:11px;font-weight:650}
+.kpi strong{display:block;color:#24445f;font-size:21px;line-height:1.35;margin-top:5px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi small{display:block;color:#91a0ad;font-size:10px;margin-top:3px}
+.funnel-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.funnel{padding:14px;border:1px solid #e3eaf0;border-radius:12px;background:#fbfcfd;position:relative;overflow:hidden}
+.funnel:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#6d9bb5}
+.funnel:nth-child(2):before{background:#4f83a4}.funnel:nth-child(3):before{background:#568e83}.funnel:nth-child(4):before{background:#77936c}
+.funnel .stage{font-size:11px;color:#778998;font-weight:750}
+.funnel strong{display:block;font-size:19px;color:#294a64;margin-top:4px;font-variant-numeric:tabular-nums}
+.funnel small{display:block;font-size:11px;color:#8796a2;margin-top:4px}
+.funnel .share{font-size:12px;font-weight:750;color:#3e728f;margin-top:7px}
+.insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.insight-card{border:1px solid #e2e9ef;border-radius:12px;overflow:hidden}
+.insight-head{padding:12px 14px;background:#f5f8fa;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.insight-head span{font-size:11px;color:#82919e}
+.insight-list{padding:4px 14px}
+.insight-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:10px 0;border-bottom:1px solid #edf1f4;align-items:center}
+.insight-item:last-child{border-bottom:0}
+.insight-item strong{display:block;font-size:12px;color:#344b5f;overflow-wrap:anywhere}
+.insight-item small{display:block;font-size:10px;color:#8997a3;margin-top:3px}
+.tag{display:inline-flex;padding:4px 7px;border-radius:6px;background:#fff4dd;color:#90611d;font-size:10px;font-weight:750;white-space:nowrap}
+.tag.weak{background:#fff0f0;color:#a0444a}.tag.strong{background:#eaf5ed;color:#38734e}
+.table-tools{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,.5fr) auto;gap:10px;align-items:end;margin-bottom:10px}
+.table-wrap{overflow:auto;border:1px solid #e1e8ee;border-radius:11px}
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:850px}
+th,td{padding:10px 11px;text-align:left;border-bottom:1px solid #e9eef2;white-space:nowrap;font-size:11px}
+th{position:sticky;top:0;background:#f3f7fa;color:#586f81;font-size:10px;font-weight:800;z-index:1}
+td{color:#43596b;background:#fff}
+tbody tr:nth-child(even) td{background:#fafcfd}
+tbody tr:last-child td{border-bottom:0}
+td.query{font-weight:750;color:#2e526e}
+.table-footer{font-size:11px;color:#8997a3;margin-top:8px}
+.rule-note{padding:12px 14px;border-radius:10px;background:#f6f8fa;color:#748594;font-size:11px;line-height:1.8;margin-top:13px}
+.rule-note strong{color:#4a6073}
+.footer{font-size:11px;color:#8795a2;line-height:1.8;margin-top:22px}
+@media(max-width:850px){.kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.funnel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.shell{padding:15px 12px 38px}.panel{padding:17px 14px}.hero{padding:24px 21px}.hero h1{font-size:25px}.upload-grid,.insight-grid{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.table-tools{grid-template-columns:1fr}.funnel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="workspace-header">
+    <a class="workspace-brand" href="./index.html" aria-label="亚马逊运营工作台首页">
+      <span class="workspace-logo" aria-hidden="true">O</span>
+      <span><span class="workspace-name">亚马逊运营工作台</span><span class="workspace-sub">Amazon Operations Workspace</span></span>
+    </a>
+    <nav class="workspace-nav" aria-label="工具模块">
+      <a href="./index.html">首页</a>
+      <a href="./tools.html" class="active" aria-current="page">运营工具中心</a>
+      <a href="./skills.html">AI Skills</a>
+      <a href="./variation-guide.html">知识库</a>
+      <a href="./listing.html?view=library">商品库</a>
+    </nav>
+  </header>
+
+  <section class="hero workspace-intro">
+    <div class="eyebrow">SEARCH QUERY PERFORMANCE</div>
+    <h1>SQR 搜索查询分析</h1>
+    <p>独立分析 Amazon Search Query Performance 报告。上传后台原始 CSV，自动拆解曝光、点击、加购、购买四阶段表现，识别高需求低曝光词和份额流失环节，并导出完整分析工作簿。</p>
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div class="step">1</div>
+      <div><h2>导入 SQR 原始数据</h2><p class="subtitle">上传 Amazon 后台下载的 Search Query Performance CSV。无需手动删除第一行报告条件，也无需整理列顺序。</p></div>
+    </div>
+    <div class="upload-grid">
+      <div>
+        <label for="sqrFile">SQR 原始 CSV 文件</label>
+        <input id="sqrFile" type="file" accept=".csv,text/csv"/>
+        <p class="file-help">当前版本按你提供的 34 列季度 SQR 格式解析；保留原始字段，不会修改上传文件。</p>
+      </div>
+      <div>
+        <label>本地处理</label>
+        <div class="file-help">CSV 解析、指标计算和 Excel 导出均在浏览器本地完成，不调用 AI API，也不会将数据上传到服务器。</div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button id="analyzeBtn" class="primary" type="button" disabled>解析并分析</button>
+      <button id="downloadBtn" type="button" disabled>下载 SQR 分析 Excel</button>
+      <span class="muted" id="fileName">尚未选择文件</span>
+    </div>
+    <div id="status" class="status" role="status" aria-live="polite">请选择一份 SQR CSV 文件开始分析。</div>
+  </section>
+
+  <div id="analysisArea" class="hidden">
+    <section class="panel">
+      <div class="panel-heading">
+        <div class="step">2</div>
+        <div><h2>报告概览</h2><p class="subtitle">以下汇总为本份 SQR 报告所包含搜索词的合计，不代表整个 Amazon 类目的全部市场规模。</p></div>
+      </div>
+      <div class="meta-row" id="metadata"></div>
+      <div class="kpi-grid" id="kpis"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div class="step">3</div>
+        <div><h2>搜索漏斗表现</h2><p class="subtitle">比较 ASIN 在曝光、点击、加购、购买各阶段的份额。</p></div>
+      </div>
+      <div class="funnel-grid" id="funnel"></div>
+      <div class="rule-note"><strong>阅读说明：</strong>阶段份额指数 = 下一阶段 ASIN 份额 ÷ 上一阶段 ASIN 份额。大于 1 表示份额提升，小于 1 表示份额下降；它是相对份额变化指标，不等同于广告 CVR 或订单转化率。</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div class="step">4</div>
+        <div><h2>重点机会与漏斗诊断</h2><p class="subtitle">先筛选值得关注的搜索词，再结合 Listing、价格、广告和库存数据判断是否采取行动。</p></div>
+      </div>
+      <div class="insight-grid">
+        <div class="insight-card">
+          <div class="insight-head"><h3>高需求 · 低曝光</h3><span id="opportunityCount">0 个词</span></div>
+          <div class="insight-list" id="opportunityList"></div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-head"><h3>主要份额流失环节</h3><span id="weakCount">0 个词</span></div>
+          <div class="insight-list" id="weakList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div class="step">5</div>
+        <div><h2>搜索词分析明细</h2><p class="subtitle">默认按搜索查询量从高到低排列。可搜索词语并按机会标签或漏斗诊断筛选。</p></div>
+      </div>
+      <div class="table-tools">
+        <div><label for="queryFilter">搜索词</label><input id="queryFilter" type="search" placeholder="输入关键词搜索"/></div>
+        <div><label for="diagnosisFilter">分析标签</label><select id="diagnosisFilter"><option value="">全部标签</option><option value="高需求·低曝光">高需求·低曝光</option><option value="高搜索量">高搜索量</option><option value="常规搜索量">常规搜索量</option><option value="曝光→点击份额流失">曝光→点击份额流失</option><option value="点击→加购份额流失">点击→加购份额流失</option><option value="加购→购买份额流失">加购→购买份额流失</option><option value="份额提升">份额提升</option><option value="份额表现相对稳定">份额表现相对稳定</option></select></div>
+        <div><button id="resetFilters" type="button">清除筛选</button></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>搜索查询</th><th>搜索查询量</th><th>机会标签</th><th>漏斗诊断</th><th>ASIN 曝光份额</th><th>ASIN 点击份额</th><th>ASIN 加购份额</th><th>ASIN 购买份额</th></tr></thead>
+          <tbody id="detailBody"></tbody>
+        </table>
+      </div>
+      <div class="table-footer" id="tableFooter"></div>
+    </section>
+  </div>
+
+  <p class="footer">分析规则为透明的本地筛选逻辑：高搜索量按本报告搜索查询量第 75 百分位识别；低曝光指该词 ASIN 曝光份额低于本报告加权 ASIN 曝光份额；份额流失/提升阈值分别为阶段份额指数低于 0.80 / 高于 1.20。标签用于定位机会，不代表因果结论。所有原始 34 列均会保留在导出文件的「原始数据」Sheet。</p>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="./sqr-engine.js?v=20261119-1"></script>
+<script src="./sqr-ui.js?v=20261119-1"></script>
+</body>
+</html>
