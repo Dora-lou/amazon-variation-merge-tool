@@ -158,8 +158,9 @@
       else if (row.funnelDiagnosis.indexOf('份额提升') >= 0) row.recommendation = '该阶段 ASIN 份额相对上一个阶段有所提升，可继续观察并保持有效做法。';
       else row.recommendation = '暂未发现明显的份额断层，结合利润、广告花费和自然排名决定后续投入。';
     });
+    const rawRows = rows.slice();
     rows.sort(function (a,b) { return (b.searchVolume-a.searchVolume) || String(a.query).localeCompare(String(b.query)); });
-    return {metadata:metadata,headers:headers,rows:rows,aggregate:aggregate,highVolumeThreshold:highVolumeThreshold,sourceRowCount:rows.length,sourceHeaderRow:headerIndex+1};
+    return {metadata:metadata,headers:headers,rows:rows,rawRows:rawRows,aggregate:aggregate,highVolumeThreshold:highVolumeThreshold,sourceRowCount:rows.length,sourceHeaderRow:headerIndex+1};
   }
   function excelValue(value) {
     if (value == null || value === '') return '';
@@ -216,7 +217,10 @@
     ];
     opportunities.forEach(function(r){overview.push([r.query,r.searchVolume,r.asinImpressionShareCalc,r.asinClickShareCalc,r.funnelDiagnosis,r.recommendation]);});
     if(!opportunities.length) overview.push(['本报告未识别到符合当前规则的高需求低曝光词。']);
-    overview.push([]); overview.push(['份额流失词（阶段份额指数低于 0.80）']);
+    overview.push([]);
+    const weakSectionRow = overview.length;
+    overview.push(['份额流失词（阶段份额指数低于 0.80）']);
+    const weakHeaderRow = overview.length;
     overview.push(['搜索查询','搜索查询量','曝光→点击指数','点击→加购指数','加购→购买指数','主要诊断']);
     weakRows.forEach(function(r){overview.push([r.query,r.searchVolume,r.exposureToClickIndex,r.clickToCartIndex,r.cartToPurchaseIndex,r.funnelDiagnosis]);});
     if(!weakRows.length) overview.push(['本报告未识别到阶段份额指数低于 0.80 的搜索词。']);
@@ -230,8 +234,8 @@
       setStyle(overviewSheet,XLSX,0,c,{fill:{patternType:'solid',fgColor:{rgb:p.navy}},font:{name:'Aptos Display',sz:16,bold:true,color:{rgb:p.white}},alignment:{vertical:'center',horizontal:'left',indent:1}});
       setStyle(overviewSheet,XLSX,1,c,{fill:{patternType:'solid',fgColor:{rgb:p.pale}},font:{name:'Aptos',sz:10,italic:true,color:{rgb:p.muted}},alignment:{vertical:'center',horizontal:'left',indent:1}});
     }
-    const sectionRows=[7,13,22,25+opportunities.length+(opportunities.length?0:1)];
-    const tableHeaderRows=[8+4,25+opportunities.length+(opportunities.length?0:1)+1];
+    const sectionRows=[7,13,23,weakSectionRow];
+    const tableHeaderRows=[14,24,weakHeaderRow];
     for(let r=0;r<overview.length;r+=1){
       const first=String((overview[r]||[])[0]||'');
       const isSection=['搜索漏斗','搜索量加权市场率','重点机会词（高搜索量且 ASIN 曝光份额低于本报告加权水平）','份额流失词（阶段份额指数低于 0.80）'].indexOf(first)>=0;
@@ -245,7 +249,7 @@
     for(let r=8;r<=11;r+=1) for(let c=0;c<=4;c+=1) setStyle(overviewSheet,XLSX,r,c,{
       fill:{patternType:'solid',fgColor:{rgb:p.pale2}},font:{name:'Aptos',sz:10,color:{rgb:p.text}}});
     ['D9','D10','D11','D12'].forEach(function(address){if(overviewSheet[address]&&typeof overviewSheet[address].v==='number')overviewSheet[address].z='0.00%';});
-    ['E10','E11','E12'].forEach(function(address){if(overviewSheet[address]&&typeof overviewSheet[address].v==='number')overviewSheet[address].z='0.00x';});
+    ['E10','E11','E12'].forEach(function(address){if(overviewSheet[address]&&typeof overviewSheet[address].v==='number')overviewSheet[address].z='0.00\"x\"';});
     XLSX.utils.book_append_sheet(workbook,overviewSheet,'SQR总览');
 
     const derivedHeaders=['机会标签','漏斗诊断','建议方向','ASIN曝光份额（计算）','ASIN点击份额（计算）','ASIN加购份额（计算）','ASIN购买份额（计算）','曝光→点击份额指数','点击→加购份额指数','加购→购买份额指数','ASIN点击率（ASIN点击/ASIN曝光）','ASIN点击后加购率','ASIN点击后购买率','ASIN加购后购买率'];
@@ -290,7 +294,7 @@
     XLSX.utils.book_append_sheet(workbook,analysisSheet,'搜索词分析');
 
     const rawAoa=[['原始 SQR 数据  |  保留后台导出的全部字段'],[metaText],data.headers];
-    rows.forEach(function(r){rawAoa.push(r.sourceValues.map(excelValue));});
+    (data.rawRows || rows).forEach(function(r){rawAoa.push(r.sourceValues.map(excelValue));});
     const rawSheet=XLSX.utils.aoa_to_sheet(rawAoa);
     rawSheet['!merges']=[{s:{r:0,c:0},e:{r:0,c:data.headers.length-1}}];
     rawSheet['!cols']=data.headers.map(function(h){if(h==='搜索查询')return{wch:38};if(/配送速度/.test(h))return{wch:18};return{wch:Math.min(26,Math.max(16,String(h).length+4))};});
