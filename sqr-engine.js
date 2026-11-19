@@ -121,6 +121,8 @@
   }
   function buildQueryGroups(rows) {
     const groups = {};
+    const totalSearchVolume = rows.reduce(function (sum,row) { return sum + (row.searchVolume || 0); }, 0);
+    const totalAsinPurchases = rows.reduce(function (sum,row) { return sum + (row.asinPurchases || 0); }, 0);
     rows.forEach(function (row) {
       const key = row.queryCategory;
       if (!groups[key]) groups[key] = {
@@ -139,6 +141,8 @@
       group.asinClickShare = safeDivide(group.asinClicks, group.clicks);
       group.asinCartShare = safeDivide(group.asinCartAdds, group.cartAdds);
       group.asinPurchaseShare = safeDivide(group.asinPurchases, group.purchases);
+      group.searchVolumeContribution = safeDivide(group.searchVolume, totalSearchVolume);
+      group.asinPurchaseContribution = safeDivide(group.asinPurchases, totalAsinPurchases);
       group.asinClickToPurchaseRate = safeDivide(group.asinPurchases, group.asinClicks);
       group.asinClickToCartRate = safeDivide(group.asinCartAdds, group.asinClicks);
       return group;
@@ -424,12 +428,12 @@
     }
     XLSX.utils.book_append_sheet(workbook,analysisSheet,'搜索词分析');
 
-    const groupHeaders=['搜索词分类','搜索词数量','搜索查询量','市场曝光量','ASIN曝光量','ASIN曝光份额','市场点击量','ASIN点击量','ASIN点击份额','市场加购量','ASIN加购量','ASIN加购份额','市场购买量','ASIN购买量','ASIN购买份额','ASIN点击后加购率','ASIN点击后购买率'];
+    const groupHeaders=['搜索词分类','搜索词数量','搜索查询量','搜索量贡献占比','市场曝光量','ASIN曝光量','ASIN曝光份额','市场点击量','ASIN点击量','ASIN点击份额','市场加购量','ASIN加购量','ASIN加购份额','市场购买量','ASIN购买量','ASIN订单贡献占比','ASIN购买份额','ASIN点击后加购率','ASIN点击后购买率'];
     const groupAoa=[groupHeaders];
     (data.queryGroups||[]).forEach(function(g){
-      groupAoa.push([g.queryCategory,g.queryCount,g.searchVolume,g.impressions,g.asinImpressions,g.asinImpressionShare,
+      groupAoa.push([g.queryCategory,g.queryCount,g.searchVolume,g.searchVolumeContribution,g.impressions,g.asinImpressions,g.asinImpressionShare,
         g.clicks,g.asinClicks,g.asinClickShare,g.cartAdds,g.asinCartAdds,g.asinCartShare,
-        g.purchases,g.asinPurchases,g.asinPurchaseShare,g.asinClickToCartRate,g.asinClickToPurchaseRate]);
+        g.purchases,g.asinPurchases,g.asinPurchaseContribution,g.asinPurchaseShare,g.asinClickToCartRate,g.asinClickToPurchaseRate]);
     });
     const groupSheet=XLSX.utils.aoa_to_sheet(groupAoa);
     groupSheet['!cols']=groupHeaders.map(function(h,i){return{wch:i===0?30:(i===1?14:18)};});
@@ -445,7 +449,7 @@
         fill:{patternType:'solid',fgColor:{rgb:r%2?p.white:p.pale2}},
         font:{name:'Aptos',sz:9,color:{rgb:p.text}},
         alignment:{vertical:'center',wrapText:false}});
-      [5,8,11,14,15,16].forEach(function(c){const cell=groupSheet[colName(c)+(r+1)];if(cell&&typeof cell.v==='number')cell.z='0.00%';});
+      [3,6,9,12,15,16,17,18].forEach(function(c){const cell=groupSheet[colName(c)+(r+1)];if(cell&&typeof cell.v==='number')cell.z='0.00%';});
     }
     XLSX.utils.book_append_sheet(workbook,groupSheet,'关键词分组');
 
