@@ -58,7 +58,7 @@ button.primary{background:#2e6385;border-color:#2e6385;color:#fff}button.primary
 .insight-item small{display:block;font-size:10px;color:#8997a3;margin-top:3px}
 .tag{display:inline-flex;padding:4px 7px;border-radius:6px;background:#fff4dd;color:#90611d;font-size:10px;font-weight:750;white-space:nowrap}
 .tag.weak{background:#fff0f0;color:#a0444a}.tag.strong{background:#eaf5ed;color:#38734e}
-.table-tools{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,.5fr) auto;gap:10px;align-items:end;margin-bottom:10px}
+.table-tools{display:grid;grid-template-columns:minmax(180px,1.2fr) repeat(3,minmax(140px,.8fr)) auto;gap:10px;align-items:end;margin-bottom:10px}
 .table-wrap{overflow:auto;border:1px solid #e1e8ee;border-radius:11px}
 table{border-collapse:separate;border-spacing:0;width:100%;min-width:850px}
 th,td{padding:10px 11px;text-align:left;border-bottom:1px solid #e9eef2;white-space:nowrap;font-size:11px}
@@ -160,16 +160,33 @@ td.query{font-weight:750;color:#2e526e}
     <section class="panel">
       <div class="panel-heading">
         <div class="step">5</div>
-        <div><h2>搜索词分析明细</h2><p class="subtitle">默认按搜索查询量从高到低排列。可搜索词语并按机会标签或漏斗诊断筛选。</p></div>
+        <div><h2>搜索词分组表现</h2><p class="subtitle">按搜索意图和产品相关性聚合，比较不同词群带来的 ASIN 点击、加购和购买。用于区分核心产品词、场景词、泛品类词与相邻品类词。</p></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>搜索词分组</th><th>词数</th><th>搜索查询量</th><th>ASIN 点击量</th><th>ASIN 加购量</th><th>ASIN 购买量</th><th>ASIN 点击份额</th><th>ASIN 购买份额</th><th>ASIN 点击后购买率</th></tr></thead>
+          <tbody id="groupBody"></tbody>
+        </table>
+      </div>
+      <div class="rule-note"><strong>分类边界：</strong>分组由英文搜索词的词根和场景词规则自动判断，是便于筛选的相关性预判，不是亚马逊官方分类。相邻形态、跨品类和泛场景词需人工核对商品是否真正满足该搜索意图。</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div class="step">6</div>
+        <div><h2>搜索词分析明细</h2><p class="subtitle">默认按搜索查询量从高到低排列。可按词语、相关性、词群、行动优先级和漏斗诊断筛选。</p></div>
       </div>
       <div class="table-tools">
         <div><label for="queryFilter">搜索词</label><input id="queryFilter" type="search" placeholder="输入关键词搜索"/></div>
-        <div><label for="diagnosisFilter">分析标签</label><select id="diagnosisFilter"><option value="">全部标签</option><option value="高需求·低曝光">高需求·低曝光</option><option value="高搜索量">高搜索量</option><option value="常规搜索量">常规搜索量</option><option value="曝光→点击份额流失">曝光→点击份额流失</option><option value="点击→加购份额流失">点击→加购份额流失</option><option value="加购→购买份额流失">加购→购买份额流失</option><option value="份额提升">份额提升</option><option value="份额表现相对稳定">份额表现相对稳定</option></select></div>
+        <div><label for="categoryFilter">搜索词分组</label><select id="categoryFilter"><option value="">全部分组</option></select></div>
+        <div><label for="relevanceFilter">相关性预判</label><select id="relevanceFilter"><option value="">全部相关性</option><option value="高相关">高相关</option><option value="中高相关">中高相关</option><option value="中相关">中相关</option><option value="相邻形态/需确认">相邻形态/需确认</option><option value="跨品类/需确认">跨品类/需确认</option><option value="低相关/需确认">低相关/需确认</option><option value="需确认">需确认</option></select></div>
+        <div><label for="priorityFilter">行动优先级</label><select id="priorityFilter"><option value="">全部优先级</option><option value="高需求流量缺口">高需求流量缺口</option><option value="核心成交词">核心成交词</option><option value="转化待优化">转化待优化</option><option value="核实形态匹配">核实形态匹配</option><option value="先核实相关性">先核实相关性</option><option value="持续观察">持续观察</option></select></div>
+        <div><label for="diagnosisFilter">漏斗诊断</label><select id="diagnosisFilter"><option value="">全部诊断</option><option value="曝光→点击份额流失">曝光→点击份额流失</option><option value="点击→加购份额流失">点击→加购份额流失</option><option value="加购→购买份额流失">加购→购买份额流失</option><option value="份额提升">份额提升</option><option value="份额表现相对稳定">份额表现相对稳定</option></select></div>
         <div><button id="resetFilters" type="button">清除筛选</button></div>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>搜索查询</th><th>搜索查询量</th><th>机会标签</th><th>漏斗诊断</th><th>ASIN 曝光份额</th><th>ASIN 点击份额</th><th>ASIN 加购份额</th><th>ASIN 购买份额</th></tr></thead>
+          <thead><tr><th>搜索查询</th><th>搜索查询量</th><th>搜索词分组</th><th>相关性</th><th>行动优先级</th><th>ASIN 点击量</th><th>ASIN 购买量</th><th>ASIN 曝光份额</th><th>ASIN 点击份额</th><th>ASIN 加购份额</th><th>ASIN 购买份额</th><th>漏斗诊断</th></tr></thead>
           <tbody id="detailBody"></tbody>
         </table>
       </div>
@@ -177,10 +194,10 @@ td.query{font-weight:750;color:#2e526e}
     </section>
   </div>
 
-  <p class="footer">分析规则为透明的本地筛选逻辑：高搜索量按本报告搜索查询量第 75 百分位识别；低曝光指该词 ASIN 曝光份额低于本报告加权 ASIN 曝光份额；份额流失/提升阈值分别为阶段份额指数低于 0.80 / 高于 1.20。标签用于定位机会，不代表因果结论。所有原始 34 列均会保留在导出文件的「原始数据」Sheet。</p>
+  <p class="footer">分析规则为透明的本地筛选逻辑：高搜索量按本报告搜索查询量第 75 百分位识别；低曝光指该词 ASIN 曝光份额低于本报告加权 ASIN 曝光份额；阶段份额指数低于 0.80 标记为流失，高于 1.20 标记为提升。相关性与分组由搜索词规则预判，不等同于人工确认；样本提示按 ASIN 点击量分档。SQR 反映搜索漏斗表现，不包含 CPC、ACOS、TACOS，也不能单独证明广告归因或自然排名。所有原始字段均保留在「原始数据」Sheet。</p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-<script src="./sqr-engine.js?v=20261119-2"></script>
-<script src="./sqr-ui.js?v=20261119-1"></script>
+<script src="./sqr-engine.js?v=20261119-3"></script>
+<script src="./sqr-ui.js?v=20261119-2"></script>
 </body>
 </html>
