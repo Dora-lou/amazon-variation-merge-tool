@@ -94,9 +94,47 @@ const fakeXlsx = {
     }
   }
 };
-const workbook = NicheEngine.buildWorkbook([result], fakeXlsx);
+const secondNiche = Object.assign({}, result, {
+  id: 'second-niche',
+  name: 'Second Niche',
+  rows: [
+    Object.assign({}, result.rows[0], { term: 'collapsible dog bowls', searchVolume: 1500 }),
+    Object.assign({}, result.rows[1], { term: 'another dog bowl', searchVolume: 250 })
+  ]
+});
+const workbook = NicheEngine.buildWorkbook([result, secondNiche], fakeXlsx);
+const overview = workbook.Sheets['总表'];
 const sheet = workbook.Sheets['Test Niche'];
-assert.deepEqual(workbook.SheetNames, ['Test Niche']);
+assert.deepEqual(workbook.SheetNames, ['总表', 'Test Niche', 'Second Niche']);
+assert.equal(overview.A4.v, '所属 Niche 市场');
+assert.equal(overview.B4.v, '搜索词');
+assert.equal(overview.C4.v, '搜索量（过去 360 天）');
+assert.equal(overview.D4.v, 'CVR');
+assert.equal(overview.E4.v, 'Clicks');
+assert.equal(overview.F4.v, 'Orders%');
+assert.equal(overview.G4.v, 'Orders');
+assert.equal(overview.H4.v, '搜索量增长（过去 90 天）');
+assert.equal(overview.I4.v, '搜索量增长（过去 180 天）');
+assert.equal(overview.J4.v, '点击份额（过去 360 天）');
+assert.equal(overview.K4.v, '搜索转化率（过去 360 天）');
+assert.equal(overview.A5.v, 'Second Niche');
+assert.equal(overview.B5.v, 'collapsible dog bowls');
+assert.equal(overview.C5.v, 1500);
+assert.equal(overview.A6.v, 'Test Niche');
+assert.equal(overview.B6.v, 'collapsible dog bowls');
+assert.equal(overview.C6.v, 1000);
+assert.equal(overview.A7.v, 'Test Niche');
+assert.equal(overview.B7.v, 'travel dog bowls');
+assert.equal(overview.C7.v, 500);
+assert.notEqual(overview.A5.s.fill.fgColor.rgb, overview.A6.s.fill.fgColor.rgb);
+assert.equal(overview.A6.s.fill.fgColor.rgb, overview.A7.s.fill.fgColor.rgb);
+assert.equal(overview.H5.v, -0.3144);
+assert.equal(overview.L5.v, 'Best bowl, premium');
+assert.equal(overview.M5.v, 'B012345678');
+assert.equal(overview['!autofilter'].ref, 'A4:Q8');
+assert.equal(overview['!freeze'].xSplit, 2);
+assert.equal(overview['!freeze'].ySplit, 4);
+assert.equal(overview['!merges'].length, 3);
 assert.equal(sheet.A7.v, '搜索词');
 assert.equal(sheet.B7.v, '搜索量（过去 360 天）');
 assert.equal(sheet.C7.v, 'CVR');
@@ -139,6 +177,10 @@ const names = NicheEngine.makeUniqueSheetNames([
 assert.equal(names[0].sheetName, 'Travel_ Dog Bowls');
 assert.notEqual(names[0].sheetName, names[1].sheetName);
 assert.ok(names.every(function (item) { return item.sheetName.length <= 31; }));
+const reservedTotalName = NicheEngine.makeUniqueSheetNames([
+  { id: 'total-name', name: '总表' }
+]);
+assert.equal(reservedTotalName[0].sheetName, '总表 (2)');
 
 assert.throws(function () {
   NicheEngine.processFiles(
