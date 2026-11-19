@@ -1,0 +1,4 @@
+interface:
+  display_name: "Amazon 关键词研究总表"
+  short_description: "整合领星与西柚数据并写入飞书"
+  default_prompt: "分析这个 Amazon 产品的关键词，并把领星出单词、西柚目标/竞品词和相关性筛选结果整理成飞书关键词研究总表。"

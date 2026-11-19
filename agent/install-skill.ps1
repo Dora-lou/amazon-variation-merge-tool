@@ -1,6 +1,7 @@
 param(
     [switch]$UpdateAdsSkill,
-    [switch]$UpdateSalesPlanSkill
+    [switch]$UpdateSalesPlanSkill,
+    [switch]$UpdateKeywordResearchSkill
 )
 
 # Install bundled workspace Skills without overwriting a user's customized Skill.
@@ -8,7 +9,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $skillNames = @(
     'feishu-amazon-sales-plan',
-    'amazon-ads-search-term-relaunch'
+    'amazon-ads-search-term-relaunch',
+    'amazon-keyword-master-table'
 )
 $targetRoot = Join-Path $HOME '.codex\skills'
 
@@ -16,7 +18,8 @@ foreach ($name in $skillNames) {
     $source = Join-Path $PSScriptRoot ("skills\" + $name)
     $target = Join-Path $targetRoot $name
     $updateThis = ($name -eq 'amazon-ads-search-term-relaunch' -and $UpdateAdsSkill) -or
-                  ($name -eq 'feishu-amazon-sales-plan' -and $UpdateSalesPlanSkill)
+                  ($name -eq 'feishu-amazon-sales-plan' -and $UpdateSalesPlanSkill) -or
+                  ($name -eq 'amazon-keyword-master-table' -and $UpdateKeywordResearchSkill)
 
     if (-not (Test-Path (Join-Path $source 'SKILL.md'))) {
         Write-Warning "Bundled Skill not found, skipping: $name"
@@ -40,4 +43,5 @@ Write-Host ''
 Write-Host 'Skill installation finished. Existing Skills were preserved unless their specific update switch was supplied.'
 Write-Host 'Update only Ads Relaunch with: .\install-skill.ps1 -UpdateAdsSkill'
 Write-Host 'Update only Sales Plan with: .\install-skill.ps1 -UpdateSalesPlanSkill'
+Write-Host 'Update only Keyword Research with: .\install-skill.ps1 -UpdateKeywordResearchSkill'
 Write-Host 'Reconnect only accounts that you are authorized to access.'

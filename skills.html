@@ -61,7 +61,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 </nav></header>
 <section class="hero workspace-intro"><div class="eyebrow">YOUR CODEX SKILL LIBRARY</div><h1>AI Skills</h1><p>先按业务分类找到合适的 AI 工具，再进入原有 Skill 操作界面完成参数配置与指令生成。</p></section>
 <section id="categoryView" class="category-view" aria-labelledby="categoryHeading">
-<div class="heading"><h2 id="categoryHeading">选择业务分类</h2><p>按运营环节组织已安装的 Skill，当前共 2 个分类、2 个工具。</p></div>
+<div class="heading"><h2 id="categoryHeading">选择业务分类</h2><p>按运营环节组织已安装的 Skill，当前共 3 个分类、3 个工具。</p></div>
 <div class="category-grid" aria-label="AI Skills 业务分类">
 <a class="category-card" href="#category-sales" data-category="sales">
 <div class="category-top"><span class="category-icon" aria-hidden="true">▥</span><span class="category-label">AI SKILLS · 01</span></div>
@@ -71,6 +71,11 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 <a class="category-card" href="#category-ads" data-category="ads">
 <div class="category-top"><span class="category-icon" aria-hidden="true">⌁</span><span class="category-label">AI SKILLS · 02</span></div>
 <h3>广告优化</h3><p>从广告搜索词报告中筛选真实出单词，完成匹配方式分层与安全的再投放配置。</p>
+<div class="category-foot"><span class="category-count">1 个工具</span><span class="category-arrow" aria-hidden="true">→</span></div>
+</a>
+<a class="category-card" href="#category-keywords" data-category="keywords">
+<div class="category-top"><span class="category-icon" aria-hidden="true">⌕</span><span class="category-label">AI SKILLS · 03</span></div>
+<h3>关键词研究</h3><p>自动识别产品，整合领星出单词、西柚目标/竞品词和历史词库，并生成可追溯的飞书关键词研究总表。</p>
 <div class="category-foot"><span class="category-count">1 个工具</span><span class="category-arrow" aria-hidden="true">→</span></div>
 </a>
 </div>
@@ -123,8 +128,40 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 <a class="button" href="https://github.com/Dora-lou/amazon-variation-merge-tool/tree/main/agent/skills/amazon-ads-search-term-relaunch" target="_blank" rel="noopener noreferrer">查看 Skill 文件 ↗</a>
 </div>
 </article>
+<article class="skill" data-category="keywords">
+<div class="top"><span class="icon" aria-hidden="true">⌕</span><span class="type">CODEX SKILL · 已收录</span></div>
+<h3>关键词研究总表</h3>
+<p>调用已安装的 amazon-keyword-master-table Skill，自动匹配产品与 ASIN，读取领星 SP 搜索词/出单词，结合西柚目标 ASIN 与竞品关键词数据，整理后写入飞书。</p>
+<div class="tags"><span class="tag">产品自动匹配</span><span class="tag">领星出单词</span><span class="tag">西柚关键词</span><span class="tag">相关性筛选</span><span class="tag">飞书总表</span></div>
+<form id="keywordForm" class="planner">
+<h4>填写关键词研究</h4>
+<p class="sub">只知道产品名称也可以，Skill 会先从领星和飞书资料中匹配产品；有 ASIN 或 SKU 时会优先使用。</p>
+<div class="input-section required-section">
+<div class="section-top"><h5>01 · 必填信息</h5><small>用于识别研究主体</small></div>
+<div class="fields">
+<div class="field full"><label for="keywordProduct">产品名称 <span class="req">必填</span></label><input id="keywordProduct" required maxlength="160" placeholder="例如：猫帐篷、宠物帐篷、便携猫围栏"/><span class="help">可以填写中文名称、英文名称或内部产品名称</span></div>
+<div class="field"><label for="keywordSite">站点</label><select id="keywordSite"><option value="US">美国站 US</option><option value="CA">加拿大站 CA</option><option value="UK">英国站 UK</option><option value="DE">德国站 DE</option><option value="FR">法国站 FR</option><option value="JP">日本站 JP</option><option value="other">其他（在补充要求注明）</option></select></div>
+<div class="field"><label for="keywordPeriod">研究周期</label><select id="keywordPeriod"><option value="12m">最近 12 个完整自然月（默认）</option><option value="30d">最近 30 天</option><option value="7d">最近 7 天</option><option value="custom">自定义周期（在补充要求注明）</option></select></div>
+<div class="field full"><label for="keywordMode">本次操作</label><select id="keywordMode"><option value="create">新建一份飞书关键词研究总表</option><option value="update">更新/追加已有关键词研究表</option><option value="preview">仅分析与预览，不写入飞书</option></select></div>
+</div>
+</div>
+<div class="input-section optional-section">
+<div class="section-top"><h5>02 · 选填信息</h5><small>有就填写，没有也可由 Skill 自动查找</small></div>
+<div class="fields">
+<div class="field"><label for="keywordAsin">父/子 ASIN</label><input id="keywordAsin" maxlength="400" placeholder="可填一个或多个 ASIN，用逗号隔开"/></div>
+<div class="field"><label for="keywordSku">SKU / MSKU</label><input id="keywordSku" maxlength="400" placeholder="可填 SKU 或 MSKU，用逗号隔开"/></div>
+<div class="field"><label for="keywordKnowledge">飞书知识库</label><input id="keywordKnowledge" maxlength="120" value="至拓-运营"/></div>
+<div class="field"><label for="keywordSheet">目标表格名称</label><input id="keywordSheet" maxlength="160" placeholder="留空按 Skill 默认规则查找或新建"/></div>
+<div class="field full"><label for="keywordPreferences">补充要求</label><textarea id="keywordPreferences" maxlength="1800" placeholder="例如：只研究猫帐篷，不要混入猫床/加热垫；沿用上次宠物帐篷总表结构；使用全年数据；重点看已出单词"></textarea></div>
+</div>
+</div>
+<div class="actions"><button id="generateKeyword" type="submit" class="button primary">生成并复制 Codex 指令</button><button id="showKeyword" type="button" class="button">仅预览指令</button></div>
+<p id="keywordStatus" role="status" aria-live="polite" style="margin-top:10px;min-height:18px"></p>
+<pre id="keywordPreview" class="preview" hidden></pre>
+</form>
+</article>
 </section>
-<div class="note"><strong>独立运行</strong>销售计划与广告出单词二次投放分别使用独立页面、独立参数和独立配置记忆。进入对应任务生成器填写信息，生成并复制本次 Codex 执行指令，再交给 Codex 调用对应 Skill；两者互不混用。</div>
+<div class="note"><strong>独立运行</strong>每个 Skill 都独立读取自己的规则和数据源。进入对应任务生成器填写信息，生成并复制本次 Codex 执行指令，再交给 Codex 调用对应 Skill；销售计划、广告再投放和关键词研究总表互不混用。</div>
 <footer class="footer">亚马逊运营工作台 · AI Skills 目录</footer>
 </main>
 <script>
@@ -184,6 +221,48 @@ function renderInstruction(copy){
 $('salesForm').addEventListener('submit',e=>{e.preventDefault();renderInstruction(true);});
 $('showSales').addEventListener('click',()=>renderInstruction(false));
 
+function makeKeywordInstruction(){
+ const product=val('keywordProduct');
+ if(!product)throw new Error('请填写产品名称');
+ const modes={create:'新建一份飞书关键词研究总表；保留已有旧表，不覆盖历史版本',update:'查找并更新/追加已有关键词研究表；保留原始来源页和原表结构，先核对目标表再写入',preview:'仅读取与分析并生成预览，绝不写入或修改飞书'};
+ const periods={'12m':'最近 12 个完整自然月（默认长期研究口径）','30d':'最近 30 天','7d':'最近 7 天',custom:'自定义周期，具体范围见补充要求'};
+ const site=val('keywordSite')==='other'?'其他站点（见补充要求）':val('keywordSite');
+ const parts=[
+  '请调用我本机已安装的 amazon-keyword-master-table Skill，按其最新规则执行本次 Amazon 产品关键词研究总表任务。',
+  '',
+  '【我已提供的任务信息】',
+  '- 产品名称：'+product,
+  '- 站点：'+site,
+  '- 父/子 ASIN：'+(val('keywordAsin')||'未提供；请先从领星、飞书和西柚可信数据匹配'),
+  '- SKU / MSKU：'+(val('keywordSku')||'未提供；请在产品匹配时补齐'),
+  '- 研究周期：'+periods[val('keywordPeriod')],
+  '- 执行方式：'+modes[val('keywordMode')],
+  '- 目标飞书知识库：'+(val('keywordKnowledge')||'至拓-运营'),
+  '- 目标表格：'+(val('keywordSheet')||'按 Skill 默认规则查找或新建'),
+  '- 补充要求：'+(val('keywordPreferences')||'无额外要求'),
+  '',
+  '【执行要求】',
+  '1. 先读取已安装 Skill 的完整说明和总表字段规则；以上输入已提供，不要重复询问。只有产品匹配出现多个无法区分的候选时再提问。',
+  '2. 先确认站点、父 ASIN、子 ASIN、SKU/MSKU 和研究主体，再读取领星 SP 原始搜索词与真实出单词；查询失败或空结果不能当作0。',
+  '3. 结合西柚目标 ASIN 词流量、竞品关键词和已有飞书词库；严格区分目标产品证据、竞品参考、相邻产品词和待验证词。',
+  '4. 按 Skill 要求保留原始来源、数据周期、指标口径、缺失字段和排除理由，不编造搜索量、订单、排名、CPC 或转化率。',
+  '5. 按执行方式处理飞书：预览模式绝不写入；新建模式创建新的版本表；更新模式先确认目标表和范围，不覆盖原始来源页。',
+  '6. 写入后回读飞书表格，校验关键词去重、来源周期、ABA门槛、总览统计和关键 Sheet，最后报告表格链接/Token和数据缺口。'
+ ];
+ return parts.join('\n');
+}
+function renderKeywordInstruction(copy){
+ const status=$('keywordStatus');
+ if(!$('keywordForm').reportValidity())return;
+ try{
+  const instruction=makeKeywordInstruction();$('keywordPreview').textContent=instruction;$('keywordPreview').hidden=false;
+  if(copy){copyText(instruction).then(()=>{status.textContent='已复制完整指令，打开 Codex 粘贴即可。';}).catch(()=>{status.textContent='复制失败，请从下方预览手动复制。';});}
+  else status.textContent='已生成预览，可核对后点击「生成并复制 Codex 指令」。';
+ }catch(e){status.textContent=e.message;}
+}
+$('keywordForm').addEventListener('submit',e=>{e.preventDefault();renderKeywordInstruction(true);});
+$('showKeyword').addEventListener('click',()=>renderKeywordInstruction(false));
+
 const categoryView=$('categoryView');
 const toolView=$('toolView');
 const toolHeading=$('toolHeading');
@@ -191,7 +270,8 @@ const toolDescription=$('toolDescription');
 const skillCards=[...document.querySelectorAll('#skillGrid .skill[data-category]')];
 const categoryMeta={
  sales:{title:'销售与库存管理',description:'销售计划与备货分析：结合销售、库存、利润和月度目标生成 Codex 指令。'},
- ads:{title:'广告优化',description:'广告出单词二次投放：进入独立任务生成器，按原有参数流程配置再投放。'}
+ ads:{title:'广告优化',description:'广告出单词二次投放：进入独立任务生成器，按原有参数流程配置再投放。'},
+ keywords:{title:'关键词研究',description:'关键词研究总表：自动匹配产品，整合领星出单词、西柚关键词和历史词库，写入飞书。'}
 };
 function showCategoryHome(){
  categoryView.hidden=false;toolView.hidden=true;skillCards.forEach(card=>{card.hidden=false;});
@@ -207,7 +287,7 @@ function showCategoryTools(category){
  toolView.scrollIntoView({block:'start'});
 }
 function renderSkillRoute(){
- const category=location.hash.match(/^#category-(sales|ads)$/)?.[1];
+ const category=location.hash.match(/^#category-(sales|ads|keywords)$/)?.[1];
  if(category)showCategoryTools(category);else showCategoryHome();
 }
 document.querySelectorAll('.category-card').forEach(card=>card.addEventListener('click',()=>{
@@ -223,4 +303,3 @@ window.addEventListener('hashchange',renderSkillRoute);
 renderSkillRoute();
 </script>
 </body></html>
-
