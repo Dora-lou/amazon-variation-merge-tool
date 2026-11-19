@@ -223,7 +223,7 @@
   }
 
   function makeUniqueSheetNames(niches) {
-    const used = new Set();
+    const used = new Set(['总表']);
     return niches.map(function (niche) {
       const original = String(niche.name || 'Niche').trim();
       let base = original.replace(/[\\/*?:\[\]]/g, '_').replace(/^'+|'+$/g, '').trim();
@@ -281,6 +281,242 @@
       text: 'FF263B4D',
       muted: 'FF637B8F'
     };
+
+    // Build the cross-Niche overview first. Duplicate search terms are deliberately retained.
+    const overviewExtraHeaders = [];
+    const overviewHeaderKeys = new Set();
+    niches.forEach(function (niche) {
+      const headers = Array.isArray(niche.searchTermHeaders) ? niche.searchTermHeaders : [];
+      const indexes = Array.isArray(niche.searchTermExtraIndexes)
+        ? niche.searchTermExtraIndexes
+        : headers.map(function (_, i) { return i; }).filter(function (i) { return i > 1; });
+      indexes.forEach(function (sourceIndex) {
+        const header = String(headers[sourceIndex] || ('原始 ST 字段 ' + (sourceIndex + 1))).trim();
+        const key = normalizeHeader(header);
+        if (key && !overviewHeaderKeys.has(key)) {
+          overviewHeaderKeys.add(key);
+          overviewExtraHeaders.push(header);
+        }
+      });
+    });
+
+    const overviewHeaders = [
+      '所属 Niche 市场',
+      '搜索词',
+      '搜索量（过去 360 天）',
+      'CVR',
+      'Clicks',
+      'Orders%',
+      'Orders'
+    ].concat(overviewExtraHeaders);
+
+    const overviewRows = [];
+    let overviewSequence = 0;
+    niches.forEach(function (niche, nicheIndex) {
+      const headers = Array.isArray(niche.searchTermHeaders) ? niche.searchTermHeaders : [];
+      const indexes = Array.isArray(niche.searchTermExtraIndexes)
+        ? niche.searchTermExtraIndexes
+        : headers.map(function (_, i) { return i; }).filter(function (i) { return i > 1; });
+      const rows = Array.isArray(niche.rows) ? niche.rows : [];
+      rows.forEach(function (row) {
+        const sourceValues = Array.isArray(row.sourceValues) ? row.sourceValues : [];
+        const sourceByHeader = {};
+        indexes.forEach(function (sourceIndex) {
+          const header = headers[sourceIndex] || ('原始 ST 字段 ' + (sourceIndex + 1));
+          sourceByHeader[normalizeHeader(header)] = rawExcelValue(sourceValues[sourceIndex]);
+        });
+        overviewRows.push({
+          nicheName: String(niche.name || ''),
+          nicheIndex: nicheIndex,
+          term: row.term || '',
+          searchVolume: Number(row.searchVolume) || 0,
+          cvr: row.cvr,
+          clicks: row.clicks,
+          ordersPct: row.ordersPct,
+          orders: row.orders,
+          sourceByHeader: sourceByHeader,
+          sequence: overviewSequence
+        });
+        overviewSequence += 1;
+      });
+    });
+    overviewRows.sort(function (a, b) {
+      return (b.searchVolume - a.searchVolume) || (a.sequence - b.sequence);
+    });
+
+    const overviewAoa = [
+      ['NICHE KEYWORD OVERVIEW'],
+      ['All Niche search terms  ·  Sorted by Search Volume (Past 360 Days)'],
+      ['Markets: ' + niches.length + '  |  Search terms: ' + overviewRows.length],
+      overviewHeaders
+    ];
+    overviewRows.forEach(function (row) {
+      const extras = overviewExtraHeaders.map(function (header) {
+        return row.sourceByHeader[normalizeHeader(header)] == null
+          ? ''
+          : row.sourceByHeader[normalizeHeader(header)];
+      });
+      overviewAoa.push([
+        row.nicheName,
+        row.term,
+        row.searchVolume,
+        row.cvr == null ? '' : row.cvr,
+        row.clicks == null ? '' : row.clicks,
+        row.ordersPct == null ? '' : row.ordersPct,
+        row.orders == null ? '' : row.orders
+      ].concat(extras));
+    });
+
+    const overviewSheet = XLSX.utils.aoa_to_sheet(overviewAoa);
+    const overviewLastColumnIndex = overviewHeaders.length - 1;
+    const overviewLastColumn = columnName(overviewLastColumnIndex);
+    const overviewLastRow = 4 + overviewRows.length;
+    overviewSheet['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: overviewLastColumnIndex } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: overviewLastColumnIndex } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: overviewLastColumnIndex } }
+    ];
+    overviewSheet['!cols'] = overviewHeaders.map(function (header, columnIndex) {
+      if (columnIndex === 0) return { wch: 27 };
+      if (columnIndex === 1) return { wch: 38 };
+      if (columnIndex === 2) return { wch: 20 };
+      if (columnIndex === 3) return { wch: 13 };
+      if (columnIndex === 4) return { wch: 16 };
+      if (columnIndex === 5) return { wch: 13 };
+      if (columnIndex === 6) return { wch: 16 };
+      if (/标题/.test(header)) return { wch: 54 };
+      if (/ASIN/i.test(header)) return { wch: 17 };
+      if (/增长|份额|转化率|比率|百分比|点击率/.test(header)) return { wch: 21 };
+      return { wch: Math.min(30, Math.max(18, String(header).length + 5)) };
+    });
+    overviewSheet['!rows'] = [
+      { hpt: 36 },
+      { hpt: 23 },
+      { hpt: 21 },
+      { hpt: 40 }
+    ];
+    for (let i = 0; i < overviewRows.length; i += 1) overviewSheet['!rows'].push({ hpt: 30 });
+    overviewSheet['!freeze'] = {
+      xSplit: 2,
+      ySplit: 4,
+      topLeftCell: 'C5',
+      activePane: 'bottomRight',
+      state: 'frozen'
+    };
+    overviewSheet['!autofilter'] = { ref: 'A4:' + overviewLastColumn + overviewLastRow };
+    overviewSheet['!views'] = [{ showGridLines: false, zoomScale: 85 }];
+    overviewSheet['!sheetPr'] = { tabColor: { rgb: 'FF1D7180' } };
+
+    const overviewThinBorder = {
+      bottom: { style: 'thin', color: { rgb: palette.border } }
+    };
+    const overviewTitleStyle = {
+      fill: { patternType: 'solid', fgColor: { rgb: palette.navy } },
+      font: { name: 'Aptos Display', sz: 16, bold: true, color: { rgb: palette.white } },
+      alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+    };
+    const overviewSubtitleStyle = {
+      fill: { patternType: 'solid', fgColor: { rgb: palette.pale } },
+      font: { name: 'Aptos', sz: 10, italic: true, color: { rgb: palette.muted } },
+      alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+    };
+    const overviewInfoStyle = {
+      fill: { patternType: 'solid', fgColor: { rgb: palette.paleValue } },
+      font: { name: 'Aptos', sz: 9, color: { rgb: palette.muted } },
+      alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+    };
+    for (let columnIndex = 0; columnIndex <= overviewLastColumnIndex; columnIndex += 1) {
+      setCellStyle(overviewSheet, XLSX, 0, columnIndex, overviewTitleStyle);
+      setCellStyle(overviewSheet, XLSX, 1, columnIndex, overviewSubtitleStyle);
+      setCellStyle(overviewSheet, XLSX, 2, columnIndex, overviewInfoStyle);
+      setCellStyle(overviewSheet, XLSX, 3, columnIndex, {
+        fill: { patternType: 'solid', fgColor: { rgb: columnIndex < 2 ? palette.teal : (columnIndex < 7 ? palette.blue : palette.slate) } },
+        font: { name: 'Aptos', sz: 10, bold: true, color: { rgb: palette.white } },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: { bottom: { style: 'medium', color: { rgb: palette.navy } } }
+      });
+    }
+
+    function nicheColor(index) {
+      const hue = (index * 137.508) % 360;
+      const saturation = 0.56;
+      const lightness = 0.88;
+      const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+      const section = hue / 60;
+      const x = chroma * (1 - Math.abs((section % 2) - 1));
+      let rgb;
+      if (section < 1) rgb = [chroma, x, 0];
+      else if (section < 2) rgb = [x, chroma, 0];
+      else if (section < 3) rgb = [0, chroma, x];
+      else if (section < 4) rgb = [0, x, chroma];
+      else if (section < 5) rgb = [x, 0, chroma];
+      else rgb = [chroma, 0, x];
+      const match = lightness - chroma / 2;
+      return 'FF' + rgb.map(function (value) {
+        return Math.round((value + match) * 255).toString(16).padStart(2, '0');
+      }).join('').toUpperCase();
+    }
+
+    const nicheColorByName = new Map();
+    niches.forEach(function (niche, index) {
+      nicheColorByName.set(String(niche.name || ''), nicheColor(index));
+    });
+
+    overviewRows.forEach(function (row, dataIndex) {
+      const excelRow = 4 + dataIndex;
+      const rowFill = dataIndex % 2 === 0 ? palette.row : palette.alternate;
+      for (let columnIndex = 0; columnIndex <= overviewLastColumnIndex; columnIndex += 1) {
+        const address = columnName(columnIndex) + (excelRow + 1);
+        const value = overviewSheet[address] ? overviewSheet[address].v : '';
+        let fill = rowFill;
+        let fontColor = palette.text;
+        let bold = false;
+        let horizontal = 'right';
+        if (columnIndex === 0) {
+          fill = nicheColorByName.get(row.nicheName) || palette.pale;
+          fontColor = palette.navy;
+          bold = true;
+          horizontal = 'left';
+        } else if (columnIndex === 1 || (columnIndex >= 7 && typeof value === 'string')) {
+          horizontal = 'left';
+        } else if (columnIndex >= 3 && columnIndex <= 6) {
+          fill = palette.calculated;
+          fontColor = palette.blue;
+          bold = true;
+        }
+        setCellStyle(overviewSheet, XLSX, excelRow, columnIndex, {
+          fill: { patternType: 'solid', fgColor: { rgb: fill } },
+          font: { name: 'Aptos', sz: 10, bold: bold, color: { rgb: fontColor } },
+          alignment: {
+            horizontal: horizontal,
+            vertical: 'center',
+            wrapText: columnIndex >= 7 && /标题/.test(overviewHeaders[columnIndex])
+          },
+          border: overviewThinBorder
+        });
+      }
+
+      const rowNumber = excelRow + 1;
+      const volumeCell = overviewSheet['C' + rowNumber];
+      const cvrCell = overviewSheet['D' + rowNumber];
+      const clicksCell = overviewSheet['E' + rowNumber];
+      const shareCell = overviewSheet['F' + rowNumber];
+      const ordersCell = overviewSheet['G' + rowNumber];
+      if (volumeCell && typeof volumeCell.v === 'number') volumeCell.z = '#,##0';
+      if (cvrCell && typeof cvrCell.v === 'number') cvrCell.z = '0.00%';
+      if (clicksCell && typeof clicksCell.v === 'number') clicksCell.z = '#,##0.00';
+      if (shareCell && typeof shareCell.v === 'number') shareCell.z = '0.00%';
+      if (ordersCell && typeof ordersCell.v === 'number') ordersCell.z = '#,##0.00';
+
+      overviewExtraHeaders.forEach(function (header, extraIndex) {
+        if (!/增长|份额|转化率|比率|百分比|点击率/.test(header)) return;
+        const cellAddress = columnName(7 + extraIndex) + rowNumber;
+        const extraCell = overviewSheet[cellAddress];
+        if (extraCell && typeof extraCell.v === 'number') extraCell.z = '0.00%';
+      });
+    });
+
+    XLSX.utils.book_append_sheet(workbook, overviewSheet, '总表');
 
     niches.forEach(function (niche, index) {
       const sourceHeaders = Array.isArray(niche.searchTermHeaders) ? niche.searchTermHeaders : [];
