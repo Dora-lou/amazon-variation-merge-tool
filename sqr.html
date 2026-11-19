@@ -173,7 +173,7 @@ td.query{font-weight:750;color:#2e526e}
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>搜索词分组</th><th>词数</th><th>搜索查询量</th><th>ASIN 点击量</th><th>ASIN 加购量</th><th>ASIN 购买量</th><th>ASIN 点击份额</th><th>ASIN 购买份额</th><th>ASIN 点击后购买率</th></tr></thead>
+          <thead><tr><th>搜索词分组</th><th>词数</th><th>搜索查询量</th><th>搜索量贡献</th><th>ASIN 点击量</th><th>ASIN 加购量</th><th>ASIN 购买量</th><th>ASIN 订单贡献</th><th>ASIN 点击份额</th><th>ASIN 购买份额</th><th>ASIN 点击后购买率</th></tr></thead>
           <tbody id="groupBody"></tbody>
         </table>
       </div>
@@ -206,7 +206,7 @@ td.query{font-weight:750;color:#2e526e}
   <p class="footer">分析规则为透明的本地筛选逻辑：高搜索量按本报告搜索查询量第 75 百分位识别；低曝光指该词 ASIN 曝光份额低于本报告加权 ASIN 曝光份额；阶段份额指数低于 0.80 标记为流失，高于 1.20 标记为提升。相关性与分组由搜索词规则预判，不等同于人工确认；样本提示按 ASIN 点击量分档。SQR 反映搜索漏斗表现，不包含 CPC、ACOS、TACOS，也不能单独证明广告归因或自然排名。所有原始字段均保留在「原始数据」Sheet。</p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-<script src="./sqr-engine.js?v=20261119-3"></script>
-<script src="./sqr-ui.js?v=20261119-4"></script>
+<script src="./sqr-engine.js?v=20261119-4"></script>
+<script src="./sqr-ui.js?v=20261119-5"></script>
 </body>
 </html>
