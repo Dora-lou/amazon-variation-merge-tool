@@ -316,68 +316,6 @@
       metrics.appendChild(card);
     });
     host.appendChild(metrics);
-
-    const table = document.createElement('table');
-    table.className = 'data-table preview-table';
-    const extraIndexes = Array.isArray(niche.searchTermExtraIndexes)
-      ? niche.searchTermExtraIndexes
-      : [];
-    const sourceHeaders = Array.isArray(niche.searchTermHeaders)
-      ? niche.searchTermHeaders
-      : [];
-    const previewHeaders = [
-      '搜索词',
-      '搜索量（过去 360 天）',
-      'CVR',
-      'Clicks',
-      'Orders%',
-      'Orders'
-    ].concat(extraIndexes.map(function (sourceIndex) {
-      return sourceHeaders[sourceIndex] || ('原始 ST 字段 ' + (sourceIndex + 1));
-    }));
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    previewHeaders.forEach(function (header) {
-      const th = document.createElement('th');
-      th.textContent = header;
-      headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-    const body = document.createElement('tbody');
-
-    (niche.rows || []).forEach(function (item) {
-      const tr = document.createElement('tr');
-      cell(tr, item.term);
-      cell(tr, formatNumber(item.searchVolume));
-      cell(tr, formatPercent(item.cvr));
-      cell(tr, formatNumber(item.clicks, 2));
-      cell(tr, formatPercent(item.ordersPct));
-      cell(tr, formatNumber(item.orders, 2));
-      const originalValues = Array.isArray(item.sourceValues) ? item.sourceValues : [];
-      extraIndexes.forEach(function (sourceIndex) {
-        cell(tr, originalValues[sourceIndex] == null ? '' : originalValues[sourceIndex]);
-      });
-      body.appendChild(tr);
-    });
-    table.appendChild(body);
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'table-wrap';
-    wrapper.appendChild(table);
-    host.appendChild(wrapper);
-    const foot = document.createElement('p');
-    foot.className = 'muted';
-    foot.textContent = '来源文件：' + (niche.productFileName || 'Product CSV') + ' / ' +
-      (niche.searchTermFileName || 'Search Term CSV') + '；商品数 ' +
-      formatNumber(niche.productCount) + '，搜索词数 ' + formatNumber(niche.searchTermCount) + '。';
-    host.appendChild(foot);
-    if (!Array.isArray(niche.searchTermHeaders) || !niche.searchTermHeaders.length) {
-      const legacyNote = document.createElement('p');
-      legacyNote.className = 'muted';
-      legacyNote.textContent = '这条 Niche 是旧版保存的数据，尚未保存原始 ST 表的其他字段。若要补齐这些字段，请重新上传该 Niche 的 Product CSV 和 Search Term CSV。';
-      host.appendChild(legacyNote);
-    }
   }
 
   function renderAll() {
