@@ -25,6 +25,9 @@ jobs:
           node --check listing.js
           node --check agent-ui.js
           node --check ads-relaunch-ui.js
+          node --check niche-engine.js
+          node --check niche-ui.js
+          node niche-engine.test.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

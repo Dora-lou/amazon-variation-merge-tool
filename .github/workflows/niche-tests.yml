@@ -1,0 +1,23 @@
+name: Niche data tests
+on:
+  push:
+    branches: [feat/niche-market-data-tool]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate JavaScript syntax
+        run: |
+          node --check niche-engine.js
+          node --check niche-ui.js
+          node --check niche-engine.test.js
+      - name: Run Niche engine tests
+        run: node niche-engine.test.js
