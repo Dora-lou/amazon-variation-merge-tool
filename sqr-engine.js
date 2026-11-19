@@ -73,6 +73,77 @@
     return key === 'query' || key === 'reportDate'
       ? String(value == null ? '' : value).trim() : parseNumber(value);
   }
+  function classifyQuery(query) {
+    const q = String(query || '').toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+    const hasDog = /\bdog\b/.test(q);
+    const hasCat = /\bcat\b/.test(q);
+    const hasBowl = /\b(bowl|bowls|dish|dishes)\b/.test(q);
+    const hasBottle = /\bbottles?\b/.test(q);
+    const hasCollapse = /\b(collapsible|collapsable|foldable|folding|collapsing|collapse|pop up)\b/.test(q);
+    const hasScene = /\b(travel|portable|hiking|hike|camping|camp|beach|walking|walks|on the go)\b/.test(q);
+    const hasBroad = /\b(accessories|necessities|essentials|gear)\b/.test(q);
+    const modifiers = [];
+    if (hasCollapse) modifiers.push('折叠/收纳');
+    if (hasScene) modifiers.push('便携/外出场景');
+    if (hasBottle) modifiers.push('饮水瓶形态');
+    if (/\b(silicone|stainless|steel|plastic|rubber)\b/.test(q)) modifiers.push('材质');
+    if (/\b(small|medium|large|mini)\b/.test(q)) modifiers.push('尺寸');
+    if (hasCat) modifiers.push('猫用品');
+    let queryCategory = '泛词/需人工确认';
+    let relevanceLevel = '低相关/需确认';
+    let relevanceScore = 25;
+    if (hasCat) {
+      queryCategory = '跨品类：猫用品'; relevanceLevel = '跨品类/需确认'; relevanceScore = 30;
+    } else if (hasBottle) {
+      queryCategory = '相邻形态：饮水瓶'; relevanceLevel = '相邻形态/需确认'; relevanceScore = 45;
+    } else if (hasBroad) {
+      queryCategory = '泛场景/周边词'; relevanceLevel = '低相关/需确认'; relevanceScore = 20;
+    } else if (hasCollapse && hasBowl) {
+      queryCategory = '核心功能词：折叠碗'; relevanceLevel = '高相关'; relevanceScore = 100;
+    } else if (hasDog && hasBowl && hasScene) {
+      queryCategory = '使用场景词：外出/旅行'; relevanceLevel = '高相关'; relevanceScore = 85;
+    } else if (hasDog && hasBowl) {
+      queryCategory = '品类词：狗碗/水碗'; relevanceLevel = '中高相关'; relevanceScore = 70;
+    } else if (hasBowl && hasScene) {
+      queryCategory = '使用场景词：外出/旅行'; relevanceLevel = '中相关'; relevanceScore = 60;
+    } else if (hasBowl) {
+      queryCategory = '碗类相关词'; relevanceLevel = '中相关'; relevanceScore = 55;
+    } else if (hasDog && hasScene) {
+      queryCategory = '犬类外出场景词'; relevanceLevel = '需确认'; relevanceScore = 45;
+    }
+    if (!modifiers.length) modifiers.push('基础品类/泛词');
+    return {
+      queryCategory: queryCategory,
+      relevanceLevel: relevanceLevel,
+      relevanceScore: relevanceScore,
+      queryModifiers: modifiers
+    };
+  }
+  function buildQueryGroups(rows) {
+    const groups = {};
+    rows.forEach(function (row) {
+      const key = row.queryCategory;
+      if (!groups[key]) groups[key] = {
+        queryCategory: key, queryCount: 0, searchVolume: 0,
+        impressions: 0, asinImpressions: 0, clicks: 0, asinClicks: 0,
+        cartAdds: 0, asinCartAdds: 0, purchases: 0, asinPurchases: 0
+      };
+      const group = groups[key];
+      group.queryCount += 1;
+      ['searchVolume','impressions','asinImpressions','clicks','asinClicks','cartAdds','asinCartAdds','purchases','asinPurchases']
+        .forEach(function (keyName) { group[keyName] += row[keyName] || 0; });
+    });
+    return Object.keys(groups).map(function (key) {
+      const group = groups[key];
+      group.asinImpressionShare = safeDivide(group.asinImpressions, group.impressions);
+      group.asinClickShare = safeDivide(group.asinClicks, group.clicks);
+      group.asinCartShare = safeDivide(group.asinCartAdds, group.cartAdds);
+      group.asinPurchaseShare = safeDivide(group.asinPurchases, group.purchases);
+      group.asinClickToPurchaseRate = safeDivide(group.asinPurchases, group.asinClicks);
+      group.asinClickToCartRate = safeDivide(group.asinCartAdds, group.asinClicks);
+      return group;
+    }).sort(function (a,b) { return b.asinPurchases-a.asinPurchases; });
+  }
   function processCsv(text) {
     const sourceRows = parseCsv(text);
     let headerIndex = -1;
@@ -151,16 +222,45 @@
         .filter(function (s) { return s.value !== null && s.value > 1.2; })
         .sort(function (a,b) { return b.value-a.value; });
       row.funnelDiagnosis = weak.length ? weak[0].label : (strong.length ? strong[0].label : '份额表现相对稳定');
-      if (row.opportunityLabel === '高需求·低曝光') row.recommendation = '优先检查该词的 Listing 相关性、广告覆盖和自然排名，争取获得更多曝光。';
-      else if (row.funnelDiagnosis === '曝光→点击份额流失') row.recommendation = '检查搜索结果页主图、标题、价格、评分和优惠，提升点击吸引力。';
-      else if (row.funnelDiagnosis === '点击→加购份额流失') row.recommendation = '检查详情页卖点、产品适配、功能表达和价格竞争力，提升加购意愿。';
-      else if (row.funnelDiagnosis === '加购→购买份额流失') row.recommendation = '检查到手价、配送时效、库存和购买限制，减少加购后的流失。';
-      else if (row.funnelDiagnosis.indexOf('份额提升') >= 0) row.recommendation = '该阶段 ASIN 份额相对上一个阶段有所提升，可继续观察并保持有效做法。';
-      else row.recommendation = '暂未发现明显的份额断层，结合利润、广告花费和自然排名决定后续投入。';
+      row.funnelIssues = weak.map(function (stage) { return stage.label; });
+      row.funnelStrengths = strong.map(function (stage) { return stage.label; });
+      const classification = classifyQuery(row.query);
+      row.queryCategory = classification.queryCategory;
+      row.relevanceLevel = classification.relevanceLevel;
+      row.relevanceScore = classification.relevanceScore;
+      row.queryModifiers = classification.queryModifiers;
+      row.sampleLabel = row.asinClicks < 20 ? '小样本（ASIN点击<20）' : (row.asinClicks < 50 ? '中样本（ASIN点击20–49）' : '样本相对充足（ASIN点击≥50）');
+      const isRelevant = row.relevanceScore >= 55;
+      if (row.opportunityLabel === '高需求·低曝光' && isRelevant) row.actionPriority = '高需求流量缺口';
+      else if (row.relevanceScore <= 30) row.actionPriority = '先核实相关性';
+      else if (row.relevanceScore <= 45) row.actionPriority = '核实形态匹配';
+      else if (isRelevant && row.asinPurchases >= 20) row.actionPriority = '核心成交词';
+      else if (isRelevant && weak.length) row.actionPriority = '转化待优化';
+      else row.actionPriority = '持续观察';
+      if (row.relevanceScore <= 30) row.recommendation = '该词偏向泛场景或跨品类搜索，先核对产品是否真正满足该搜索意图，不建议仅因搜索量高就直接扩量。';
+      else if (row.relevanceScore <= 45) row.recommendation = '该词涉及相邻产品形态或需要进一步确认，先核实商品功能是否与搜索意图一致，再决定是否纳入关键词投放。';
+      else if (row.opportunityLabel === '高需求·低曝光') row.recommendation = '搜索需求较高但 ASIN 曝光份额低。确认产品相关性后，检查 Listing 关键词覆盖、广告覆盖和自然位置，再考虑小预算测试。';
+      else if (row.relevanceScore >= 70 && row.asinPurchases >= 20) row.recommendation = '该词已有较强 ASIN 成交信号，优先保护有效的 Listing 与广告覆盖；是否增投仍需结合 CPC、ACOS、TACOS 和利润判断。';
+      else if (row.funnelDiagnosis === '曝光→点击份额流失') row.recommendation = 'ASIN 曝光份额未有效转化为点击。检查搜索结果页主图、标题、价格、评分和优惠；同时确认搜索词与商品是否足够匹配。';
+      else if (row.funnelDiagnosis === '点击→加购份额流失') row.recommendation = 'ASIN 点击份额未充分转化为加购。检查详情页卖点、产品适配、尺寸/材质表达和到手价，判断用户是否在页面阶段流失。';
+      else if (row.funnelDiagnosis === '加购→购买份额流失') row.recommendation = 'ASIN 加购份额未充分转化为购买。检查到手价、配送时效、库存和购买限制，排查结账前流失。';
+      else if (row.funnelIssues.length) row.recommendation = '该词存在多个阶段份额下降，优先排查：' + row.funnelIssues.join('、') + '。先确认相关性和样本量，再决定优化动作。';
+      else if (row.funnelDiagnosis.indexOf('份额提升') >= 0) row.recommendation = '该阶段 ASIN 份额相对上一个阶段有所提升，可继续观察并保持有效做法；投放决策仍需结合广告成本。';
+      else row.recommendation = '暂未发现明显的份额断层，结合相关性、利润、广告花费和自然排名决定后续投入。';
     });
     const rawRows = rows.slice();
     rows.sort(function (a,b) { return (b.searchVolume-a.searchVolume) || String(a.query).localeCompare(String(b.query)); });
-    return {metadata:metadata,headers:headers,rows:rows,rawRows:rawRows,aggregate:aggregate,highVolumeThreshold:highVolumeThreshold,sourceRowCount:rows.length,sourceHeaderRow:headerIndex+1};
+    const queryGroups = buildQueryGroups(rows);
+    const coreConvertingTerms = rows.filter(function (row) {
+      return row.relevanceScore >= 70 && row.asinPurchases > 0;
+    }).sort(function (a,b) { return b.asinPurchases-a.asinPurchases; }).slice(0,20);
+    const relevantOpportunities = rows.filter(function (row) {
+      return row.opportunityLabel === '高需求·低曝光' && row.relevanceScore >= 55;
+    }).sort(function (a,b) { return (b.relevanceScore-a.relevanceScore) || (b.searchVolume-a.searchVolume); });
+    return {metadata:metadata,headers:headers,rows:rows,rawRows:rawRows,aggregate:aggregate,
+      highVolumeThreshold:highVolumeThreshold,queryGroups:queryGroups,
+      coreConvertingTerms:coreConvertingTerms,relevantOpportunities:relevantOpportunities,
+      sourceRowCount:rows.length,sourceHeaderRow:headerIndex+1};
   }
   function excelValue(value) {
     if (value == null || value === '') return '';
