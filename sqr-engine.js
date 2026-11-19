@@ -236,6 +236,16 @@
     }
     const sectionRows=[7,13,22,weakSectionRow];
     const tableHeaderRows=[14,23,weakHeaderRow];
+    for(let r=2;r<=5;r+=1){
+      for(let c=0;c<6;c+=1){
+        const isLabel=c%2===0;
+        setStyle(overviewSheet,XLSX,r,c,{
+          fill:{patternType:'solid',fgColor:{rgb:isLabel?p.pale:p.pale2}},
+          font:{name:'Aptos',sz:isLabel?9:11,bold:isLabel||c===1||c===3||c===5,color:{rgb:isLabel?p.muted:p.navy}},
+          alignment:{vertical:'center',horizontal:'left',indent:isLabel?1:0}
+        });
+      }
+    }
     for(let r=0;r<overview.length;r+=1){
       const first=String((overview[r]||[])[0]||'');
       const isSection=['搜索漏斗','搜索量加权市场率','重点机会词（高搜索量且 ASIN 曝光份额低于本报告加权水平）','份额流失词（阶段份额指数低于 0.80）'].indexOf(first)>=0;
