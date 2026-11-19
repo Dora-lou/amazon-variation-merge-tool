@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Niche 数据提取｜亚马逊运营工作台</title>
+<link rel="stylesheet" href="./workspace-shell.css?v=workspace-brand-20261105-3"/>
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#243447;background:#f5f7f9;font-size:14px;line-height:1.6}
+*{box-sizing:border-box}
+body{margin:0}
+.shell{max-width:1180px;margin:0 auto;padding:22px 28px 60px}
+.panel{background:#fff;border:1px solid #e1e8ef;border-radius:16px;padding:24px;margin-top:17px;box-shadow:0 5px 20px rgba(35,53,72,.035)}
+.panel-heading{display:flex;align-items:flex-start;gap:13px;margin-bottom:18px}
+.heading-num{display:grid;place-items:center;flex:0 0 34px;height:34px;border-radius:11px;background:#e7effa;color:#295b96;font-weight:800}
+h2{font-size:18px;line-height:1.35;letter-spacing:-.02em;margin:0;color:#25384b}
+h3{font-size:15px;line-height:1.4;margin:0;color:#2c4054}
+.section-subtitle{font-size:13px;color:#738397;margin:5px 0 0;line-height:1.7}
+label{display:block;font-size:13px;font-weight:700;color:#3d5064;margin:0 0 7px}
+input,select{font:inherit;width:100%;min-width:0;border:1px solid #d1dbe5;border-radius:9px;padding:11px 12px;background:#fff;color:#243447;outline:none}
+input:focus,select:focus{border-color:#4b7fb2;box-shadow:0 0 0 3px #4b7fb21a}
+input[type=file]{padding:10px;background:#fbfcfe}
+input::file-selector-button{margin-right:10px;padding:7px 10px;border:1px solid #d6e0e9;border-radius:7px;background:#f1f5f9;color:#41576c;font:inherit;font-size:12px;cursor:pointer}
+button{font:inherit;font-weight:700;border:1px solid #d1dce6;border-radius:9px;padding:10px 14px;background:#fff;color:#40566b;cursor:pointer;transition:background .15s,border-color .15s}
+button:hover{background:#f4f7fa;border-color:#bdcbd8}
+button:disabled{cursor:not-allowed;opacity:.55}
+button.primary{background:#315f94;border-color:#315f94;color:#fff}
+button.primary:hover{background:#264e7d;border-color:#264e7d}
+button.small-button{padding:6px 9px;font-size:12px;margin:2px}
+button.danger{color:#a33a47}
+.toolbar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.toolbar .grow{flex:1;min-width:220px}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}
+.product-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) auto;gap:12px;align-items:end}
+.help,.muted{font-size:12px;color:#8291a0;line-height:1.7;margin:6px 0 0}
+.notice{padding:12px 14px;border-radius:10px;font-size:13px;margin-top:13px;line-height:1.7;background:#eef5fc;color:#315b88;border:1px solid #d6e5f4}
+.notice.warn{background:#fff8eb;border-color:#f2dfb7;color:#875b16}
+.notice.error{background:#fff1f2;border-color:#f0cbd0;color:#a83245}
+.hidden{display:none!important}
+.table-wrap{overflow:auto;border:1px solid #dfe7ee;border-radius:11px;margin-top:12px}
+table.data-table{border-collapse:separate;border-spacing:0;width:100%;min-width:720px}
+.data-table th,.data-table td{padding:10px;text-align:left;border-bottom:1px solid #e8edf2;vertical-align:middle}
+.data-table th{position:sticky;top:0;background:#f5f8fa;font-size:12px;font-weight:750;color:#596d80;white-space:nowrap}
+.data-table td{background:#fff;font-size:13px}
+.data-table tr:last-child td{border-bottom:0}
+.data-table tr.selected-row td{background:#f3f7fc}
+.metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.metric-card{display:flex;flex-direction:column;gap:5px;padding:14px 16px;border:1px solid #e0e7ee;border-radius:12px;background:#f9fbfd}
+.metric-card span{font-size:12px;color:#7b8a99}
+.metric-card strong{font-size:22px;line-height:1.3;color:#2c4967;font-variant-numeric:tabular-nums}
+.preview-table{min-width:780px!important}
+.action-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.action-row .muted{margin:0}
+.file-help{margin-top:7px;font-size:12px;color:#8492a0;line-height:1.6}
+.footer{font-size:12px;color:#7d8b99;margin-top:22px;line-height:1.8}
+@media(max-width:760px){
+ .shell{padding:16px 13px 42px}
+ .panel{padding:18px 15px}
+ .product-controls,.field-grid,.metric-grid{grid-template-columns:1fr}
+ .product-controls button{width:100%}
+ .panel-heading{gap:10px}
+}
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="workspace-header">
+    <a class="workspace-brand" href="./index.html" aria-label="亚马逊运营工作台首页">
+      <span class="workspace-logo" aria-hidden="true">O</span>
+      <span><span class="workspace-name">亚马逊运营工作台</span><span class="workspace-sub">Amazon Operations Workspace</span></span>
+    </a>
+    <nav class="workspace-nav" aria-label="工具模块">
+      <a href="./index.html">首页</a>
+      <a href="./tools.html" class="active" aria-current="page" id="navTools">运营工具中心</a>
+      <a href="./skills.html">AI Skills</a>
+      <a href="./variation-guide.html">知识库</a>
+      <a href="./listing.html?view=library" id="navLibrary">商品库</a>
+    </nav>
+  </header>
+
+  <section class="workspace-intro">
+    <div class="eyebrow">NICHE MARKET DATA</div>
+    <h1>Niche 数据提取</h1>
+    <p>按产品管理多个 Niche。上传 Product 和 Search Term 两份 CSV，自动计算指标，并将同一产品的全部 Niche 汇总到一个多 Sheet Excel。</p>
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div class="heading-num">1</div>
+      <div><h2>产品管理</h2><p class="section-subtitle">先创建或选择产品。一个产品可以保存多个 Niche 市场。</p></div>
+    </div>
+    <div class="product-controls">
+      <div>
+        <label for="productSelect">当前产品</label>
+        <select id="productSelect"><option value="">正在读取产品…</option></select>
+      </div>
+      <div>
+        <label for="newProductName">添加新产品</label>
+        <input id="newProductName" type="text" maxlength="100" placeholder="例如：Collapsible Dog Bowls"/>
+      </div>
+      <button id="addProduct" class="primary" type="button">添加产品</button>
+    </div>
+    <div id="productStatus" class="notice" role="status" aria-live="polite">正在读取本地产品库…</div>
+    <div class="action-row" style="margin-top:20px">
+      <h3>已保存的产品</h3>
+      <span class="muted">删除产品会同时删除它下面的全部 Niche。</span>
+    </div>
+    <div id="productsTable">正在加载…</div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div class="heading-num">2</div>
+      <div><h2>添加或更新 Niche</h2><p class="section-subtitle">每个 Niche 必须同时上传 Product CSV 和 Search Term CSV。</p></div>
+    </div>
+    <div class="field-grid">
+      <div>
+        <label for="nicheName">Niche 市场名称</label>
+        <input id="nicheName" type="text" maxlength="120" placeholder="例如：Travel Dog Bowls"/>
+        <p class="help">会优先从 CSV 第一行自动读取市场名称，也可以手动填写或修改。</p>
+      </div>
+      <div>
+        <label>数据处理规则</label>
+        <div class="file-help">同一产品下，如果 Niche 名称已存在，系统会先询问是否覆盖。确认后只更新该 Niche，其他 Niche 保留。</div>
+      </div>
+      <div>
+        <label for="productCsv">Product 原始 CSV</label>
+        <input id="productCsv" type="file" accept=".csv,text/csv"/>
+        <p class="file-help">读取「细分市场点击量（过去 360 天）」并汇总 Total Clicks。</p>
+      </div>
+      <div>
+        <label for="searchTermCsv">Search Term 原始 CSV</label>
+        <input id="searchTermCsv" type="file" accept=".csv,text/csv"/>
+        <p class="file-help">读取搜索词、搜索量、点击份额和搜索转化率，计算 Orders、Clicks、CVR 和 Orders%。</p>
+      </div>
+    </div>
+    <div class="toolbar" style="margin-top:18px">
+      <button id="saveNiche" class="primary" type="button">计算并保存 Niche</button>
+      <span class="muted">自动跳过 CSV 开头的市场说明行，不需要手动整理表头。</span>
+    </div>
+    <div id="nicheStatus" class="notice" role="status" aria-live="polite">请先选择产品，再上传两份 CSV。</div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div class="heading-num">3</div>
+      <div><h2>Niche 市场管理</h2><p class="section-subtitle">当前产品：<strong id="activeProductLabel">尚未选择产品</strong></p></div>
+    </div>
+    <div class="action-row">
+      <span class="muted">每个 Niche 独立计算、独立更新；导出时汇总当前产品下全部 Niche。</span>
+      <button id="downloadWorkbook" class="primary" type="button" disabled>下载该产品完整 Excel</button>
+    </div>
+    <div id="nichesTable">请先选择或添加一个产品。</div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div class="heading-num">4</div>
+      <div><h2 id="previewTitle">数据预览</h2><p class="section-subtitle">预览单个 Niche 的计算结果。Excel 导出会保留全部搜索词。</p></div>
+    </div>
+    <div id="previewContent" class="muted">选择上方某个 Niche 的「查看」即可预览计算结果。</div>
+  </section>
+
+  <p class="footer">所有 CSV 解析、指标计算和 Excel 生成均在当前浏览器本地完成，不调用 AI API，也不会将原始文件上传到服务器。产品和 Niche 数据保存在当前浏览器；更换电脑或浏览器前，请下载生成的 Excel 留存。SQR 暂不处理。</p>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="./niche-engine.js?v=20261119-1"></script>
+<script src="./niche-ui.js?v=20261119-1"></script>
+</body>
+</html>
