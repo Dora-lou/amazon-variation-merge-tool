@@ -225,7 +225,6 @@
     niches.forEach(function (niche, index) {
       const aoa = [
         ['细分市场名称: ' + String(niche.name || '')],
-        [],
         ['Total Orders', niche.totalOrders],
         ['Total Clicks', niche.totalClicks],
         ['CVR', niche.overallCvr == null ? '' : niche.overallCvr],
@@ -245,19 +244,19 @@
       });
 
       const sheet = XLSX.utils.aoa_to_sheet(aoa);
-      const lastRow = 6 + (niche.rows || []).length;
+      const lastRow = 5 + (niche.rows || []).length;
       sheet['!cols'] = [
         { wch: 13 }, { wch: 15 }, { wch: 13 }, { wch: 15 },
         { wch: 3 }, { wch: 42 }, { wch: 23 }
       ];
       sheet['!freeze'] = { xSplit: 0, ySplit: 5, topLeftCell: 'A6', activePane: 'bottomLeft', state: 'frozen' };
-      sheet['!autofilter'] = { ref: 'A6:G' + lastRow };
+      sheet['!autofilter'] = { ref: 'A5:G' + lastRow };
 
       if (sheet.B2) sheet.B2.z = '#,##0.00';
       if (sheet.B3) sheet.B3.z = '#,##0';
       if (sheet.B4 && niche.overallCvr != null) sheet.B4.z = '0.00%';
 
-      for (let rowIndex = 7; rowIndex <= lastRow; rowIndex += 1) {
+      for (let rowIndex = 6; rowIndex <= lastRow; rowIndex += 1) {
         const cvrCell = sheet['A' + rowIndex];
         const clicksCell = sheet['B' + rowIndex];
         const shareCell = sheet['C' + rowIndex];
