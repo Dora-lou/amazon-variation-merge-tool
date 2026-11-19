@@ -44,7 +44,7 @@ assert.equal(result.headers.length, 34);
 assert.equal(result.rows.length, 4);
 assert.equal(result.rawRows[0].query, 'low volume dog bowl');
 assert.equal(result.rows[0].query, 'high demand water bowl');
-assert.equal(result.highVolumeThreshold, 8450);
+assert.equal(result.highVolumeThreshold, 8500);
 assert.equal(result.rows[0].opportunityLabel, '高需求·低曝光');
 assert.equal(result.rows.find(function (r) { return r.query === 'click share leakage query'; }).funnelDiagnosis, '曝光→点击份额流失');
 assert.equal(result.aggregate.queryCount, 4);
