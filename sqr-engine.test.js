@@ -104,6 +104,6 @@ assert.equal(raw['!autofilter'].ref, 'A3:AH7');
 const overview = workbook.Sheets['SQR总览'];
 assert.equal(overview.A1.v, 'SQR SEARCH QUERY PERFORMANCE');
 assert.equal(overview.A8.v, '搜索漏斗');
-assert.equal(overview.A25.v, '搜索查询');
-assert.equal(overview.A29.v, '搜索查询');
+assert.equal(overview.A24.v, '搜索查询');
+assert.equal(overview.A28.v, '搜索查询');
 console.log('SQR engine tests passed.');
