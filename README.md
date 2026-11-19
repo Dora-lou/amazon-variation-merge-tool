@@ -34,5 +34,8 @@
 - 系统自动识别 CSV 表头、汇总 Total Clicks，并按搜索量 × 搜索转化率估算 Orders。
 - 同一产品下可保存多个 Niche；重新上传同名 Niche 时仅覆盖该 Niche，其他 Niche 保留。
 - 导出时，一个产品生成一个 Excel 工作簿，每个 Niche 对应一个 Sheet。
+- 每个 Sheet 的字段顺序固定为：搜索词、搜索量（过去 360 天）、CVR、Clicks、Orders%、Orders；其后保留原始 Search Term 表中的其他全部字段，并沿用原表字段顺序。
+- Excel 使用统一的标题区、核心指标卡片、分组表头、交替行底色、数字格式、筛选和冻结窗格。
+- 更新前已保存的旧版 Niche 没有保存原始 ST 其他字段；如需补齐，请重新上传该 Niche 的 Product CSV 和 Search Term CSV。
 - 数据保存在当前浏览器的 IndexedDB 中；不调用 AI API，也不会将原始 CSV 上传到服务器。不同浏览器或设备之间不会自动同步。
 - 当前版本暂不处理 SQR。
