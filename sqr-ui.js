@@ -149,9 +149,11 @@
         group.queryCategory,
         formatNumber(group.queryCount),
         formatNumber(group.searchVolume),
+        formatPercent(group.searchVolumeContribution),
         formatNumber(group.asinClicks),
         formatNumber(group.asinCartAdds),
         formatNumber(group.asinPurchases),
+        formatPercent(group.asinPurchaseContribution),
         formatPercent(group.asinClickShare),
         formatPercent(group.asinPurchaseShare),
         formatPercent(group.asinClickToPurchaseRate)
