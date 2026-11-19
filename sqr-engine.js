@@ -288,8 +288,11 @@
     const workbook=XLSX.utils.book_new(), rows=data.rows, a=data.aggregate;
     const p={navy:'FF183B56',blue:'FF2F5D83',teal:'FF1D7180',pale:'FFEAF1F7',pale2:'FFF5F8FB',green:'FFE6F3EA',greenText:'FF236B48',amber:'FFFFF2D9',amberText:'FF8A5A12',red:'FFFCE9EA',redText:'FF9A3942',white:'FFFFFFFF',text:'FF263B4D',muted:'FF637B8F',border:'FFE1E8EF'};
     const metaText=[data.metadata.asin?'ASIN: '+data.metadata.asin:'',data.metadata.reportRange?'报告范围: '+data.metadata.reportRange:'',data.metadata.year?'年份: '+data.metadata.year:'',data.metadata.quarter?'季度: Q'+data.metadata.quarter:''].filter(Boolean).join('  |  ');
-    const opportunities=rows.filter(function(r){return r.opportunityLabel==='高需求·低曝光';}).slice(0,20);
-    const weakRows=rows.filter(function(r){return r.funnelDiagnosis.indexOf('份额流失')>=0;}).slice(0,20);
+    const opportunities=rows.filter(function(r){return r.opportunityLabel==='高需求·低曝光';})
+      .sort(function(a,b){return (b.relevanceScore-a.relevanceScore)||(b.searchVolume-a.searchVolume);}).slice(0,20);
+    const weakRows=rows.filter(function(r){return r.funnelIssues && r.funnelIssues.length;})
+      .sort(function(a,b){return (b.relevanceScore-a.relevanceScore)||(b.searchVolume-a.searchVolume);}).slice(0,20);
+    const coreSalesRows=(data.coreConvertingTerms||[]).slice(0,15);
     const overview=[
       ['SQR SEARCH QUERY PERFORMANCE'],[metaText||'Amazon Search Query Performance Report'],
       ['搜索查询数',a.queryCount,'搜索查询量合计',a.searchVolume,'ASIN',data.metadata.asin||''],
@@ -313,17 +316,24 @@
       ['ASIN 购买 / ASIN 加购',a.asinCartToPurchaseRate],
       [],
       ['重点机会词（高搜索量且 ASIN 曝光份额低于本报告加权水平）'],
-      ['搜索查询','搜索查询量','ASIN 曝光占比','ASIN 点击份额','漏斗诊断','建议方向']
+      ['搜索查询','搜索查询量','相关性预判','ASIN 曝光份额','ASIN 购买量','行动优先级']
     ];
-    opportunities.forEach(function(r){overview.push([r.query,r.searchVolume,r.asinImpressionShareCalc,r.asinClickShareCalc,r.funnelDiagnosis,r.recommendation]);});
+    opportunities.forEach(function(r){overview.push([r.query,r.searchVolume,r.relevanceLevel,r.asinImpressionShareCalc,r.asinPurchases,r.actionPriority]);});
     if(!opportunities.length) overview.push(['本报告未识别到符合当前规则的高需求低曝光词。']);
     overview.push([]);
     const weakSectionRow = overview.length;
     overview.push(['份额流失词（阶段份额指数低于 0.80）']);
     const weakHeaderRow = overview.length;
     overview.push(['搜索查询','搜索查询量','曝光→点击指数','点击→加购指数','加购→购买指数','主要诊断']);
-    weakRows.forEach(function(r){overview.push([r.query,r.searchVolume,r.exposureToClickIndex,r.clickToCartIndex,r.cartToPurchaseIndex,r.funnelDiagnosis]);});
+    weakRows.forEach(function(r){overview.push([r.query,r.searchVolume,r.exposureToClickIndex,r.clickToCartIndex,r.cartToPurchaseIndex,r.funnelIssues.join('；')]);});
     if(!weakRows.length) overview.push(['本报告未识别到阶段份额指数低于 0.80 的搜索词。']);
+    overview.push([]);
+    const coreSectionRow=overview.length;
+    overview.push(['核心成交词（高/中高相关，按 ASIN 购买量排序）']);
+    const coreHeaderRow=overview.length;
+    overview.push(['搜索查询','搜索查询量','ASIN 点击量','ASIN 加购量','ASIN 购买量','ASIN 购买份额']);
+    coreSalesRows.forEach(function(r){overview.push([r.query,r.searchVolume,r.asinClicks,r.asinCartAdds,r.asinPurchases,r.asinPurchaseShareCalc]);});
+    if(!coreSalesRows.length) overview.push(['本报告未识别到有 ASIN 购买记录的高相关搜索词。']);
     const overviewSheet=XLSX.utils.aoa_to_sheet(overview);
     overviewSheet['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
     overviewSheet['!cols']=[{wch:38},{wch:20},{wch:19},{wch:19},{wch:23},{wch:62}];
@@ -335,7 +345,7 @@
       setStyle(overviewSheet,XLSX,1,c,{fill:{patternType:'solid',fgColor:{rgb:p.pale}},font:{name:'Aptos',sz:10,italic:true,color:{rgb:p.muted}},alignment:{vertical:'center',horizontal:'left',indent:1}});
     }
     const sectionRows=[7,13,22,weakSectionRow];
-    const tableHeaderRows=[14,23,weakHeaderRow];
+    const tableHeaderRows=[23,weakHeaderRow,coreHeaderRow];
     for(let r=2;r<=5;r+=1){
       for(let c=0;c<6;c+=1){
         const isLabel=c%2===0;
@@ -348,7 +358,7 @@
     }
     for(let r=0;r<overview.length;r+=1){
       const first=String((overview[r]||[])[0]||'');
-      const isSection=['搜索漏斗','搜索量加权市场率','重点机会词（高搜索量且 ASIN 曝光份额低于本报告加权水平）','份额流失词（阶段份额指数低于 0.80）'].indexOf(first)>=0;
+      const isSection=['搜索漏斗','搜索量加权市场率','重点机会词（高搜索量且 ASIN 曝光份额低于本报告加权水平）','份额流失词（阶段份额指数低于 0.80）','核心成交词（高/中高相关，按 ASIN 购买量排序）'].indexOf(first)>=0;
       const isHeader=tableHeaderRows.indexOf(r)>=0;
       if(isSection||isHeader) for(let c=0;c<6;c+=1) setStyle(overviewSheet,XLSX,r,c,{
         fill:{patternType:'solid',fgColor:{rgb:isSection?p.blue:p.teal}},
@@ -360,23 +370,27 @@
       fill:{patternType:'solid',fgColor:{rgb:p.pale2}},font:{name:'Aptos',sz:10,color:{rgb:p.text}}});
     ['D9','D10','D11','D12'].forEach(function(address){if(overviewSheet[address]&&typeof overviewSheet[address].v==='number')overviewSheet[address].z='0.00%';});
     ['E10','E11','E12'].forEach(function(address){if(overviewSheet[address]&&typeof overviewSheet[address].v==='number')overviewSheet[address].z='0.00\"x\"';});
+    opportunities.forEach(function(_,i){const cell=overviewSheet['D'+(25+i)];if(cell&&typeof cell.v==='number')cell.z='0.00%';});
+    weakRows.forEach(function(_,i){['C','D','E'].forEach(function(col){const cell=overviewSheet[col+(weakHeaderRow+2+i)];if(cell&&typeof cell.v==='number')cell.z='0.00"x"';});});
+    coreSalesRows.forEach(function(_,i){const cell=overviewSheet['F'+(coreHeaderRow+2+i)];if(cell&&typeof cell.v==='number')cell.z='0.00%';});
     XLSX.utils.book_append_sheet(workbook,overviewSheet,'SQR总览');
 
-    const derivedHeaders=['机会标签','漏斗诊断','建议方向','ASIN曝光份额（计算）','ASIN点击份额（计算）','ASIN加购份额（计算）','ASIN购买份额（计算）','曝光→点击份额指数','点击→加购份额指数','加购→购买份额指数','ASIN点击率（ASIN点击/ASIN曝光）','ASIN点击后加购率','ASIN点击后购买率','ASIN加购后购买率'];
+    const derivedHeaders=['搜索词类型','相关性预判','修饰意图','行动优先级','样本提示','机会标签','漏斗诊断','全部漏斗问题','建议方向','ASIN曝光份额（计算）','ASIN点击份额（计算）','ASIN加购份额（计算）','ASIN购买份额（计算）','曝光→点击份额指数','点击→加购份额指数','加购→购买份额指数','ASIN点击率（ASIN点击/ASIN曝光）','ASIN点击后加购率','ASIN点击后购买率','ASIN加购后购买率'];
     const queryIndex=data.headers.findIndex(function(h){return normalizeHeader(h)===normalizeHeader('搜索查询');});
     const volumeIndex=data.headers.findIndex(function(h){return normalizeHeader(h)===normalizeHeader('搜索查询量');});
     const remainingIndexes=data.headers.map(function(_,i){return i;}).filter(function(i){return i!==queryIndex&&i!==volumeIndex;});
     const analysisHeaders=['搜索查询','搜索查询量'].concat(derivedHeaders).concat(remainingIndexes.map(function(i){return data.headers[i];}));
     const analysisAoa=[analysisHeaders];
     rows.forEach(function(r){
-      const values=[r.query,r.searchVolume,r.opportunityLabel,r.funnelDiagnosis,r.recommendation,r.asinImpressionShareCalc,r.asinClickShareCalc,r.asinCartShareCalc,r.asinPurchaseShareCalc,r.exposureToClickIndex,r.clickToCartIndex,r.cartToPurchaseIndex,r.asinCtr,r.asinClickToCartRate,r.asinClickToPurchaseRate,r.asinCartToPurchaseRate];
+      const values=[r.query,r.searchVolume,r.queryCategory,r.relevanceLevel,r.queryModifiers.join('、'),r.actionPriority,r.sampleLabel,r.opportunityLabel,r.funnelDiagnosis,(r.funnelIssues||[]).join('；'),r.recommendation,r.asinImpressionShareCalc,r.asinClickShareCalc,r.asinCartShareCalc,r.asinPurchaseShareCalc,r.exposureToClickIndex,r.clickToCartIndex,r.cartToPurchaseIndex,r.asinCtr,r.asinClickToCartRate,r.asinClickToPurchaseRate,r.asinCartToPurchaseRate];
       remainingIndexes.forEach(function(i){values.push(excelValue(r.sourceValues[i]));});
       analysisAoa.push(values);
     });
     const analysisSheet=XLSX.utils.aoa_to_sheet(analysisAoa);
     analysisSheet['!cols']=analysisHeaders.map(function(h,i){
       if(i===0)return{wch:38};if(i===1)return{wch:18};if(h==='建议方向')return{wch:62};
-      if(h==='漏斗诊断'||h==='机会标签')return{wch:25};if(/标题/.test(h))return{wch:48};
+      if(h==='修饰意图'||h==='全部漏斗问题')return{wch:32};
+      if(h==='漏斗诊断'||h==='机会标签'||h==='行动优先级'||h==='搜索词类型'||h==='相关性预判'||h==='样本提示')return{wch:24};if(/标题/.test(h))return{wch:48};
       if(/ASIN/.test(h))return{wch:18};return{wch:Math.min(25,Math.max(14,String(h).length+3))};
     });
     analysisSheet['!freeze']={xSplit:2,ySplit:1,topLeftCell:'C2',activePane:'bottomRight',state:'frozen'};
@@ -384,7 +398,7 @@
     analysisSheet['!views']=[{showGridLines:false,zoomScale:80}];
     analysisSheet['!sheetPr']={tabColor:{rgb:p.blue}};
     for(let c=0;c<analysisHeaders.length;c+=1)setStyle(analysisSheet,XLSX,0,c,{
-      fill:{patternType:'solid',fgColor:{rgb:c<2?p.teal:(c<16?p.blue:p.muted)}},
+      fill:{patternType:'solid',fgColor:{rgb:c<2?p.teal:(c<22?p.blue:p.muted)}},
       font:{name:'Aptos',sz:10,bold:true,color:{rgb:p.white}},
       alignment:{vertical:'center',horizontal:'center',wrapText:true}});
     for(let r=1;r<analysisAoa.length;r+=1){
@@ -392,22 +406,48 @@
       for(let c=0;c<analysisHeaders.length;c+=1){
         const address=colName(c)+(r+1),v=analysisSheet[address]?analysisSheet[address].v:'';
         let color=p.text,bold=false;
-        if(c===2&&v==='高需求·低曝光'){color=p.amberText;bold=true;}
-        if(c===3&&String(v).indexOf('流失')>=0){color=p.redText;bold=true;}
-        if(c===3&&String(v).indexOf('提升')>=0){color=p.greenText;bold=true;}
-        setStyle(analysisSheet,XLSX,r,c,{fill:{patternType:'solid',fgColor:{rgb:fill}},font:{name:'Aptos',sz:9,bold:bold,color:color},alignment:{vertical:'center',wrapText:c===2||c===3||c===4||/标题/.test(analysisHeaders[c])}});
+        if(c===5&&String(v).indexOf('高需求')>=0){color=p.amberText;bold=true;}
+        if(c===8&&String(v).indexOf('流失')>=0){color=p.redText;bold=true;}
+        if(c===8&&String(v).indexOf('提升')>=0){color=p.greenText;bold=true;}
+        if(c===5&&String(v).indexOf('核实')>=0){color=p.amberText;bold=true;}
+        setStyle(analysisSheet,XLSX,r,c,{fill:{patternType:'solid',fgColor:{rgb:fill}},font:{name:'Aptos',sz:9,bold:bold,color:color},alignment:{vertical:'center',wrapText:c>=2&&c<=10||/标题/.test(analysisHeaders[c])}});
       }
-      [5,6,7,8,12,13,14,15].forEach(function(c){const cell=analysisSheet[colName(c)+(r+1)];if(cell&&typeof cell.v==='number')cell.z='0.00%';});
-      [9,10,11].forEach(function(c){const cell=analysisSheet[colName(c)+(r+1)];if(cell&&typeof cell.v==='number')cell.z='0.00"x"';});
+      [11,12,13,14,18,19,20,21].forEach(function(c){const cell=analysisSheet[colName(c)+(r+1)];if(cell&&typeof cell.v==='number')cell.z='0.00%';});
+      [15,16,17].forEach(function(c){const cell=analysisSheet[colName(c)+(r+1)];if(cell&&typeof cell.v==='number')cell.z='0.00"x"';});
       remainingIndexes.forEach(function(sourceIndex,offset){
         if(/%/.test(data.headers[sourceIndex])){
-          const cell=analysisSheet[colName(16+offset)+(r+1)];
+          const cell=analysisSheet[colName(22+offset)+(r+1)];
           if(cell&&typeof cell.v==='number')cell.z='0.00"%"';
         }
       });
       const volumeCell=analysisSheet['B'+(r+1)];if(volumeCell&&typeof volumeCell.v==='number')volumeCell.z='#,##0';
     }
     XLSX.utils.book_append_sheet(workbook,analysisSheet,'搜索词分析');
+
+    const groupHeaders=['搜索词分类','搜索词数量','搜索查询量','市场曝光量','ASIN曝光量','ASIN曝光份额','市场点击量','ASIN点击量','ASIN点击份额','市场加购量','ASIN加购量','ASIN加购份额','市场购买量','ASIN购买量','ASIN购买份额','ASIN点击后加购率','ASIN点击后购买率'];
+    const groupAoa=[groupHeaders];
+    (data.queryGroups||[]).forEach(function(g){
+      groupAoa.push([g.queryCategory,g.queryCount,g.searchVolume,g.impressions,g.asinImpressions,g.asinImpressionShare,
+        g.clicks,g.asinClicks,g.asinClickShare,g.cartAdds,g.asinCartAdds,g.asinCartShare,
+        g.purchases,g.asinPurchases,g.asinPurchaseShare,g.asinClickToCartRate,g.asinClickToPurchaseRate]);
+    });
+    const groupSheet=XLSX.utils.aoa_to_sheet(groupAoa);
+    groupSheet['!cols']=groupHeaders.map(function(h,i){return{wch:i===0?30:(i===1?14:18)};});
+    groupSheet['!freeze']={xSplit:1,ySplit:1,topLeftCell:'B2',activePane:'bottomRight',state:'frozen'};
+    groupSheet['!autofilter']={ref:'A1:'+colName(groupHeaders.length-1)+groupAoa.length};
+    groupSheet['!views']=[{showGridLines:false,zoomScale:90}];
+    groupSheet['!sheetPr']={tabColor:{rgb:p.greenText}};
+    for(let c=0;c<groupHeaders.length;c+=1)setStyle(groupSheet,XLSX,0,c,{
+      fill:{patternType:'solid',fgColor:{rgb:p.teal}},font:{name:'Aptos',sz:10,bold:true,color:{rgb:p.white}},
+      alignment:{vertical:'center',horizontal:'center',wrapText:true}});
+    for(let r=1;r<groupAoa.length;r+=1){
+      for(let c=0;c<groupHeaders.length;c+=1)setStyle(groupSheet,XLSX,r,c,{
+        fill:{patternType:'solid',fgColor:{rgb:r%2?p.white:p.pale2}},
+        font:{name:'Aptos',sz:9,color:{rgb:p.text}},
+        alignment:{vertical:'center',wrapText:false}});
+      [5,8,11,14,15,16].forEach(function(c){const cell=groupSheet[colName(c)+(r+1)];if(cell&&typeof cell.v==='number')cell.z='0.00%';});
+    }
+    XLSX.utils.book_append_sheet(workbook,groupSheet,'关键词分组');
 
     const rawAoa=[['原始 SQR 数据  |  保留后台导出的全部字段'],[metaText],data.headers];
     (data.rawRows || rows).forEach(function(r){rawAoa.push(r.sourceValues.map(excelValue));});
