@@ -234,8 +234,8 @@
       setStyle(overviewSheet,XLSX,0,c,{fill:{patternType:'solid',fgColor:{rgb:p.navy}},font:{name:'Aptos Display',sz:16,bold:true,color:{rgb:p.white}},alignment:{vertical:'center',horizontal:'left',indent:1}});
       setStyle(overviewSheet,XLSX,1,c,{fill:{patternType:'solid',fgColor:{rgb:p.pale}},font:{name:'Aptos',sz:10,italic:true,color:{rgb:p.muted}},alignment:{vertical:'center',horizontal:'left',indent:1}});
     }
-    const sectionRows=[7,13,23,weakSectionRow];
-    const tableHeaderRows=[14,24,weakHeaderRow];
+    const sectionRows=[7,13,22,weakSectionRow];
+    const tableHeaderRows=[14,23,weakHeaderRow];
     for(let r=0;r<overview.length;r+=1){
       const first=String((overview[r]||[])[0]||'');
       const isSection=['搜索漏斗','搜索量加权市场率','重点机会词（高搜索量且 ASIN 曝光份额低于本报告加权水平）','份额流失词（阶段份额指数低于 0.80）'].indexOf(first)>=0;
