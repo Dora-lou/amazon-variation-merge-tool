@@ -8,7 +8,9 @@
 - **运营工具中心**：变体合并和 Listing 修改，生成 Excel 上传文件。
 - **商品库**：本浏览器保存 ASIN/MSKU、类目模板；支持 ZIP 备份与恢复。
 - **AI Skills**：集中展示 Codex 技能，目前收录销售计划 Skill，提供启动指令及 Skill 文件链接。
-- **Niche 数据提取**：按产品管理多个 Niche，上传 Product 与 Search Term CSV 后自动计算并导出一个多 Sheet Excel 工作簿。\n\n旧版 **AI Agent** 入口已从导航和首页移除，相关代码保留在仓库中供未来参考，不再作为日常推荐入口。
+- **Niche 数据提取**：按产品管理多个 Niche，上传 Product 与 Search Term CSV 后自动计算并导出一个多 Sheet Excel 工作簿。
+
+旧版 **AI Agent** 入口已从导航和首页移除，相关代码保留在仓库中供未来参考，不再作为日常推荐入口。
 
 ## 旧版销售计划 Agent（保留代码，非推荐入口）
 
