@@ -26,7 +26,7 @@ import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from business_context import (build_codex_context, load_context, load_rules,
                               save_product_mappings, set_default_store)
@@ -36,6 +36,9 @@ from listing_collectors import collect_listing_data
 from listing_engine import LISTING_SCHEMA, make_listing_prompt, validate_listing_result
 from listing_lark import create_test_workbook
 from ads_relaunch_store import load_ads_config, save_ads_config
+from mcp_gateway import (McpConfirmationRequired, McpGatewayError, McpRegistry,
+                         McpToolNotFound)
+from mcp_call_log import McpCallLogger
 
 HOST = "127.0.0.1"
 PORT = int(os.getenv("AMAZON_AGENT_PORT", "8765"))
@@ -49,6 +52,7 @@ ASIN_RE = re.compile(r"^[A-Z0-9]{10}$")
 MONTH_RE = re.compile(r"^20\d{2}-(0[1-9]|1[0-2])$")
 RUN_TIMEOUT_SECONDS = 900
 MAX_BODY_BYTES = 8192
+MAX_MCP_BODY_BYTES = 1_000_000
 MAX_ADS_CONFIG_BYTES = 250_000
 CODEX_PROBE_TIMEOUT_SECONDS = 20
 # Keep model input well below the upstream 4 MiB request ceiling and leave room
@@ -281,7 +285,7 @@ def check_ready() -> dict:
         "listing_writer_skill_found": listing_skill.is_file(),
         "amazon_ads_relaunch_skill_found": ads_relaunch_skill.is_file(),
         "xiyou_configured": _mcp_enabled(resolve_codex_bin(), "xydc-mcp"),
-        "collector_mode": "host_read_only_allowlist",
+        "collector_mode": "unified_mcp_dynamic",
         "shared_rules_found": bool(load_rules().get("rules")),
         "shared_context_path": "local_app_data",
         "default_store": context.get("default_store"),
@@ -603,11 +607,30 @@ def record_safe_diagnostic(job_id: str, stage: str, exc: Exception) -> None:
 
 
 class AgentState:
-    def __init__(self):
+    def __init__(self, auto_discover: bool = False):
         self.pair_key = secrets.token_urlsafe(24)
         self.lock = threading.Lock()
         self.jobs: dict[str, dict] = {}
         self.active_job_id: str | None = None
+        self.mcp_call_logger = McpCallLogger()
+        self.mcp_registry = McpRegistry(resolve_codex_bin(), call_logger=self.mcp_call_logger.append)
+        # Discovery is automatic at Agent startup, but it must not delay the
+        # local HTTP server when one remote MCP is slow or unavailable.
+        self.mcp_refresh_thread = None
+        if auto_discover:
+            self.mcp_refresh_thread = threading.Thread(
+                target=self._initial_mcp_refresh, name="mcp-discovery", daemon=True
+            )
+            self.mcp_refresh_thread.start()
+
+    def _initial_mcp_refresh(self) -> None:
+        try:
+            self.mcp_registry.refresh()
+        except Exception:
+            # Per-server errors are retained by the registry when discovery can
+            # complete. A global config/CLI failure is represented by an empty
+            # catalog and is surfaced through the explicit refresh endpoint.
+            return
 
     def create_job(self, params: dict, job_type: str = "sales_plan") -> dict:
         with self.lock:
@@ -630,6 +653,9 @@ class AgentState:
         with self.lock:
             job = self.jobs.get(job_id)
             return dict(job) if job else None
+
+    def mcp_snapshot(self) -> dict:
+        return self.mcp_registry.snapshot()
 
     def _run_job(self, job_id: str, params: dict, job_type: str) -> None:
         with self.lock:
@@ -1009,8 +1035,9 @@ class AgentHandler(BaseHTTPRequestHandler):
             self._send(403, {"error": "来源不受信任"})
             return
         path = urlsplit(self.path).path
+        query = parse_qs(urlsplit(self.path).query)
         if path == "/api/health":
-            self._send(200, check_ready(), origin)
+            self._send(200, {**check_ready(), "mcp": self.state.mcp_snapshot()}, origin)
         elif path == "/api/auth":
             self._send(200, {"paired": True}, origin) if self._authorized() else self._send(401, {"error": "配对码无效"}, origin)
         elif path == "/api/ads/config":
@@ -1018,6 +1045,52 @@ class AgentHandler(BaseHTTPRequestHandler):
                 self._send(401, {"error": "配对码无效"}, origin)
                 return
             self._send(200, {"config": load_ads_config()}, origin)
+        elif path == "/api/mcp":
+            if not self._authorized():
+                self._send(401, {"error": "配对码无效"}, origin)
+                return
+            self._send(200, {
+                **self.state.mcp_snapshot(),
+                "tool_catalog": self.state.mcp_registry.catalog(
+                    query.get("q", [""])[0], query.get("offset", [0])[0], query.get("limit", [500])[0],
+                    server=query.get("server", [""])[0], risk=query.get("risk", [""])[0],
+                    available=query.get("available", [None])[0]
+                ),
+                "tool_declarations": self.state.mcp_registry.openai_tools(),
+            }, origin)
+        elif path == "/api/mcp/tools":
+            if not self._authorized():
+                self._send(401, {"error": "配对码无效"}, origin)
+                return
+            self._send(200, self.state.mcp_registry.catalog(
+                query.get("q", [""])[0], query.get("offset", [0])[0], query.get("limit", [500])[0],
+                server=query.get("server", [""])[0], risk=query.get("risk", [""])[0],
+                available=query.get("available", [None])[0]
+            ), origin)
+        elif path == "/api/mcp/logs":
+            if not self._authorized():
+                self._send(401, {"error": "配对码无效"}, origin)
+                return
+            try:
+                payload = self.state.mcp_call_logger.list(
+                    server=query.get("server", [""])[0],
+                    tool=query.get("tool", [""])[0],
+                    status=query.get("status", [""])[0],
+                    since=query.get("since", [""])[0],
+                    until=query.get("until", [""])[0],
+                    offset=query.get("offset", [0])[0],
+                    limit=query.get("limit", [50])[0],
+                )
+                self._send(200, payload, origin)
+            except (TypeError, ValueError):
+                self._send(400, {"error": "调用日志筛选参数无效"}, origin)
+        elif path.startswith("/api/mcp/logs/"):
+            if not self._authorized():
+                self._send(401, {"error": "配对码无效"}, origin)
+                return
+            entry_id = path.removeprefix("/api/mcp/logs/")
+            entry = self.state.mcp_call_logger.get(entry_id)
+            self._send(200, entry, origin) if entry else self._send(404, {"error": "调用日志不存在"}, origin)
         elif path == "/api/stores":
             if not self._authorized():
                 self._send(401, {"error": "配对码无效"}, origin)
@@ -1050,6 +1123,49 @@ class AgentHandler(BaseHTTPRequestHandler):
             self._send(401, {"error": "配对码无效"}, origin)
             return
         path = urlsplit(self.path).path
+        if path in ("/api/mcp/refresh", "/api/mcp/reconnect", "/api/mcp/call", "/api/mcp/tool-call"):
+            try:
+                content_len = int(self.headers.get("Content-Length", "0"))
+                if not 1 <= content_len <= MAX_MCP_BODY_BYTES:
+                    raise ValueError("MCP 请求大小不符合限制")
+                data = json.loads(self.rfile.read(content_len).decode("utf-8"))
+                if not isinstance(data, dict):
+                    raise ValueError("MCP 请求格式错误")
+                if path == "/api/mcp/refresh":
+                    names = data.get("servers")
+                    if names is not None and (not isinstance(names, list) or
+                                               not all(isinstance(name, str) and name.strip() for name in names) or
+                                               len(names) > 100):
+                        raise ValueError("servers 必须是最多 100 个非空 Server 名称")
+                    self._send(200, self.state.mcp_registry.refresh(names), origin)
+                    return
+                if path == "/api/mcp/reconnect":
+                    name = str(data.get("server", "")).strip()
+                    if not name or len(name) > 200:
+                        raise ValueError("server 不能为空")
+                    self._send(200, self.state.mcp_registry.reconnect(name), origin)
+                    return
+                if path == "/api/mcp/tool-call":
+                    tool_call = data.get("tool_call")
+                    if not isinstance(tool_call, dict):
+                        raise ValueError("tool_call 必须是对象")
+                    result = self.state.mcp_registry.dispatch_tool_call(
+                        tool_call, confirmed=data.get("confirmed") is True
+                    )
+                    self._send(200, result, origin)
+                    return
+                name = str(data.get("tool") or data.get("qualified_name") or "").strip()
+                arguments = data.get("arguments", {})
+                result = self.state.mcp_registry.invoke(
+                    name, arguments, confirmed=data.get("confirmed") is True
+                )
+                self._send(200, result, origin)
+            except McpConfirmationRequired as exc:
+                self._send(428, {"error": str(exc), "confirmation_required": True,
+                                 "tool": exc.tool}, origin)
+            except (McpToolNotFound, McpGatewayError, ValueError, TypeError, json.JSONDecodeError) as exc:
+                self._send(400, {"error": str(exc)}, origin)
+            return
         if path == "/api/ads/config":
             try:
                 content_len = int(self.headers.get("Content-Length", "0"))
@@ -1145,7 +1261,7 @@ def main():
         return 2
     httpd = None
     try:
-        state = AgentState()
+        state = AgentState(auto_discover=True)
         AgentHandler.state = state
         httpd = ThreadingHTTPServer((HOST, PORT), AgentHandler)
         httpd.daemon_threads = True
@@ -1156,7 +1272,8 @@ def main():
     print(f"地址： http://{HOST}:{PORT}（只允许本机访问）", flush=True)
     print("配对码（仅输入你自己打开的运营工具箱网页，勿分享）：", flush=True)
     print(state.pair_key, flush=True)
-    print("销售计划/Listing 仍为只读采集；广告配置仅保存在本机，不通过此服务写入 Amazon 或飞书。", flush=True)
+    print("统一 MCP 层已启用：自动发现全部已配置 Server 和 tools/list 工具；高风险工具调用前需要确认。", flush=True)
+    print("销售计划/Listing 仍为只读业务采集；广告配置仅保存在本机，不通过此服务写入 Amazon 或飞书。", flush=True)
     print("广告创建由 Codex 中的 Ads Relaunch Skill 通过已授权领星 MCP 执行。", flush=True)
     print("关闭此终端即停止 Agent。\n", flush=True)
     try:
@@ -1171,3 +1288,4 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

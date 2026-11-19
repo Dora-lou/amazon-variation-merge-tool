@@ -4,9 +4,15 @@
 
 销售计划与 Listing 任务仍采用只读采集和分析，不通过本地 Agent 写入飞书或 Amazon。Ads Relaunch 页面只保存用户配置、ASIN 专属否定规则和 Skill Campaign Registry 元数据到本机；它不会代替 Codex 创建广告。广告创建在用户把前置程序生成的指令交给 Codex 后，由已安装的 Skill 调用领星 MCP 完成。领星库存字段和在途去重仍需按实际返回逐项确认；不确定时结果会标记待核对。
 
-## 只读采集边界
+## 统一 MCP 接入层与只读采集边界
 
-- 领星固定走 `help → search → action`。只有 help 与 search 同时返回 `toolType=read`、参数通过 Schema 校验且工具 ID 在代码白名单内时才允许 action。目前白名单为：`erp_listing`、`get_fba_stock_list`、`query_fba_valid_list`、`query_product_performance_asin_lists`。销量工具分别执行完整自然月和最近30个已结束自然日查询，二者不会互相替代。
+- Agent 启动时自动读取 Codex 中全部已配置 MCP Server（包括 stdio、streamable HTTP 等受支持传输），并为每个 Server 独立执行 MCP `initialize` 与 `tools/list`。所有发现的工具及完整 `inputSchema` 都进入统一 Registry，不按读/写/删过滤。
+- 工具名保留 Server 命名空间，模型调用名格式为 `mcp__<server>__<tool>`；`GET /api/mcp`、`GET /api/mcp/tools` 可查看完整清单，`POST /api/mcp/refresh` 和 `POST /api/mcp/reconnect` 支持动态刷新/重连。清单可分页检索，但分页只影响返回量，不影响调用能力。
+- `POST /api/mcp/call` 和 `POST /api/mcp/tool-call` 是统一调用入口，后者提供 OpenAI-compatible function tool-call 分发。高风险工具仍会出现在清单和模型 tools 中，但实际执行前返回 `confirmation_required`，确认后才调用；不会通过隐藏工具规避风险控制。
+- 每个 MCP Server 独立记录 `connected`、`stale`、`disabled` 或 `error` 状态。单个 Server 连接失败只影响该 Server，并在 `/api/health` 与 `/api/mcp` 独立报告，不阻断其它 MCP。
+- 当前旧的领星/飞书采集器仍为销售计划的业务兼容路径，只选择该流程需要的只读调用来生成权威证据；这不是统一 Registry 的工具白名单，也不会删掉领星、西柚或未来 MCP 的其它工具。
+
+- 销售计划的领星兼容采集流程仍固定走 `help → search → action`，并只为该只读业务流程选择 `erp_listing`、`get_fba_stock_list`、`query_fba_valid_list`、`query_product_performance_asin_lists` 等已验证调用；这只约束该流程的证据计算，不约束统一 MCP Registry 的注册、模型工具清单或其它工具调用。销量工具分别执行完整自然月和最近30个已结束自然日查询，二者不会互相替代。
 - 领星响应先按父/子 ASIN、SKU、MSKU、FNSKU 规范化并做目标范围过滤，再进入分析快照；接口返回的其他产品行会标记 `out_of_scope_response` 并排除。字段、接口和去重风险见 [FIELD_MAPPING.md](FIELD_MAPPING.md)。
 - 飞书只允许 `auth status`、`wiki +space-list`、`wiki +node-list`、`sheets +workbook-info`、`sheets +table-get`，并对每条命令的 flags 再做固定白名单检查。命令通过参数数组执行，不经过 shell，也不接受网页或模型提供的命令文本。
 - `+table-get` 遇到重复表头的 validation/exit 2 时，自动使用只读 `--no-header` 位置列模式重试并标记待核对；单个表格失败不会再抹掉其他已成功读取的表格。CLI 固定在用户主目录运行，并关闭更新/Skill 通知，确保 stdout 只用于 JSON。
@@ -50,7 +56,7 @@ lark-cli --version
 - 仅接受来自本站 `https://dora-lou.github.io` 和本机允许来源的浏览器请求；创建任务必须提供当前进程启动时生成的随机配对码。
 - 配对码仅保存在当前浏览器标签页会话存储中，关闭后可清除；每次重启 Agent 会更换配对码。
 - 后台不保存 Token、MCP 密钥、Cookie 或原始广告报表。Ads Relaunch 配置保存在 `%LOCALAPPDATA%\AmazonOperationsWorkspace\context\ads_relaunch_config.json`，包含全局规则、ASIN 专属否定词/否定商品、Campaign ID/Ad Group ID Registry 和执行摘要；不保存认证信息。销售计划预览任务仍只在内存保留最近几次，重启服务后任务记录消失。
-- 销售计划/Listing 的本地 `codex exec` 保留 `--sandbox read-only`、`--ask-for-approval never` 和 `--ephemeral`，并用本次进程级 `--ignore-user-config` 隔离全局 MCP 配置；该只读流程只分析已采集的 JSON。Ads Relaunch Skill 是用户在 Codex 对话中单独调用的技能，按授权使用领星 MCP 创建 SP 广告；本地 Agent 不提供 Amazon Ads 或飞书业务写入 HTTP 接口。
+- 销售计划/Listing 的本地 `codex exec` 保留 `--sandbox read-only`、`--ask-for-approval never` 和 `--ephemeral`，并用本次进程级 `--ignore-user-config` 隔离全局 MCP 配置；该只读业务流程只分析已采集的 JSON。统一 MCP Registry 使用全部已配置 Server，独立执行前确认保护。Ads Relaunch Skill 仍可在用户授权下创建 SP 广告；业务写入不从统一工具清单中隐藏。
 - 每次分析前会以独立进程检查 CLI 版本、`exec --help` 中的必需参数和 `codex login status`。网页只显示固定诊断码：`CODEX_CLI_ARGUMENTS`、`CODEX_AUTHENTICATION`、`CODEX_INPUT_SIZE`、`CODEX_MODEL_CALL`、`CODEX_OUTPUT_SCHEMA`、`CODEX_OUTPUT_FORMAT`、`CODEX_SERVICE` 或 `CODEX_RUNTIME`；原始 stdout/stderr、请求头和凭证不会返回网页。
 - 宿主采集层可以暂存较大的完整响应，但传给模型前会生成有体积上限的分析副本。发生截断时来源状态强制改为 `partial`，页面提示人工核对，任何被省略内容都不能当作 0；其他产品的 `reference` 表格数值在送模前直接移除。
 - 不要在公共 GitHub 仓库上传公司 ASIN、库存、利润、客户数据、私钥、OAuth 凭证或 Codex 的个人登录文件。离职后只迁移有权保留的通用代码与个人资料；公司数据连接需依法停用。
@@ -80,4 +86,5 @@ python -m unittest discover -s agent -p "test_*.py" -v
 
 自动化测试使用模拟 MCP/飞书响应，不需要领星和飞书认证。实际生产联调需要在用户自己的电脑执行，依次检查 `/api/health`、只读领星和飞书调用、库存字段映射、结构化输出。修改代码后通过 GitHub 更新；不要将凭证写入 `.py`、配置或 Git 日志。
 
-接口：`GET /api/health`（公开健康状态）、`GET /api/auth`（验证配对码）、`POST /api/jobs/preview`（排队只读预览）、`GET /api/jobs/{id}`（查看进度/结果）、`GET/POST /api/ads/config`（仅读写本机 Ads Skill 配置，不写入 Amazon/飞书业务对象）。
+接口：`GET /api/health`（公开健康状态）、`GET /api/auth`（验证配对码）、`GET /api/mcp` / `GET /api/mcp/tools`（完整 Server/工具清单）、`POST /api/mcp/refresh` / `POST /api/mcp/reconnect`（动态发现/重连）、`POST /api/mcp/call` / `POST /api/mcp/tool-call`（统一调用及 function tool-call 分发）、`GET /api/mcp/logs` / `GET /api/mcp/logs/{id}`（脱敏调用日志）、`POST /api/jobs/preview`（排队只读预览）、`GET /api/jobs/{id}`（查看进度/结果）、`GET/POST /api/ads/config`（读写本机 Ads Skill 配置）。MCP 接口仍受本机来源和 Agent 配对码保护，高风险调用需要确认。
+
