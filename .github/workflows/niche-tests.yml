@@ -1,4 +1,4 @@
-name: Niche data tests
+name: Niche and SQR data tests
 on:
   push:
     branches: [main]
@@ -19,5 +19,10 @@ jobs:
           node --check niche-engine.js
           node --check niche-ui.js
           node --check niche-engine.test.js
+          node --check sqr-engine.js
+          node --check sqr-ui.js
+          node --check sqr-engine.test.js
       - name: Run Niche engine tests
         run: node niche-engine.test.js
+      - name: Run SQR engine tests
+        run: node sqr-engine.test.js
