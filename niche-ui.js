@@ -531,6 +531,21 @@
       return;
     }
 
+    const legacyNiches = niches.filter(function (niche) {
+      return !Array.isArray(niche.searchTermHeaders) || !niche.searchTermHeaders.length;
+    });
+    if (legacyNiches.length) {
+      const names = legacyNiches.map(function (niche) { return niche.name; }).join('、');
+      const confirmed = window.confirm(
+        '以下 Niche 是旧版保存的数据，尚未保存原始 ST 表的其他字段：' + names +
+        '。如果继续导出，这些 Sheet 只会包含 6 个核心字段。建议先重新上传这些 Niche 的 Product CSV 和 Search Term CSV。仍然继续导出吗？'
+      );
+      if (!confirmed) {
+        setStatus('nicheStatus', '已取消导出。重新上传旧版 Niche 的两份 CSV 后，即可补齐原始 ST 字段。', 'warn');
+        return;
+      }
+    }
+
     try {
       const workbook = NicheEngine.buildWorkbook(niches, window.XLSX);
       const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
