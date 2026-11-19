@@ -103,8 +103,10 @@
       empty.className = 'muted';
       empty.style.padding = '15px 0';
       empty.textContent = mode === 'opportunity'
-        ? '本报告未识别到符合当前规则的高需求低曝光词。'
-        : '本报告未识别到阶段份额指数低于 0.80 的搜索词。';
+        ? '没有符合当前规则的相关性机会词。'
+        : (mode === 'weak'
+          ? '本报告未识别到阶段份额指数低于 0.80 的搜索词。'
+          : (mode === 'core' ? '没有符合条件的核心成交词。' : '没有需要优先核实的高搜索量词。'));
       host.appendChild(empty);
       return;
     }
@@ -115,12 +117,19 @@
       const query = document.createElement('strong');
       query.textContent = row.query;
       const note = document.createElement('small');
-      note.textContent = '搜索量 ' + formatNumber(row.searchVolume) +
-        ' · ASIN 曝光份额 ' + formatPercent(row.asinImpressionShareCalc);
+      if (mode === 'core') {
+        note.textContent = 'ASIN 购买 ' + formatNumber(row.asinPurchases) + ' · ASIN 点击 ' + formatNumber(row.asinClicks);
+      } else if (mode === 'verify') {
+        note.textContent = '搜索量 ' + formatNumber(row.searchVolume) + ' · ASIN 购买 ' + formatNumber(row.asinPurchases);
+      } else {
+        note.textContent = '搜索量 ' + formatNumber(row.searchVolume) +
+          ' · ASIN 曝光份额 ' + formatPercent(row.asinImpressionShareCalc);
+      }
       info.append(query, note);
       const tag = document.createElement('span');
-      tag.className = 'tag' + (mode === 'weak' ? ' weak' : '');
-      tag.textContent = mode === 'opportunity' ? row.opportunityLabel : row.funnelDiagnosis;
+      tag.className = 'tag' + (mode === 'weak' ? ' weak' : (mode === 'core' ? ' strong' : ''));
+      tag.textContent = mode === 'opportunity' ? row.actionPriority :
+        (mode === 'core' ? '核心成交' : (mode === 'verify' ? row.relevanceLevel : row.funnelDiagnosis));
       item.append(info, tag);
       host.appendChild(item);
     });
@@ -227,6 +236,14 @@
     $('weakCount').textContent = weak.length + ' 个词';
     renderInsightList('opportunityList', opportunities, 'opportunity');
     renderInsightList('weakList', weak, 'weak');
+    const core = data.coreConvertingTerms || [];
+    const verify = data.rows.filter(function (row) {
+      return row.highVolume && row.relevanceScore <= 45;
+    }).sort(function (a,b) { return b.searchVolume-a.searchVolume; });
+    $('coreCount').textContent = core.length + ' 个词';
+    $('verifyCount').textContent = verify.length + ' 个词';
+    renderInsightList('coreList', core, 'core');
+    renderInsightList('verifyList', verify, 'verify');
     renderGroupSummary(data);
     const categorySelect = $('categoryFilter');
     categorySelect.innerHTML = '<option value="">全部分组</option>';
