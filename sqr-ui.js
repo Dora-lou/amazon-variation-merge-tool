@@ -196,7 +196,8 @@
         formatPercent(row.asinClickShareCalc),
         formatPercent(row.asinCartShareCalc),
         formatPercent(row.asinPurchaseShareCalc),
-        (row.funnelIssues && row.funnelIssues.length) ? row.funnelIssues.join('；') : row.funnelDiagnosis
+        (row.funnelIssues && row.funnelIssues.length) ? row.funnelIssues.join('；') : row.funnelDiagnosis,
+        row.recommendation
       ];
       values.forEach(function (value, index) {
         const td = document.createElement('td');
