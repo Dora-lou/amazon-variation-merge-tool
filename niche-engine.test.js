@@ -120,7 +120,15 @@ assert.equal(sheet['!freeze'].xSplit, 2);
 assert.equal(sheet['!freeze'].ySplit, 7);
 assert.ok(sheet.A1.s && sheet.A1.s.fill.fgColor.rgb === 'FF183B56');
 assert.ok(sheet.A7.s && sheet.A7.s.font.color.rgb === 'FFFFFFFF');
-assert.equal(sheet['!autofilter'].ref, 'A7:L9');
+assert.equal(sheet.M7.v, '点击率最高的商品2（标题）');
+assert.equal(sheet.N7.v, '点击率最高的商品2 (ASIN)');
+assert.equal(sheet.O7.v, '点击率最高的商品3（标题）');
+assert.equal(sheet.P7.v, '点击率最高的商品3 (ASIN)');
+assert.equal(sheet.M8.v, 'Second bowl');
+assert.equal(sheet.N8.v, 'B023456789');
+assert.equal(sheet.O8.v, 'Third bowl');
+assert.equal(sheet.P8.v, 'B034567890');
+assert.equal(sheet['!autofilter'].ref, 'A7:P9');
 assert.equal(sheet['!merges'].length, 8);
 
 const names = NicheEngine.makeUniqueSheetNames([
