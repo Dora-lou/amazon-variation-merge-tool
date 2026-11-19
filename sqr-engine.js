@@ -31,8 +31,8 @@
   function parseMetadata(line) {
     const text = String(line || '');
     function get(key) {
-      const match = text.match(new RegExp(key + '\\s*=\\s*\\["([^"]*)"\\]'));
-      return match ? match[1] : '';
+      const match = text.match(new RegExp(key + '\\s*=\\s*\\[([^\\]]*)\\]'));
+      return match ? match[1].replace(/^["']|["']$/g, '').trim() : '';
     }
     return {
       asin: get('ASIN'), reportRange: get('报告范围'),
