@@ -47,7 +47,7 @@ button.primary{background:#2e6385;border-color:#2e6385;color:#fff}button.primary
 .funnel strong{display:block;font-size:19px;color:#294a64;margin-top:4px;font-variant-numeric:tabular-nums}
 .funnel small{display:block;font-size:11px;color:#8796a2;margin-top:4px}
 .funnel .share{font-size:12px;font-weight:750;color:#3e728f;margin-top:7px}
-.insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.insight-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
 .insight-card{border:1px solid #e2e9ef;border-radius:12px;overflow:hidden}
 .insight-head{padding:12px 14px;background:#f5f8fa;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .insight-head span{font-size:11px;color:#82919e}
@@ -58,7 +58,7 @@ button.primary{background:#2e6385;border-color:#2e6385;color:#fff}button.primary
 .insight-item small{display:block;font-size:10px;color:#8997a3;margin-top:3px}
 .tag{display:inline-flex;padding:4px 7px;border-radius:6px;background:#fff4dd;color:#90611d;font-size:10px;font-weight:750;white-space:nowrap}
 .tag.weak{background:#fff0f0;color:#a0444a}.tag.strong{background:#eaf5ed;color:#38734e}
-.table-tools{display:grid;grid-template-columns:minmax(180px,1.2fr) repeat(3,minmax(140px,.8fr)) auto;gap:10px;align-items:end;margin-bottom:10px}
+.table-tools{display:grid;grid-template-columns:minmax(180px,1.2fr) repeat(4,minmax(130px,.8fr)) auto;gap:10px;align-items:end;margin-bottom:10px}
 .table-wrap{overflow:auto;border:1px solid #e1e8ee;border-radius:11px}
 table{border-collapse:separate;border-spacing:0;width:100%;min-width:850px}
 th,td{padding:10px 11px;text-align:left;border-bottom:1px solid #e9eef2;white-space:nowrap;font-size:11px}
@@ -154,6 +154,14 @@ td.query{font-weight:750;color:#2e526e}
           <div class="insight-head"><h3>主要份额流失环节</h3><span id="weakCount">0 个词</span></div>
           <div class="insight-list" id="weakList"></div>
         </div>
+        <div class="insight-card">
+          <div class="insight-head"><h3>核心成交词</h3><span id="coreCount">0 个词</span></div>
+          <div class="insight-list" id="coreList"></div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-head"><h3>高搜索量 · 先核实相关性</h3><span id="verifyCount">0 个词</span></div>
+          <div class="insight-list" id="verifyList"></div>
+        </div>
       </div>
     </section>
 
@@ -198,6 +206,6 @@ td.query{font-weight:750;color:#2e526e}
 </main>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="./sqr-engine.js?v=20261119-3"></script>
-<script src="./sqr-ui.js?v=20261119-2"></script>
+<script src="./sqr-ui.js?v=20261119-3"></script>
 </body>
 </html>
