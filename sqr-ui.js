@@ -128,14 +128,47 @@
   function matchesFilter(row, filter) {
     if (!filter) return true;
     if (filter === '份额提升') return row.funnelDiagnosis.indexOf('份额提升') >= 0;
-    return row.opportunityLabel === filter || row.funnelDiagnosis === filter;
+    return row.opportunityLabel === filter || row.funnelDiagnosis === filter ||
+      (row.funnelIssues || []).indexOf(filter) >= 0;
+  }
+  function renderGroupSummary(data) {
+    const body = $('groupBody');
+    body.innerHTML = '';
+    (data.queryGroups || []).forEach(function (group) {
+      const tr = document.createElement('tr');
+      const values = [
+        group.queryCategory,
+        formatNumber(group.queryCount),
+        formatNumber(group.searchVolume),
+        formatNumber(group.asinClicks),
+        formatNumber(group.asinCartAdds),
+        formatNumber(group.asinPurchases),
+        formatPercent(group.asinClickShare),
+        formatPercent(group.asinPurchaseShare),
+        formatPercent(group.asinClickToPurchaseRate)
+      ];
+      values.forEach(function (value, index) {
+        const td = document.createElement('td');
+        td.textContent = value;
+        if (index === 0) td.className = 'query';
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
   }
   function renderDetail() {
     if (!currentData) return;
     const query = $('queryFilter').value.trim().toLowerCase();
     const filter = $('diagnosisFilter').value;
+    const category = $('categoryFilter').value;
+    const relevance = $('relevanceFilter').value;
+    const priority = $('priorityFilter').value;
     const filtered = currentData.rows.filter(function (row) {
-      return (!query || row.query.toLowerCase().indexOf(query) >= 0) && matchesFilter(row, filter);
+      return (!query || row.query.toLowerCase().indexOf(query) >= 0) &&
+        (!category || row.queryCategory === category) &&
+        (!relevance || row.relevanceLevel === relevance) &&
+        (!priority || row.actionPriority === priority) &&
+        matchesFilter(row, filter);
     });
     const shown = filtered.slice(0, 30);
     const body = $('detailBody');
@@ -145,25 +178,29 @@
       const values = [
         row.query,
         formatNumber(row.searchVolume),
-        row.opportunityLabel,
-        row.funnelDiagnosis,
+        row.queryCategory,
+        row.relevanceLevel,
+        row.actionPriority,
+        formatNumber(row.asinClicks),
+        formatNumber(row.asinPurchases),
         formatPercent(row.asinImpressionShareCalc),
         formatPercent(row.asinClickShareCalc),
         formatPercent(row.asinCartShareCalc),
-        formatPercent(row.asinPurchaseShareCalc)
+        formatPercent(row.asinPurchaseShareCalc),
+        (row.funnelIssues && row.funnelIssues.length) ? row.funnelIssues.join('；') : row.funnelDiagnosis
       ];
       values.forEach(function (value, index) {
         const td = document.createElement('td');
         td.textContent = value;
         if (index === 0) td.className = 'query';
-        if (index === 2 && row.opportunityLabel === '高需求·低曝光') {
+        if (index === 4 && (row.actionPriority === '高需求流量缺口' || row.actionPriority === '核心成交词')) {
           td.innerHTML = '';
           const tag = document.createElement('span');
-          tag.className = 'tag';
+          tag.className = 'tag' + (row.actionPriority === '核心成交词' ? ' strong' : '');
           tag.textContent = value;
           td.appendChild(tag);
         }
-        if (index === 3 && row.funnelDiagnosis.indexOf('流失') >= 0) {
+        if (index === 11 && row.funnelIssues && row.funnelIssues.length) {
           td.innerHTML = '';
           const tag = document.createElement('span');
           tag.className = 'tag weak';
@@ -174,7 +211,7 @@
       });
       body.appendChild(tr);
     });
-    $('tableFooter').textContent = '当前筛选 ' + formatNumber(filtered.length) + ' 个搜索词；页面预览最多显示前 30 条。Excel 导出包含全部 ' + formatNumber(currentData.rows.length) + ' 条搜索词及完整原始字段。';
+    $('tableFooter').textContent = '当前筛选 ' + formatNumber(filtered.length) + ' 个搜索词；页面预览最多显示前 30 条。相关性和词群为规则预判。Excel 导出包含全部 ' + formatNumber(currentData.rows.length) + ' 条搜索词、分组汇总及完整原始字段。';
   }
   function render(data) {
     currentData = data;
@@ -182,13 +219,27 @@
     renderMetadata(data);
     renderKpis(data);
     renderFunnel(data);
-    const opportunities = data.rows.filter(function (row) { return row.opportunityLabel === '高需求·低曝光'; });
-    const weak = data.rows.filter(function (row) { return row.funnelDiagnosis.indexOf('份额流失') >= 0; });
-    $('opportunityCount').textContent = opportunities.length + ' 个词';
+    const opportunities = data.relevantOpportunities || [];
+    const allOpportunityCount = data.rows.filter(function (row) { return row.opportunityLabel === '高需求·低曝光'; }).length;
+    const weak = data.rows.filter(function (row) { return row.funnelIssues && row.funnelIssues.length; })
+      .sort(function (a,b) { return (b.relevanceScore-a.relevanceScore) || (b.searchVolume-a.searchVolume); });
+    $('opportunityCount').textContent = opportunities.length + ' 个相关词 / ' + allOpportunityCount + ' 个规则命中';
     $('weakCount').textContent = weak.length + ' 个词';
     renderInsightList('opportunityList', opportunities, 'opportunity');
     renderInsightList('weakList', weak, 'weak');
+    renderGroupSummary(data);
+    const categorySelect = $('categoryFilter');
+    categorySelect.innerHTML = '<option value="">全部分组</option>';
+    (data.queryGroups || []).forEach(function (group) {
+      const option = document.createElement('option');
+      option.value = group.queryCategory;
+      option.textContent = group.queryCategory;
+      categorySelect.appendChild(option);
+    });
     $('queryFilter').value = '';
+    $('categoryFilter').value = '';
+    $('relevanceFilter').value = '';
+    $('priorityFilter').value = '';
     $('diagnosisFilter').value = '';
     renderDetail();
     $('downloadBtn').disabled = false;
@@ -229,15 +280,20 @@
         ? '_' + currentData.metadata.year + (currentData.metadata.quarter ? 'Q' + currentData.metadata.quarter : '')
         : '';
       window.XLSX.writeFile(workbook, asin + '_SQR分析' + period + '.xlsx');
-      setStatus('Excel 工作簿已生成，包含 SQR 总览、搜索词分析和原始数据三个 Sheet。', 'success');
+      setStatus('Excel 工作簿已生成，包含 SQR 总览、搜索词分析、关键词分组和原始数据四个 Sheet。', 'success');
     } catch (error) {
       setStatus(error && error.message ? error.message : 'Excel 导出失败，请重试。', 'error');
     }
   });
   $('queryFilter').addEventListener('input', renderDetail);
-  $('diagnosisFilter').addEventListener('change', renderDetail);
+  ['categoryFilter','relevanceFilter','priorityFilter','diagnosisFilter'].forEach(function (id) {
+    $(id).addEventListener('change', renderDetail);
+  });
   $('resetFilters').addEventListener('click', function () {
     $('queryFilter').value = '';
+    $('categoryFilter').value = '';
+    $('relevanceFilter').value = '';
+    $('priorityFilter').value = '';
     $('diagnosisFilter').value = '';
     renderDetail();
   });
