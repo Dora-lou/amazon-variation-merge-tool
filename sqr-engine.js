@@ -288,7 +288,13 @@
         setStyle(analysisSheet,XLSX,r,c,{fill:{patternType:'solid',fgColor:{rgb:fill}},font:{name:'Aptos',sz:9,bold:bold,color:color},alignment:{vertical:'center',wrapText:c===2||c===3||c===4||/标题/.test(analysisHeaders[c])}});
       }
       [5,6,7,8,12,13,14,15].forEach(function(c){const cell=analysisSheet[colName(c)+(r+1)];if(cell&&typeof cell.v==='number')cell.z='0.00%';});
-      [9,10,11].forEach(function(c){const cell=analysisSheet[colName(c)+(r+1)];if(cell&&typeof cell.v==='number')cell.z='0.00x';});
+      [9,10,11].forEach(function(c){const cell=analysisSheet[colName(c)+(r+1)];if(cell&&typeof cell.v==='number')cell.z='0.00"x"';});
+      remainingIndexes.forEach(function(sourceIndex,offset){
+        if(/%/.test(data.headers[sourceIndex])){
+          const cell=analysisSheet[colName(16+offset)+(r+1)];
+          if(cell&&typeof cell.v==='number')cell.z='0.00"%"';
+        }
+      });
       const volumeCell=analysisSheet['B'+(r+1)];if(volumeCell&&typeof volumeCell.v==='number')volumeCell.z='#,##0';
     }
     XLSX.utils.book_append_sheet(workbook,analysisSheet,'搜索词分析');
@@ -305,6 +311,12 @@
     for(let c=0;c<data.headers.length;c+=1){
       setStyle(rawSheet,XLSX,0,c,{fill:{patternType:'solid',fgColor:{rgb:p.navy}},font:{name:'Aptos Display',sz:14,bold:true,color:{rgb:p.white}},alignment:{vertical:'center',indent:1}});
       setStyle(rawSheet,XLSX,2,c,{fill:{patternType:'solid',fgColor:{rgb:p.muted}},font:{name:'Aptos',sz:9,bold:true,color:{rgb:p.white}},alignment:{vertical:'center',wrapText:true}});
+      if(/%/.test(data.headers[c])){
+        for(let rowIndex=3;rowIndex<rawAoa.length;rowIndex+=1){
+          const cell=rawSheet[colName(c)+(rowIndex+1)];
+          if(cell&&typeof cell.v==='number')cell.z='0.00"%"';
+        }
+      }
     }
     XLSX.utils.book_append_sheet(workbook,rawSheet,'原始数据');
     workbook.Props={Title:'Amazon SQR Analysis',Subject:'Search Query Performance analysis',Author:'Amazon Operations Workspace'};
