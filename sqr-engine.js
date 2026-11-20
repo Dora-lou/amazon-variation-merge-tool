@@ -287,10 +287,115 @@
     if (!sheet[address]) sheet[address]={t:'s',v:''};
     sheet[address].s=style;
   }
+  const BENCHMARK_RAW_HEADERS = [
+    '搜索查询','搜索查询得分','搜索查询量','曝光：曝光总量','曝光量：ASIN 计数','曝光：ASIN 曝光占比 %',
+    '点击量：总次数','点击量：点击率 %','点击量：ASIN 数量','点击量：ASIN 份额 %','点击量：价格(中位数)','点击量：ASIN 售价（中位数）',
+    '点击量：当日达配送速度','点击量：1 天配送速度','点击：2天配送速度','购物车添加：总数','加入购物车：加购率%',
+    '加购：ASIN 数量','加入购物车：ASIN 加购占比 %','加入购物车：售价（中位数）','加入购物车：ASIN 价格（中位数）',
+    '购物车添加：当日达配送速度','加入购物车：1 天配送速度','购物车添加：2 天配送速度','购买：下单总数',
+    '下单成交：成交转化率%','下单成交：ASIN 数量','下单: ASIN 占比 %','购买次数：价格（中位数）',
+    '购买：ASIN 价格（中位数）','下单成交：当日达配送速度','下单成交：1 天配送速度','下单：2天配送速度','报告日期'
+  ];
+  const BENCHMARK_HEADERS = [
+    '类目点击率','ASIN点击率','点击胜率','类目-加购率','ASIN-加购率','加购胜率','类目-CVR','ASIN-CVR','CVR胜率','PRI'
+  ].concat(BENCHMARK_RAW_HEADERS);
+  function benchmarkDate(value) {
+    const raw = String(value == null ? '' : value).trim();
+    const match = raw.match(/^(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})/);
+    if (!match) return excelValue(value);
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+  function buildBenchmarkSheet(data,XLSX) {
+    const sourceIndexes = {};
+    data.headers.forEach(function (header,index) { sourceIndexes[normalizeHeader(header)] = index; });
+    const aoa = [BENCHMARK_HEADERS];
+    const rows = data.rows || [];
+    rows.forEach(function (row) {
+      const rawValues = BENCHMARK_RAW_HEADERS.map(function (header) {
+        const sourceIndex = sourceIndexes[normalizeHeader(header)];
+        if (sourceIndex === undefined) return '';
+        const value = row.sourceValues && row.sourceValues[sourceIndex];
+        return header === '报告日期' ? benchmarkDate(value) : excelValue(value);
+      });
+      aoa.push(['','','','','','','','','',''].concat(rawValues));
+    });
+    const sheet = XLSX.utils.aoa_to_sheet(aoa);
+    const widths = [
+      11.21,13,13,13,13,13,11.21,13,13,13,42.65,11.21,13,13,11.55,18.76,
+      11.21,13,13,13,14.93,11.21,13,13,13,13,13,13,13,13,13,13,13,13,
+      13,10.65,9.29,17.41,11.21,13,13,13,13,13
+    ];
+    sheet['!cols'] = widths.map(function (wch) { return {wch:wch}; });
+    sheet['!autofilter'] = {ref:'A1:AR' + aoa.length};
+    sheet['!views'] = [{showGridLines:false,zoomScale:80}];
+    sheet['!sheetPr'] = {tabColor:{rgb:'FFE1EAFF'}};
+    const headerFills = ['FFE1EAFF','FFD9F3FD','FFECE2FE'];
+    for (let c = 0; c < BENCHMARK_HEADERS.length; c += 1) {
+      const fill = c < 3 ? headerFills[0] : (c < 6 ? headerFills[1] : (c < 10 ? headerFills[2] : null));
+      const style = {font:{name:c < 10 ? '等线' : '宋体',sz:11,color:{rgb:'FF000000'}},alignment:{vertical:'center',horizontal:'center'}};
+      if (fill) style.fill = {patternType:'solid',fgColor:{rgb:fill}};
+      setStyle(sheet,XLSX,0,c,style);
+    }
+    const rawBodyStyle = {font:{name:'宋体',sz:11,color:{rgb:'FF000000'}},alignment:{vertical:'center',horizontal:'center'}};
+    for (let r = 1; r < aoa.length; r += 1) {
+      for (let c = 10; c < 44; c += 1) {
+        const address = colName(c) + (r + 1);
+        if (sheet[address]) sheet[address].s = rawBodyStyle;
+        if (c === 43 && sheet[address] && sheet[address].t === 'd') sheet[address].z = 'mm-dd-yy';
+      }
+    }
+    function ratio(numerator,denominator) {
+      const value = safeDivide(numerator || 0,denominator || 0);
+      return value === null ? 0 : value;
+    }
+    const formulaStyle = {font:{name:'等线',sz:11,color:{rgb:'FF000000'}},alignment:{vertical:'center',horizontal:'center'}};
+    rows.forEach(function (row,index) {
+      const excelRow = index + 2;
+      const marketCtr = ratio(row.clicks,row.impressions);
+      const asinCtr = ratio(row.asinClicks,row.asinImpressions);
+      const marketCartRate = ratio(row.cartAdds,row.clicks);
+      const asinCartRate = ratio(row.asinCartAdds,row.asinClicks);
+      const marketCvr = ratio(row.purchases,row.clicks);
+      const asinCvr = ratio(row.asinPurchases,row.asinClicks);
+      const clickWin = asinCtr > marketCtr;
+      const cartWin = asinCartRate > marketCartRate;
+      const cvrWin = asinCvr > marketCvr;
+      const pri = ratio(row.asinPurchaseShareCalc,row.asinImpressionShareCalc);
+      const formulas = [
+        {column:0,formula:'IFERROR(Q' + excelRow + '/N' + excelRow + ',0)',value:marketCtr,type:'n',percent:true},
+        {column:1,formula:'IFERROR(S' + excelRow + '/O' + excelRow + ',0)',value:asinCtr,type:'n',percent:true},
+        {column:2,formula:'B' + excelRow + '>A' + excelRow,value:clickWin,type:'b',win:true},
+        {column:3,formula:'IFERROR(Z' + excelRow + '/Q' + excelRow + ',0)',value:marketCartRate,type:'n',percent:true},
+        {column:4,formula:'IFERROR(AB' + excelRow + '/S' + excelRow + ',0)',value:asinCartRate,type:'n',percent:true},
+        {column:5,formula:'E' + excelRow + '>D' + excelRow,value:cartWin,type:'b',win:true},
+        {column:6,formula:'IFERROR(AI' + excelRow + '/Q' + excelRow + ',0)',value:marketCvr,type:'n',percent:true},
+        {column:7,formula:'IFERROR(AK' + excelRow + '/S' + excelRow + ',0)',value:asinCvr,type:'n',percent:true},
+        {column:8,formula:'H' + excelRow + '>G' + excelRow,value:cvrWin,type:'b',win:true},
+        {column:9,formula:'IFERROR(AL' + excelRow + '/P' + excelRow + ',0)',value:pri,type:'n',percent:true}
+      ];
+      formulas.forEach(function (item) {
+        const address = colName(item.column) + excelRow;
+        sheet[address] = {t:item.type,f:item.formula,v:item.value};
+        if (item.win) {
+          sheet[address].s = {
+            font:{name:'等线',sz:11,color:{rgb:'FF000000'}},
+            fill:{patternType:'solid',fgColor:{rgb:item.value ? 'FFD9F5D6' : 'FFFFFFFF'}},
+            alignment:{vertical:'center',horizontal:'center'}
+          };
+        } else {
+          sheet[address].s = formulaStyle;
+          sheet[address].z = '0.00%';
+        }
+      });
+    });
+    return sheet;
+  }
   function buildWorkbook(data,XLSX) {
     if (!XLSX || !XLSX.utils) fail('Excel 处理组件未加载，请刷新页面后重试。');
     const workbook=XLSX.utils.book_new(), rows=data.rows, a=data.aggregate;
     const p={navy:'FF183B56',blue:'FF2F5D83',teal:'FF1D7180',pale:'FFEAF1F7',pale2:'FFF5F8FB',green:'FFE6F3EA',greenText:'FF236B48',amber:'FFFFF2D9',amberText:'FF8A5A12',red:'FFFCE9EA',redText:'FF9A3942',white:'FFFFFFFF',text:'FF263B4D',muted:'FF637B8F',border:'FFE1E8EF'};
+    const benchmarkSheet=buildBenchmarkSheet(data,XLSX);
+    XLSX.utils.book_append_sheet(workbook,benchmarkSheet,'SQR');
     const metaText=[data.metadata.asin?'ASIN: '+data.metadata.asin:'',data.metadata.reportRange?'报告范围: '+data.metadata.reportRange:'',data.metadata.year?'年份: '+data.metadata.year:'',data.metadata.quarter?'季度: Q'+data.metadata.quarter:''].filter(Boolean).join('  |  ');
     const opportunities=rows.filter(function(r){return r.opportunityLabel==='高需求·低曝光';})
       .sort(function(a,b){return (b.relevanceScore-a.relevanceScore)||(b.searchVolume-a.searchVolume);}).slice(0,20);
