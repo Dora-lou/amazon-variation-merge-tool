@@ -300,7 +300,7 @@
         ? '_' + currentData.metadata.year + (currentData.metadata.quarter ? 'Q' + currentData.metadata.quarter : '')
         : '';
       window.XLSX.writeFile(workbook, asin + '_SQR分析' + period + '.xlsx');
-      setStatus('Excel 工作簿已生成，包含 SQR 总览、搜索词分析、关键词分组和原始数据四个 Sheet。', 'success');
+      setStatus('Excel 工作簿已生成，包含首张 SQR 类目/ASIN胜率对比表，以及 SQR总览、搜索词分析、关键词分组和原始数据，共五个 Sheet。', 'success');
     } catch (error) {
       setStatus(error && error.message ? error.message : 'Excel 导出失败，请重试。', 'error');
     }
