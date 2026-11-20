@@ -301,7 +301,7 @@
   ].concat(BENCHMARK_RAW_HEADERS);
   function benchmarkDate(value) {
     const raw = String(value == null ? '' : value).trim();
-    const match = raw.match(/^(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})/);
+    const match = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
     if (!match) return excelValue(value);
     return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
   }
