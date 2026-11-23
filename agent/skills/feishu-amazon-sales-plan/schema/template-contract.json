@@ -1,0 +1,269 @@
+{
+  "contract_version": "1.0",
+  "source": "用户上传的《加热垫2.0销售计划-最新.xlsx》；只固化结构与公式模式，不保留产品示例数据",
+  "target": "飞书原生电子表格",
+  "fixed_sheet_order": [
+    "销售计划",
+    "库存统计",
+    "利润测算",
+    "竞对分析",
+    "月度复盘与补量折扣"
+  ],
+  "hard_rules": {
+    "exact_sheet_count": 5,
+    "allow_extra_sheets": false,
+    "allow_delete_or_rename": false,
+    "dynamic_planning_months": true,
+    "dynamic_sku_rows": true,
+    "dynamic_competitor_rows": true,
+    "preserve_competitor_sheet_when_empty": true,
+    "preserve_monthly_review_sheet_without_actuals": true,
+    "no_sample_product_data": true,
+    "no_extra_columns": true,
+    "target_format": "Feishu native spreadsheet"
+  },
+  "layout": {
+    "font": "等线",
+    "freeze_panes": {
+      "销售计划": "E14",
+      "库存统计": "E4",
+      "利润测算": "D4",
+      "竞对分析": "D4",
+      "月度复盘与补量折扣": "C7"
+    },
+    "fixed_merges": {
+      "库存统计": [
+        "A1:S1",
+        "A2:S2"
+      ],
+      "利润测算": [
+        "A1:R1",
+        "A2:R2"
+      ],
+      "竞对分析": [
+        "A1:M1",
+        "A2:M2"
+      ],
+      "月度复盘与补量折扣": [
+        "A1:P1",
+        "A5:P5"
+      ]
+    },
+    "sales_plan": {
+      "fixed_columns": [
+        "ASIN",
+        "产品名称",
+        "当前总库存",
+        "后续月份计划量"
+      ],
+      "top_metrics": [
+        "大类",
+        "小类",
+        "平均售价",
+        "总单量",
+        "预计利润率",
+        "TACOS",
+        "销售额",
+        "广告花费",
+        "备注",
+        "月目标规划比例"
+      ],
+      "month_block_with_actual": [
+        "销售比例",
+        "日均",
+        "原计划月销量",
+        "实际销量",
+        "差值（实际−计划）",
+        "售价 USD"
+      ],
+      "month_block_without_actual": [
+        "销售比例",
+        "日均",
+        "月销量",
+        "售价 USD"
+      ],
+      "month_title_rows": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "month_header_row": 13,
+      "sku_first_row": 14,
+      "minimum_sku_rows": 6,
+      "total_row_after_skus": true,
+      "note_row_after_total": true,
+      "month_block_widths": [
+        4,
+        6
+      ]
+    }
+  },
+  "sheets": {
+    "销售计划": {
+      "fixed_headers_row_13": [
+        "ASIN",
+        "产品名称",
+        "当前总库存",
+        "后续月份计划量"
+      ],
+      "dynamic_month_blocks": {
+        "actual": [
+          "销售比例",
+          "日均",
+          "原计划月销量",
+          "实际销量",
+          "差值（实际−计划）",
+          "售价 USD"
+        ],
+        "plan": [
+          "销售比例",
+          "日均",
+          "月销量",
+          "售价 USD"
+        ]
+      },
+      "minimum_sku_rows": 6
+    },
+    "库存统计": {
+      "header_row": 3,
+      "column_count": 19,
+      "headers": [
+        "产品名称",
+        "ASIN",
+        "MSKU",
+        "FNSKU",
+        "FBA可售",
+        "FBA待调仓",
+        "FBA入库中",
+        "FBA实际在途",
+        "FBA计划入库",
+        "AWD可用",
+        "AWD标发在途",
+        "规划总库存",
+        "库存日期",
+        "来源/口径",
+        "{目标百分比}规划目标",
+        "后续计划量",
+        "预计余量",
+        "库存消化率",
+        "库存检查"
+      ],
+      "minimum_sku_rows": 6
+    },
+    "利润测算": {
+      "header_row": 3,
+      "column_count": 18,
+      "headers": [
+        "ASIN",
+        "FNSKU",
+        "产品名称",
+        "产品成本 USD",
+        "FBA配送费 USD",
+        "其他固定成本 USD",
+        "平台佣金率",
+        "其他售价计提率",
+        "售价 USD",
+        "默认TACOS",
+        "退货率",
+        "仓储率",
+        "固定成本 USD",
+        "公式估算单件净利 USD",
+        "公式估算单件利润率",
+        "阶段广告费 USD",
+        "成本状态",
+        "数据来源/假设"
+      ],
+      "minimum_sku_rows": 6
+    },
+    "竞对分析": {
+      "header_row": 3,
+      "column_count": 13,
+      "headers": [
+        "竞对ASIN",
+        "品牌",
+        "商品标题（原文）",
+        "{月份1}销量",
+        "{月份2}销量",
+        "{月份3}销量",
+        "{月份4}销量",
+        "四月合计",
+        "{月份1}占比",
+        "{月份2}占比",
+        "{月份3}占比",
+        "{月份4}占比",
+        "可比性/说明"
+      ],
+      "minimum_competitor_rows": 20,
+      "summary_rows": [
+        "单品占比中位数",
+        "四月中位数归一化",
+        "未来三月建议比例"
+      ]
+    },
+    "月度复盘与补量折扣": {
+      "header_row": 6,
+      "column_count": 16,
+      "headers": [
+        "ASIN",
+        "产品名称",
+        "所选月计划销量",
+        "所选月实际销量",
+        "差值（实际−计划；负数=未达）",
+        "待完成目标量",
+        "售价 USD",
+        "原价单件净利 USD",
+        "折后售价 USD",
+        "折后单件净利 USD",
+        "折后预计总利润 USD",
+        "前期未完成量",
+        "本月补量参考（不叠加）",
+        "库存余量（正式计划）",
+        "成本状态",
+        "计划/实际状态"
+      ],
+      "minimum_sku_rows": 6,
+      "month_selector_cell": "B2",
+      "discount_input_cell": "B3"
+    }
+  },
+  "style_palette": {
+    "month_title_yellow": "#FFE84A",
+    "summary_label_pink": "#F9E3EC",
+    "summary_result_teal": "#D9F0EC",
+    "input_light_blue": "#EAF3FB",
+    "fee_input_light_yellow": "#FFF7DF",
+    "formula_result_light_green": "#E2F0D9",
+    "profit_focus_green": "#A9D18E",
+    "table_header_light_blue": "#D9EAF7",
+    "note_light_gray": "#F6F8FA",
+    "price_light_orange": "#FCE4D6",
+    "editable_blue_text": "#1673B8",
+    "font_color": "#000000"
+  },
+  "formula_contract": {
+    "plan_month_sales": "ROUND(SKU规划总库存 * 工作台库存消化目标 * 当月月目标规划比例, 0)",
+    "total_stock": "SUM(FBA可售, FBA待调仓, FBA入库中, FBA实际在途, FBA计划入库, AWD可用, AWD标发在途)",
+    "inventory_target": "ROUND(规划总库存 * 工作台库存消化目标, 0)",
+    "remaining_stock": "规划总库存 - 后续计划量",
+    "sell_through": "后续计划量 / 规划总库存",
+    "actual_variance": "实际销量 - 原计划月销量",
+    "weighted_average_price": "IFERROR(SUMPRODUCT(SKU月销量, SKU月售价) / SUM(SKU月销量), 0)",
+    "sales_revenue": "SUMPRODUCT(SKU月销量, SKU月售价)",
+    "ad_spend": "销售额 * 当月TACOS",
+    "unit_profit": "售价 - 固定成本 - 售价*(佣金率+其他售价计提率+TACOS+仓储率) - 固定成本*退货率",
+    "competitor_month_share": "竞品该月销量 / 该竞品四月合计",
+    "competitor_median": "MEDIAN(合格竞品该月占比)",
+    "competitor_normalized": "该月中位数 / 四个月中位数之和",
+    "pending_quantity": "MAX(所选月计划销量 - 实际销量, 0)",
+    "discounted_price": "售价 * (1 - 生效折扣率)"
+  }
+}
