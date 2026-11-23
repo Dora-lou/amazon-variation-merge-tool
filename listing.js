@@ -383,7 +383,7 @@ async function exportBackup(){
  const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
  const csvRows=[['Parent ASIN','Child ASIN','MSKU']];
  for(const p of state.products)for(const c of p.children||[])csvRows.push([p.parentAsin,c.asin,normalizeChildRecord(c).mskus.join(', ')]);
- zip.file('products.csv','\\uFEFF'+csvRows.map(row=>row.map(quote).join(',')).join('\\r\\n'));
+ zip.file('products.csv','\uFEFF'+csvRows.map(row=>row.map(quote).join(',')).join('\r\n'));
  const clearanceRows=[['父ASIN','子ASIN','毛重(lb)','长(in)','宽(in)','高(in)','ASP(USD)','FBA可售+待调仓','FBA实际在途']];
  for(const p of clearanceProducts)clearanceRows.push([p.parentAsin,p.childAsin,p.grossWeightLb,p.lengthIn,p.widthIn,p.heightIn,p.asp,p.fbaAvailableAndTransfer,p.fbaActualInTransit]);
  zip.file('clearance-products.csv','\\uFEFF'+clearanceRows.map(row=>row.map(quote).join(',')).join('\\r\\n'));
@@ -408,24 +408,13 @@ function replaceAllLibrary(products,templates,clearanceProducts){
   tx.onabort=()=>reject(tx.error||new Error('恢复资料库已取消'));
  });
 }
-function replaceAllLibrary(products,templates){
- return new Promise((resolve,reject)=>{
-  const tx=state.db.transaction(['products','templates'],'readwrite');
-  const productStore=tx.objectStore('products'),templateStore=tx.objectStore('templates');
-  productStore.clear();templateStore.clear();
-  products.forEach(record=>productStore.put(record));
-  templates.forEach(record=>templateStore.put(record));
-  tx.oncomplete=()=>resolve();
-  tx.onerror=()=>reject(tx.error||new Error('恢复资料库失败'));
-  tx.onabort=()=>reject(tx.error||new Error('恢复资料库已取消'));
- });
-}
 async function importBackup(file){
  if(!file)throw new Error('请先选择完整备份 ZIP');
  const zip=await JSZip.loadAsync(await file.arrayBuffer()),fileManifest=zip.file('manifest.json');
  if(!fileManifest)throw new Error('备份缺少 manifest.json，无法恢复');
  let manifest;try{manifest=JSON.parse(await fileManifest.async('string'))}catch(_){throw new Error('备份索引无法读取')}
- if(!Array.isArray(manifest.products)||!Array.isArray(manifest.templates))throw new Error('备份不完整：需要同时包含商品库和模板库');\n if(manifest.clearanceProducts!=null&&!Array.isArray(manifest.clearanceProducts))throw new Error('备份中的清货计费资料格式无效');\n const clearanceProducts=Array.isArray(manifest.clearanceProducts)?manifest.clearanceProducts:undefined;
+ if(!Array.isArray(manifest.products)||!Array.isArray(manifest.templates))throw new Error('备份不完整：需要同时包含商品库和模板库');
+ if(manifest.clearanceProducts!=null&&!Array.isArray(manifest.clearanceProducts))throw new Error('备份中的清货计费资料格式无效');\n const clearanceProducts=Array.isArray(manifest.clearanceProducts)?manifest.clearanceProducts:undefined;
  const products=[],templates=[],parentSet=new Set(),productIds=new Set(),templateIds=new Set(),templateNames=new Set();
  for(const p of manifest.products){
   const parentAsin=normalizeAsin(p.parentAsin);
