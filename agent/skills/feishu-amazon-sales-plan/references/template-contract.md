@@ -1,9 +1,20 @@
 # 销售计划五表模板合约
 
-版本：1.1  
+版本：1.2  
 来源：用户上传并认可的《加热垫2.0销售计划-最新.xlsx》  
 目标：飞书原生电子表格  
 本文件与 `schema/template-contract.json` 是销售计划 Skill 的唯一结构标准。
+
+## 0.1 GitHub 母版位置与读取方式（强制）
+
+固定母版存放于本 Skill 的 GitHub 仓库，不依赖 Codex 本机预装 Skill，也不要求用户每次上传 Excel。
+
+- 仓库：`Dora-lou/amazon-variation-merge-tool`
+- 分支：`main`
+- 母版路径：`agent/skills/feishu-amazon-sales-plan/template/sales-plan-master.xlsx`
+- Raw 地址：`https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/template/sales-plan-master.xlsx`
+
+每次任务必须从 GitHub main 获取最新 Skill、母版、JSON 合同、Markdown 合同、计算规则和校验脚本，并记录 commit SHA。母版下载到临时工作目录使用，不得要求用户重复上传。GitHub 文件无法读取时停止任务并报告，不得使用来源不明的本地副本代替。
 
 
 ## 0. 合同执行级别（强制）
