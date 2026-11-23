@@ -373,8 +373,16 @@ function exportProductCsv(){
  setStatus('productCsvStatus','已导出 '+state.products.length+' 个父 ASIN，'+(rows.length-1)+' 条子 ASIN 记录，多个 MSKU 会在同一单元格用逗号分隔。');
 }
 async function exportBackup(){
- const clearanceProducts=await getAll('clearanceProducts');
- const zip=new JSZip(),manifest={schemaVersion:4,exportedAt:new Date().toISOString(),products:state.products.map(p=>({...p,children:p.children.map(normalizeChildRecord)})),clearanceProducts,templates:[]};
+ const storedClearanceProducts=await getAll('clearanceProducts');
+ const clearanceProducts=storedClearanceProducts.map(p=>({
+  ...p,
+  fbaAvailable:Number(p.fbaAvailable??p.fbaAvailableAndTransfer)||0,
+  fbaTransfer:Number(p.fbaTransfer)||0,
+  fbaActualInTransit:Number(p.fbaActualInTransit)||0,
+  awdAvailable:Number(p.awdAvailable)||0,
+  awdShippedInTransit:Number(p.awdShippedInTransit)||0
+ }));
+ const zip=new JSZip(),manifest={schemaVersion:5,exportedAt:new Date().toISOString(),products:state.products.map(p=>({...p,children:p.children.map(normalizeChildRecord)})),clearanceProducts,templates:[]};
  for(const t of state.templates){
   const path='templates/'+t.id+'_'+String(t.filename||'template.xlsx').replace(/[\\/:*?"<>|]/g,'_');
   zip.file(path,t.blob);
@@ -384,8 +392,8 @@ async function exportBackup(){
  const csvRows=[['Parent ASIN','Child ASIN','MSKU']];
  for(const p of state.products)for(const c of p.children||[])csvRows.push([p.parentAsin,c.asin,normalizeChildRecord(c).mskus.join(', ')]);
  zip.file('products.csv','\uFEFF'+csvRows.map(row=>row.map(quote).join(',')).join('\r\n'));
- const clearanceRows=[['父ASIN','子ASIN','毛重(lb)','长(in)','宽(in)','高(in)','ASP(USD)','FBA可售+待调仓','FBA实际在途']];
- for(const p of clearanceProducts)clearanceRows.push([p.parentAsin,p.childAsin,p.grossWeightLb,p.lengthIn,p.widthIn,p.heightIn,p.asp,p.fbaAvailableAndTransfer,p.fbaActualInTransit]);
+ const clearanceRows=[['父ASIN','子ASIN','毛重(lb)','长(in)','宽(in)','高(in)','ASP(USD)','FBA可售','FBA待调仓','FBA实际在途','AWD可用','AWD标发在途']];
+ for(const p of clearanceProducts)clearanceRows.push([p.parentAsin,p.childAsin,p.grossWeightLb,p.lengthIn,p.widthIn,p.heightIn,p.asp,p.fbaAvailable,p.fbaTransfer,p.fbaActualInTransit,p.awdAvailable,p.awdShippedInTransit]);
  zip.file('clearance-products.csv','\uFEFF'+clearanceRows.map(row=>row.map(quote).join(',')).join('\r\n'));
  zip.file('manifest.json',JSON.stringify(manifest,null,2));
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:5}});
