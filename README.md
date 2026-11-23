@@ -6,7 +6,7 @@
 
 - **知识库**：合并/拆分变体、FBA 发货 SOP 等。
 - **运营工具中心**：变体合并和 Listing 修改，生成 Excel 上传文件。
-- **商品库**：本浏览器保存 ASIN/MSKU、类目模板；支持 ZIP 备份与恢复。
+- **商品库**：本浏览器保存 Listing ASIN/MSKU、清货计费资料与库存、类目模板；支持 ZIP 备份与恢复。
 - **AI Skills**：集中展示 Codex 技能，目前收录销售计划 Skill，提供启动指令及 Skill 文件链接。
 - **Niche 数据提取**：按产品管理多个 Niche，上传 Product 与 Search Term CSV 后自动计算并导出一个多 Sheet Excel 工作簿。
 - **SQR 搜索查询分析**：上传 Amazon Search Query Performance CSV，分析搜索词漏斗与 ASIN 份额。
