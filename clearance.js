@@ -118,7 +118,7 @@ async function previewImport(){
 }
 async function saveImport(){
  if(!state.pendingImport)throw new Error('请先识别商品资料表');
- const now=new Date().toISOString(),map=new Map(state.products.map(p=>[p.id,p]));
+ const importedFileName=state.pendingImport.fileName;\n const now=new Date().toISOString(),map=new Map(state.products.map(p=>[p.id,p]));
  let added=0,updated=0;
  for(const incoming of state.pendingImport.products){
   const old=map.get(incoming.id);
@@ -133,7 +133,7 @@ async function saveImport(){
  }
  const merged=[...map.values()].sort((a,b)=>a.parentAsin.localeCompare(b.parentAsin)||a.childAsin.localeCompare(b.childAsin));
  await replaceAll(merged);state.products=merged;state.pendingImport=null;$('confirmImport').disabled=true;$('productFile').value='';
- $('importPreview').textContent='已导入 '+state.pendingImport?.fileName||'商品资料表';
+ $('importPreview').textContent='已导入：'+importedFileName+'。库存数量已保留；新商品库存默认为 0。';
  status('importStatus','导入完成：新增 '+added+' 个子 ASIN，更新 '+updated+' 个子 ASIN。原有库存输入已保留；新商品库存默认为 0。','success');
  renderAll();
 }
