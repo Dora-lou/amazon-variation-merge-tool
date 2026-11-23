@@ -16,7 +16,7 @@ function normalizeAsin(v){return String(v==null?'':v).normalize('NFKC').replace(
 function validAsin(v){return /^[A-Z0-9]{10}$/.test(normalizeAsin(v))}
 function normalizeProduct(p){
  const parentAsin=normalizeAsin(p.parentAsin),childAsin=normalizeAsin(p.childAsin);
- const legacyStock=p.fbaAvailable==null&&p.fbaAvailableAndTransfer!=null;
+ const legacyStock=(p.fbaAvailable==null&&p.fbaAvailableAndTransfer!=null)||Boolean(p.legacyStockCombined);
  return {
   id:String(p.id||keyOf(parentAsin,childAsin)),parentAsin,childAsin,
   grossWeightLb:Number(p.grossWeightLb)||0,lengthIn:Number(p.lengthIn)||0,widthIn:Number(p.widthIn)||0,heightIn:Number(p.heightIn)||0,asp:Number(p.asp)||0,
@@ -267,10 +267,10 @@ function exportResults(){
  const totals=getTotals(state.products);
  const compare=XLSX.utils.aoa_to_sheet([
   ['处理方案','预计回收金额（USD）','销售佣金（USD）','处理费用（USD）','最终现金结果（USD）','处理结果'],
-  ['批量清货（5%）',totals.recovery5,totals.commission5,totals.processing,totals.net5,'预计净回款；回收比例 5%'],
-  ['批量清货（10%）',totals.recovery10,totals.commission10,totals.processing,totals.net10,'预计净回款；回收比例 10%'],
-  ['移除退回（Return）','','',totals.removeTotal,-totals.removeTotal,'预计支出；商品退回后由你自行处理'],
-  ['弃置（Disposal）','','',totals.removeTotal,-totals.removeTotal,'预计支出；商品不再保留']
+  ['批量清货（5%）',totals.recovery5,totals.commission5,totals.processing,totals.net5,'预计净回款；仅按 FBA 三项库存，回收比例 5%'],
+  ['批量清货（10%）',totals.recovery10,totals.commission10,totals.processing,totals.net10,'预计净回款；仅按 FBA 三项库存，回收比例 10%'],
+  ['移除退回（Return）','','',totals.removeTotal,-totals.removeTotal,'预计支出；按 FBA 三项库存，商品退回后由你自行处理'],
+  ['弃置（Disposal）','','',totals.removeTotal,-totals.removeTotal,'预计支出；按 FBA 三项库存，商品不再保留']
  ]);
  const inventory=XLSX.utils.aoa_to_sheet([
   ['FBA可售','FBA待调仓','FBA实际在途','FBA小计','AWD可用','AWD标发在途','AWD小计','总库存'],
