@@ -1,5 +1,5 @@
 {
-  "contract_version": "1.0",
+  "contract_version": "1.1",
   "source": "用户上传的《加热垫2.0销售计划-最新.xlsx》；只固化结构与公式模式，不保留产品示例数据",
   "target": "飞书原生电子表格",
   "fixed_sheet_order": [
@@ -20,7 +20,40 @@
     "preserve_monthly_review_sheet_without_actuals": true,
     "no_sample_product_data": true,
     "no_extra_columns": true,
-    "target_format": "Feishu native spreadsheet"
+    "target_format": "Feishu native spreadsheet",
+    "no_codex_discretion": true,
+    "no_layout_or_header_changes": true,
+    "no_formula_replacement_with_static_values": true,
+    "stop_if_feishu_cannot_reproduce_required_format": true,
+    "require_readback_validation": true,
+    "user_upload_master_once_only": true,
+    "allowed_dynamic_changes": [
+      "planning_month_count_and_labels",
+      "sku_data_rows",
+      "qualified_competitor_data_rows"
+    ],
+    "prohibited_changes": [
+      "sheet_names",
+      "sheet_order",
+      "sheet_count",
+      "header_text",
+      "header_order",
+      "column_order",
+      "fixed_rows",
+      "formula_logic",
+      "merge_layout",
+      "font",
+      "fill_colors",
+      "borders",
+      "number_formats",
+      "freeze_panes",
+      "data_validations",
+      "conditional_formatting",
+      "extra_sheets",
+      "extra_columns",
+      "charts",
+      "dashboards"
+    ]
   },
   "layout": {
     "font": "等线",
@@ -373,5 +406,6 @@
     "competitor_normalized": "该月中位数 / 四个月中位数之和",
     "pending_quantity": "MAX(所选月计划销量 - 实际销量, 0)",
     "discounted_price": "售价 * (1 - 生效折扣率)"
-  }
+  },
+  "template_authority": "This contract is the fixed source of truth. Codex must fill data only and must not redesign or approximate the workbook."
 }
