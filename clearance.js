@@ -182,8 +182,9 @@ function getTotals(products){
 function renderSummary(products){
  const t=getTotals(products),cards=[
   ['总库存',num(t.qty)+' 件','可售+待调仓+实际在途'],
-  ['移除/退回费用',money(t.removeTotal),'按当前移除费率估算'],
+  ['移除退回费用',money(t.removeTotal),'按当前移除费率估算'],
   ['弃置费用',money(t.removeTotal),'与移除费使用同一费率表'],
+  ['清货处理费',money(t.processing),'按尺寸等级和毛重逐件计算'],
   ['清货净回款 · 5%',money(t.net5),'扣除 15% 佣金及处理费'],
   ['清货净回款 · 10%',money(t.net10),'扣除 15% 佣金及处理费']
  ];
@@ -207,13 +208,13 @@ function renderProducts(){
 }
 function renderComparison(products){
  const t=getTotals(products),rows=[
-  ['批量清货（回收比例 5%）','ASP × 总库存 × 5% − 15% 销售佣金 − 清货处理费',t.net5,'扣除费用后的净回款；负数表示净支出'],
-  ['批量清货（回收比例 10%）','ASP × 总库存 × 10% − 15% 销售佣金 − 清货处理费',t.net10,'扣除费用后的净回款；负数表示净支出'],
-  ['移除退回（Return）','总库存 × 移除单件费',-t.removeTotal,'支付移除费用，商品退回后仍由你自行处理'],
-  ['弃置（Disposal）','总库存 × 弃置单件费',-t.removeTotal,'支付弃置费用，商品不再保留']
+  ['批量清货（回收比例 5%）',t.recovery5,t.commission5,t.processing,t.net5,'按 ASP × 总库存 × 5% 估算回收价值'],
+  ['批量清货（回收比例 10%）',t.recovery10,t.commission10,t.processing,t.net10,'按 ASP × 总库存 × 10% 估算回收价值'],
+  ['移除退回（Return）',null,null,null,-t.removeTotal,'支付移除费用，商品退回后仍由你自行处理'],
+  ['弃置（Disposal）',null,null,null,-t.removeTotal,'支付弃置费用，商品不再保留']
  ];
- $('comparisonTable').innerHTML='<table><thead><tr><th>处理方案</th><th>计算方式</th><th>净现金结果</th><th>说明</th></tr></thead><tbody>'+rows.map(r=>'<tr><td class="strong">'+esc(r[0])+'</td><td>'+esc(r[1])+'</td><td class="numeric strong '+(r[2]<0?'negative':'positive')+'">'+(r[2]>=0?'+':'')+money(r[2])+'</td><td>'+esc(r[3])+'</td></tr>').join('')+'</tbody></table>';
- $('comparisonNote').textContent='退回与弃置按你提供的费率资料使用同一单件收费标准，因此现金费用相同；两者的区别是退回后保留商品，弃置则不保留。退回商品的后续残值/二次销售收入未计入净现金结果。';
+ $('comparisonTable').innerHTML='<table><thead><tr><th>处理方案</th><th>回收价值</th><th>销售佣金</th><th>处理费用</th><th>净现金结果</th><th>说明</th></tr></thead><tbody>'+rows.map(r=>'<tr><td class="strong">'+esc(r[0])+'</td><td class="numeric">'+(r[1]==null?'—':money(r[1]))+'</td><td class="numeric">'+(r[2]==null?'—':money(r[2]))+'</td><td class="numeric">'+(r[3]==null?'—':money(r[3]))+'</td><td class="numeric strong '+(r[4]<0?'negative':'positive')+'">'+(r[4]>=0?'+':'')+money(r[4])+'</td><td>'+esc(r[5])+'</td></tr>').join('')+'</tbody></table>';
+ $('comparisonNote').textContent='退回与弃置按你提供的费率资料使用同一单件收费标准，因此现金费用相同；两者的区别是退回后保留商品，弃置则不保留。退回商品的后续残值/二次销售收入未计入净现金结果。移除/弃置费用按商品实际移除或弃置数量逐件计算。';
 }
 function renderAll(){
  const filtered=state.products.filter(p=>!state.search||p.parentAsin.includes(state.search.toUpperCase())||p.childAsin.includes(state.search.toUpperCase()));
