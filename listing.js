@@ -485,7 +485,7 @@ function initEvents(){
 $('restoreBackup').addEventListener('click',async()=>{
  const file=state.pendingBackupFile;
  if(!file){setStatus('backupStatus','请先选择完整备份 ZIP。','warn');return}
- if(!confirm('恢复会完整替换当前商品库和类目模板，当前未备份的内容将被覆盖。建议先下载当前完整备份。确定继续吗？'))return;
+ if(!confirm('恢复会替换备份中包含的 Listing 商品库、清货计费资料和类目模板。旧版备份未包含清货资料时，当前清货资料会保留。建议先下载当前完整备份。确定继续吗？'))return;
  const btn=$('restoreBackup');btn.disabled=true;
  try{
   state.product=null;state.template=null;state.templateRecord=null;
