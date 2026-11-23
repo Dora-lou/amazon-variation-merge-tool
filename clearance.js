@@ -258,10 +258,10 @@ function downloadTemplate(){
  XLSX.writeFile(wb,'清货与移除费用计算器_商品资料模板.xlsx');
 }
 function exportResults(){
- const rows=[['父ASIN','子ASIN','毛重(lb)','长(in)','宽(in)','高(in)','自动尺寸等级','ASP(USD)','FBA可售','FBA待调仓','FBA实际在途','AWD可用','AWD标发在途','总库存','移除/弃置单件费','移除/弃置总费用','清货处理费单件','清货处理费总额','5%清货回收金额','5%销售佣金','5%清货净回款','10%清货回收金额','10%销售佣金','10%清货净回款']];
+ const rows=[['父ASIN','子ASIN','毛重(lb)','长(in)','宽(in)','高(in)','自动尺寸等级','ASP(USD)','FBA可售','FBA待调仓','FBA实际在途','FBA小计','AWD可用','AWD标发在途','AWD小计','总库存(FBA+AWD)','移除/弃置单件费(FBA)','移除/弃置总费用(FBA)','清货处理费单件','清货处理费总额(FBA)','5%清货回收金额(FBA)','5%销售佣金','5%清货净回款','10%清货回收金额(FBA)','10%销售佣金','10%清货净回款']];
  for(const p of state.products){
   const c=calculate(p);
-  rows.push([p.parentAsin,p.childAsin,p.grossWeightLb,p.lengthIn,p.widthIn,p.heightIn,c.size.label,p.asp,p.fbaAvailable,p.fbaTransfer,p.fbaActualInTransit,p.awdAvailable,p.awdShippedInTransit,c.qty,c.removeUnit,c.removeTotal,c.liquidationUnit,c.processing,c.recovery5,c.commission5,c.net5,c.recovery10,c.commission10,c.net10]);
+  rows.push([p.parentAsin,p.childAsin,p.grossWeightLb,p.lengthIn,p.widthIn,p.heightIn,c.size.label,p.asp,p.fbaAvailable,p.fbaTransfer,p.fbaActualInTransit,c.fbaQty,p.awdAvailable,p.awdShippedInTransit,c.awdQty,c.qty,c.removeUnit,c.removeTotal,c.liquidationUnit,c.processing,c.recovery5,c.commission5,c.net5,c.recovery10,c.commission10,c.net10]);
  }
  const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=rows[0].map((_,i)=>({wch:i<2?18:i===6?15:i>=8&&i<=13?15:17}));
  const totals=getTotals(state.products);
