@@ -190,7 +190,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
           <button id="exportProductCsv" class="primary" type="button">下载商品库 CSV</button>
         </div>
         <div id="productLibraryTable" class="table-wrap">正在读取商品库…</div>
-        <div id="productCsvStatus" class="notice" role="status">CSV 包含父 ASIN、子 ASIN、MSKU 三列（多个 MSKU 用逗号分隔）；完整 ZIP 备份还会包含所有类目模板。</div>
+        <div id="productCsvStatus" class="notice" role="status">CSV 包含父 ASIN、子 ASIN、MSKU 三列（多个 MSKU 用逗号分隔）；完整 ZIP 备份还会包含清货计费资料、库存和所有类目模板。</div>
       </section>
 
       <section>
@@ -199,7 +199,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
         <div class="toolbar" style="margin-top:14px">
           <button id="exportBackup" class="primary" type="button">一键下载全部资料（ZIP）</button>
         </div>
-        <p class="muted">恢复时选择之前下载的完整 ZIP，再点击恢复。程序会先检查备份内容；确认后会用备份中的商品库和类目模板整体替换当前资料库。</p>
+        <p class="muted">恢复时选择之前下载的完整 ZIP，再点击恢复。程序会先检查备份内容；确认后会恢复备份中的 Listing 商品库、清货计费资料和类目模板。旧版备份没有清货计费资料时，当前清货资料会保留。</p>
         <div style="margin-top:14px"><label for="importBackup">选择完整备份 ZIP</label><input id="importBackup" type="file" accept=".zip"/></div>
         <div class="toolbar" style="margin-top:12px"><button id="restoreBackup" class="primary" type="button" disabled>上传并恢复全部资料</button></div>
         <div id="backupStatus" class="notice" role="status">ZIP 包含 Listing 商品库、清货计费资料和类目模板。恢复会替换备份中包含的资料，请确认已备份当前资料。</div>
