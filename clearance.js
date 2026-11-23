@@ -118,7 +118,7 @@ async function previewImport(){
 }
 async function saveImport(){
  if(!state.pendingImport)throw new Error('请先识别商品资料表');
- const importedFileName=state.pendingImport.fileName;\n const now=new Date().toISOString(),map=new Map(state.products.map(p=>[p.id,p]));
+ const importedFileName=state.pendingImport.fileName; const now=new Date().toISOString(),map=new Map(state.products.map(p=>[p.id,p]));
  let added=0,updated=0;
  for(const incoming of state.pendingImport.products){
   const old=map.get(incoming.id);
