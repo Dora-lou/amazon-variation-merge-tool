@@ -67,6 +67,13 @@ td.asin{font-weight:750;color:#2e526e}
 .comparison-table th,.comparison-table td{white-space:normal}
 .rule-note{padding:12px 14px;border-radius:10px;background:#f6f8fa;color:#748594;font-size:11px;line-height:1.85;margin-top:13px}
 .rule-note strong{color:#4a6073}
+.rule-details{margin-top:14px;border:1px solid #e2e9ef;border-radius:11px;padding:13px 15px;background:#fbfcfd}
+.rule-details summary{cursor:pointer;color:#3c566c;font-size:12px;font-weight:800}
+.rate-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.rate-card{border:1px solid #e5ebf0;border-radius:9px;overflow:hidden;min-width:0}
+.rate-card h3{padding:10px 12px;background:#f2f6f9;font-size:12px}
+.rate-card table{min-width:0;width:100%}.rate-card th,.rate-card td{padding:7px 9px;font-size:10px;white-space:normal}
+.rule-details p{font-size:11px;color:#748594;line-height:1.8;margin:12px 0 0}
 .hidden{display:none!important}
 .footer{font-size:11px;color:#8795a2;line-height:1.8;margin-top:22px}
 @media(max-width:950px){.kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.upload-grid{grid-template-columns:1fr auto auto}}
@@ -129,6 +136,38 @@ td.asin{font-weight:750;color:#2e526e}
   <div id="summaryCards" class="kpi-grid"></div>
   <div id="comparisonTable" class="comparison-table"></div>
   <div id="comparisonNote" class="rule-note"></div>
+
+  <details class="rule-details">
+   <summary>查看内置费率表与尺寸判断规则</summary>
+   <div class="rate-grid">
+    <div class="rate-card">
+     <h3>移除 / 弃置费（标准件）</h3>
+     <table><thead><tr><th>毛重（lb）</th><th>单件费用</th></tr></thead><tbody>
+      <tr><td>0–0.5</td><td>$0.84</td></tr><tr><td>&gt;0.5–1</td><td>$1.53</td></tr><tr><td>&gt;1–2</td><td>$2.27</td></tr><tr><td>&gt;2</td><td>$2.89 + $1.06/lb（超出 2 lb 部分）</td></tr>
+     </tbody></table>
+    </div>
+    <div class="rate-card">
+     <h3>移除 / 弃置费（大件 / 特殊处理）</h3>
+     <table><thead><tr><th>毛重（lb）</th><th>单件费用</th></tr></thead><tbody>
+      <tr><td>0–1</td><td>$3.12</td></tr><tr><td>&gt;1–2</td><td>$4.30</td></tr><tr><td>&gt;2–4</td><td>$6.36</td></tr><tr><td>&gt;4–10</td><td>$10.04</td></tr><tr><td>&gt;10</td><td>$14.32 + $1.06/lb（超出 10 lb 部分）</td></tr>
+     </tbody></table>
+    </div>
+    <div class="rate-card">
+     <h3>清货处理费（标准件）</h3>
+     <table><thead><tr><th>毛重（lb）</th><th>单件费用</th></tr></thead><tbody>
+      <tr><td>0–0.5</td><td>$0.25</td></tr><tr><td>&gt;0.5–1</td><td>$0.30</td></tr><tr><td>&gt;1–2</td><td>$0.35</td></tr><tr><td>&gt;2</td><td>$0.40 + $0.20/lb（超出 2 lb 部分）</td></tr>
+     </tbody></table>
+    </div>
+    <div class="rate-card">
+     <h3>清货处理费（大件 / 特殊处理）</h3>
+     <table><thead><tr><th>毛重（lb）</th><th>单件费用</th></tr></thead><tbody>
+      <tr><td>0–1</td><td>$0.60</td></tr><tr><td>&gt;1–2</td><td>$0.70</td></tr><tr><td>&gt;2–4</td><td>$0.90</td></tr><tr><td>&gt;4–10</td><td>$1.45</td></tr><tr><td>&gt;10</td><td>$1.90 + $0.20/lb（超出 10 lb 部分）</td></tr>
+     </tbody></table>
+    </div>
+   </div>
+   <p><strong>自动尺寸判断：</strong>将包装长宽高从大到小排序，三边分别不超过 18 × 14 × 8 in，且毛重不超过 20 lb 时按标准件费率；超出任一条件时按大件费率。特殊处理商品无法仅凭尺寸和重量自动识别。</p>
+   <p><strong>计算精度：</strong>单件费率使用完整重量公式计算；页面单件金额显示到美分，总费用按未提前四舍五入的单件费率乘数量后再显示到美分。</p>
+  </details>
   <div class="rule-note"><strong>清货计算：</strong>回收价值 = 总库存 × ASP × 回收比例；销售佣金 = 回收价值 × 15%；清货处理费 = 总库存 × 单件处理费；清货净回款 = 回收价值 − 销售佣金 − 清货处理费。默认同时展示 5% 和 10% 两种回收比例。</div>
  </section>
 </section>
