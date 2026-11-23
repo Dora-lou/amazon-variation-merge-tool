@@ -195,14 +195,14 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 
       <section>
         <h2>资料库备份与恢复</h2>
-        <p class="muted">一键下载全部资料，包含商品库记录和所有已保存的类目模板文件。更换电脑、清理浏览器数据前建议先备份。</p>
+        <p class="muted">一键下载全部资料，包含 Listing 商品库、清货计费商品资料、库存数量和所有已保存的类目模板文件。更换电脑、清理浏览器数据前建议先备份。</p>
         <div class="toolbar" style="margin-top:14px">
           <button id="exportBackup" class="primary" type="button">一键下载全部资料（ZIP）</button>
         </div>
         <p class="muted">恢复时选择之前下载的完整 ZIP，再点击恢复。程序会先检查备份内容；确认后会用备份中的商品库和类目模板整体替换当前资料库。</p>
         <div style="margin-top:14px"><label for="importBackup">选择完整备份 ZIP</label><input id="importBackup" type="file" accept=".zip"/></div>
         <div class="toolbar" style="margin-top:12px"><button id="restoreBackup" class="primary" type="button" disabled>上传并恢复全部资料</button></div>
-        <div id="backupStatus" class="notice" role="status">ZIP 包含商品库和类目模板。恢复会覆盖当前两份资料库，请确认已备份当前资料。</div>
+        <div id="backupStatus" class="notice" role="status">ZIP 包含 Listing 商品库、清货计费资料和类目模板。恢复会替换备份中包含的资料，请确认已备份当前资料。</div>
       </section>
     </div>
   </div>
@@ -212,7 +212,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 if(new URLSearchParams(window.location.search).get('view')==='library'){
   document.getElementById('pageEyebrow').textContent='PRODUCT LIBRARY';
   document.getElementById('pageTitle').textContent='商品库';
-  document.getElementById('pageDescription').textContent='集中维护商品资料、类目模板与备份，随时调用。';
+  document.getElementById('pageDescription').textContent='集中维护 Listing 商品资料、类目模板与清货计费资料备份，随时调用。';
   document.getElementById('navLibrary').classList.add('active');
   document.getElementById('navTools').classList.remove('active');
 }
@@ -220,7 +220,7 @@ if(new URLSearchParams(window.location.search).get('view')==='library'){
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="./engine.js"></script>
-<script src="./listing.js?v=fix-bullet-undefined-20261023"></script>
+<script src="./listing.js?v=clearance-db-v3-20261123"></script>
 </body>
 </html>
 
