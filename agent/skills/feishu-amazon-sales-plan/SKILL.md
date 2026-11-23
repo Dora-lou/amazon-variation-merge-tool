@@ -5,20 +5,36 @@ description: 为 Amazon 产品建立和维护严格遵循固定五表模板的�
 
 # 飞书亚马逊销售计划与备货分析
 
-版本：V2.1（固定五表模板·禁止自由发挥）
+版本：V2.2（GitHub远程读取·固定五表模板·禁止自由发挥）
 
 > **严格执行，不得自由发挥。** 本 Skill 的任务是按固定合同填充数据，不是让 Codex 重新设计表格。Codex 不得自行设计、优化、简化、补充或改写任何表格结构；不得以“更清晰”“更专业”“方便分析”为理由改变表头、字段顺序、说明文字、行列布局、合并、颜色、字体、边框、数字格式、冻结窗格、数据验证、条件格式或公式。合同未定义且无法从现有规则确定的事项，保留空白并在执行报告说明，不得自行发明字段或结构。
 
+**GitHub 是唯一 Skill 来源（每次任务必须执行）：**
+- 仓库：`Dora-lou/amazon-variation-merge-tool`
+- 分支：`main`
+- Skill 目录：`agent/skills/feishu-amazon-sales-plan/`
+- Codex 不需要预先安装本 Skill，也不得假设本机已有 Skill。每次开始任务时，必须从 GitHub main 读取当前最新文件；本机旧副本只能作为缓存，不能覆盖 GitHub 最新版本。
+- 优先直接读取以下 Raw 文件；若环境不能直接打开 Raw URL，可浅克隆仓库到临时目录后读取对应文件。不得覆盖用户现有工作目录或未提交修改。
+  - `https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/SKILL.md`
+  - `https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/template/sales-plan-master.xlsx`
+  - `https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/schema/template-contract.json`
+  - `https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/references/template-contract.md`
+  - `https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/references/calculation-rules.md`
+  - `https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/scripts/validate_output.py`
+- 必须确认以上文件均已成功读取，记录 GitHub main 的 commit SHA。任何文件读取失败，停止任务并报告；不得假装已读取、使用不明来源旧副本或要求用户每次重新上传母版。
+- 母版是仓库中的固定文件，每次自动下载到临时工作目录使用；不需要用户重复提供。
+
 **模板唯一来源与优先级：**
-1. `schema/template-contract.json`：机器可读的五表结构、表头、动态模块、公式、布局和样式合同。
-2. `references/template-contract.md`：人类可读的执行与验收合同。
-3. 本文件与 `references/calculation-rules.md`：业务预测、库存、利润和备货规则。
+1. `template/sales-plan-master.xlsx`：GitHub 固定母版，作为单元格布局、样式、合并、冻结、验证和条件格式的基准。
+2. `schema/template-contract.json`：机器可读的五表结构、表头、动态模块、公式、布局和样式合同。
+3. `references/template-contract.md`：人类可读的执行与验收合同。
+4. 本文件与 `references/calculation-rules.md`：业务预测、库存、利润和备货规则。
 
 用户上传的《加热垫2.0销售计划-最新.xlsx》只需在本次标准固化时提供一次；其结构与样式已固化到上述合同。不得要求用户每次重复上传母版。合同没有记录的格式细节不得凭空声称完全复刻；应报告待补齐的合同细节，不得自由设计。
 
 发生冲突时，五表不可变规则优先；表头/布局以 JSON 合同为准；公式计算口径以 calculation-rules.md 和本文件业务规则为准。若合同自身冲突，停止写入并报告，不得自行选择一个版本继续。
 
-**母版只需随 Skill 保存一次。** 工作台每次只收集本次任务参数并生成 Codex 指令；用户不需要重复上传 Excel。Codex 必须从已安装 Skill 目录读取母版、合同和校验脚本。母版中的示例 ASIN、SKU、销量、库存、售价、成本、竞品、日期和说明均不是可复用业务数据，严禁带入新任务。
+**母版只需保存在 GitHub 一次。** 工作台每次只收集本次任务参数并生成 Codex 指令；用户不需要重复上传 Excel，也不需要安装 Skill。Codex 每次从 GitHub main 下载母版、合同和校验脚本。母版中的示例 ASIN、SKU、销量、库存、售价、成本、竞品、日期和说明均不是可复用业务数据，严禁带入新任务。
 
 **禁止自由发挥的硬性边界：**
 - 新建任务必须创建且只能创建五张合同指定的 Sheet，名称和顺序逐字一致。
@@ -132,7 +148,7 @@ description: 为 Amazon 产品建立和维护严格遵循固定五表模板的�
 ### 2.5 飞书原生表格
 
 - 最终交付必须是飞书原生电子表格，使用飞书原生公式和格式。
-- Excel 母版仅作为一次性结构参考；不得要求用户每次上传 Excel，也不得把静态 Excel 作为最终交付替代飞书表格。
+- Excel 母版是固定的结构与样式来源，存放于 GitHub Skill 目录；每次任务由 Codex 自动下载，不得要求用户重复上传。母版不是最终交付，正式写入模式仍须生成飞书原生电子表格。
 - 不得通过重新设计表格、复制一份不同布局或把数据静态粘贴为数值来规避模板规则。
 - 具体表头、列顺序、公式模式、冻结区域、合并单元格、颜色、字体、列宽和行高，以模板合约为准。
 ## 三、工作台输入与信息收集
