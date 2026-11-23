@@ -1,7 +1,7 @@
 /* Amazon Listing editor and local product library. All Excel files stay in this browser. */
 (function(){
 'use strict';
-const DB_NAME='amazonOpsToolkit', DB_VERSION=2;
+const DB_NAME='amazonOpsToolkit', DB_VERSION=3;
 const $=id=>document.getElementById(id);
 const state={db:null,products:[],templates:[],template:null,templateRecord:null,product:null,editingProductId:null,bulletCount:5,pendingProductImport:null,productPage:1,pendingBackupFile:null};
 const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
@@ -28,7 +28,7 @@ function openDB(){return new Promise((resolve,reject)=>{
  req.onupgradeneeded=()=>{
   const db=req.result;
   if(db.objectStoreNames.contains('history'))db.deleteObjectStore('history');
-  for(const name of ['products','templates'])if(!db.objectStoreNames.contains(name))db.createObjectStore(name,{keyPath:'id'});
+  for(const name of ['products','templates','clearanceProducts'])if(!db.objectStoreNames.contains(name))db.createObjectStore(name,{keyPath:'id'});
  };
  req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
 })}
@@ -373,19 +373,40 @@ function exportProductCsv(){
  setStatus('productCsvStatus','已导出 '+state.products.length+' 个父 ASIN，'+(rows.length-1)+' 条子 ASIN 记录，多个 MSKU 会在同一单元格用逗号分隔。');
 }
 async function exportBackup(){
- const zip=new JSZip(),manifest={schemaVersion:3,exportedAt:new Date().toISOString(),products:state.products.map(p=>({...p,children:p.children.map(normalizeChildRecord)})),templates:[]};
+ const clearanceProducts=await getAll('clearanceProducts');
+ const zip=new JSZip(),manifest={schemaVersion:4,exportedAt:new Date().toISOString(),products:state.products.map(p=>({...p,children:p.children.map(normalizeChildRecord)})),clearanceProducts,templates:[]};
  for(const t of state.templates){
   const path='templates/'+t.id+'_'+String(t.filename||'template.xlsx').replace(/[\\/:*?"<>|]/g,'_');
   zip.file(path,t.blob);
   manifest.templates.push({id:t.id,category:t.category,filename:t.filename,size:t.size,createdAt:t.createdAt,updatedAt:t.updatedAt,path});
  }
- const csvRows=[['Parent ASIN','Child ASIN','MSKU']],quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+ const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+ const csvRows=[['Parent ASIN','Child ASIN','MSKU']];
  for(const p of state.products)for(const c of p.children||[])csvRows.push([p.parentAsin,c.asin,normalizeChildRecord(c).mskus.join(', ')]);
- zip.file('products.csv','\uFEFF'+csvRows.map(row=>row.map(quote).join(',')).join('\r\n'));
+ zip.file('products.csv','\\uFEFF'+csvRows.map(row=>row.map(quote).join(',')).join('\\r\\n'));
+ const clearanceRows=[['父ASIN','子ASIN','毛重(lb)','长(in)','宽(in)','高(in)','ASP(USD)','FBA可售+待调仓','FBA实际在途']];
+ for(const p of clearanceProducts)clearanceRows.push([p.parentAsin,p.childAsin,p.grossWeightLb,p.lengthIn,p.widthIn,p.heightIn,p.asp,p.fbaAvailableAndTransfer,p.fbaActualInTransit]);
+ zip.file('clearance-products.csv','\\uFEFF'+clearanceRows.map(row=>row.map(quote).join(',')).join('\\r\\n'));
  zip.file('manifest.json',JSON.stringify(manifest,null,2));
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:5}});
  setDownload(blob,'Amazon_Ops_Toolkit_Full_Backup_'+new Date().toISOString().slice(0,10)+'.zip');
- setStatus('backupStatus','完整备份已下载：'+state.products.length+' 个父 ASIN 商品组、'+state.templates.length+' 个类目模板。MSKU 多选项已全部备份。');
+ setStatus('backupStatus','完整备份已下载：'+state.products.length+' 个 Listing 父 ASIN 商品组、'+clearanceProducts.length+' 个清货计费子 ASIN、'+state.templates.length+' 个类目模板。');
+}
+function replaceAllLibrary(products,templates,clearanceProducts){
+ return new Promise((resolve,reject)=>{
+  const tx=state.db.transaction(['products','templates','clearanceProducts'],'readwrite');
+  const productStore=tx.objectStore('products'),templateStore=tx.objectStore('templates'),clearanceStore=tx.objectStore('clearanceProducts');
+  productStore.clear();templateStore.clear();
+  products.forEach(record=>productStore.put(record));
+  templates.forEach(record=>templateStore.put(record));
+  if(Array.isArray(clearanceProducts)){
+   clearanceStore.clear();
+   clearanceProducts.forEach(record=>clearanceStore.put(record));
+  }
+  tx.oncomplete=()=>resolve();
+  tx.onerror=()=>reject(tx.error||new Error('恢复资料库失败'));
+  tx.onabort=()=>reject(tx.error||new Error('恢复资料库已取消'));
+ });
 }
 function replaceAllLibrary(products,templates){
  return new Promise((resolve,reject)=>{
@@ -404,7 +425,7 @@ async function importBackup(file){
  const zip=await JSZip.loadAsync(await file.arrayBuffer()),fileManifest=zip.file('manifest.json');
  if(!fileManifest)throw new Error('备份缺少 manifest.json，无法恢复');
  let manifest;try{manifest=JSON.parse(await fileManifest.async('string'))}catch(_){throw new Error('备份索引无法读取')}
- if(!Array.isArray(manifest.products)||!Array.isArray(manifest.templates))throw new Error('备份不完整：需要同时包含商品库和模板库');
+ if(!Array.isArray(manifest.products)||!Array.isArray(manifest.templates))throw new Error('备份不完整：需要同时包含商品库和模板库');\n if(manifest.clearanceProducts!=null&&!Array.isArray(manifest.clearanceProducts))throw new Error('备份中的清货计费资料格式无效');\n const clearanceProducts=Array.isArray(manifest.clearanceProducts)?manifest.clearanceProducts:undefined;
  const products=[],templates=[],parentSet=new Set(),productIds=new Set(),templateIds=new Set(),templateNames=new Set();
  for(const p of manifest.products){
   const parentAsin=normalizeAsin(p.parentAsin);
@@ -426,11 +447,11 @@ async function importBackup(file){
   const blob=await entry.async('blob');
   templates.push({id,category,filename:String(t.filename||path.split('/').pop()),size:Number(t.size)||blob.size,createdAt:t.createdAt||new Date().toISOString(),updatedAt:t.updatedAt||t.createdAt||new Date().toISOString(),blob});
  }
- await replaceAllLibrary(products,templates);
+ await replaceAllLibrary(products,templates,clearanceProducts);
  state.product=null;state.template=null;state.templateRecord=null;state.productPage=1;
  await refreshAll();
  setStatus('listingTemplateStatus','恢复完成，请重新选择类目模板。');
- setStatus('backupStatus','完整恢复成功：'+products.length+' 个父 ASIN 商品组、'+templates.length+' 个类目模板，多个 MSKU 也已恢复。');
+ setStatus('backupStatus','完整恢复成功：'+products.length+' 个 Listing 父 ASIN 商品组、'+(clearanceProducts?clearanceProducts.length+' 个清货计费子 ASIN':'旧版备份未包含清货计费资料（当前清货资料已保留）')+'、'+templates.length+' 个类目模板。');
 }
 function onProductChange(){
  const previous=state.product?.id||'';
