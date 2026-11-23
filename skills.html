@@ -180,7 +180,7 @@ function makeInstruction(){
  const comparisons={auto:'按 Skill 规则判断是否需要竞品分析',yes:'需要竞品季节性分析，按照 Skill 的合格样本与稳健比例规则执行',no:'本次不要求竞品分析；如因数据缺失影响目标可信度，请明确说明'};
  const site=val('site')==='other'?'其他站点（见补充要求）':val('site');
  const parts=[
- '请调用我本机已安装的 feishu-amazon-sales-plan Skill（V2.1），严格按 GitHub 中的固定五表模板合约执行本次任务。最终必须生成飞书原生电子表格。Skill 是唯一规则来源；你只负责数据采集、计算和填充，禁止重新设计或自由发挥。',
+ (val('mode')==='preview' ? '本次为预览模式：请从 GitHub 仓库 main 分支读取最新 Skill 和母版，只做数据采集、计算、分析与预览，绝不创建或修改任何飞书表格，也不得声称已生成飞书原生表格。' : '本次为正式执行模式：请从 GitHub 仓库 main 分支读取最新 Skill 和母版，按用户确认的范围生成/更新飞书原生电子表格。') ,
  '',
  '【我已提供的任务信息】',
  '- 目标 ASIN：'+asins.join('、'),
@@ -194,9 +194,10 @@ function makeInstruction(){
  '- 目标表格：'+(val('sheet')||'按 Skill 默认名称与原表匹配规则'),
  '- 利润成本表位置：'+(val('profit')||'未提供；先在已授权位置查找，找不到再向我索取'),
  '- 其他计划偏好：'+(val('preferences')||'无额外要求'),
+ '- 预览模式特别说明：'+(val('mode')==='preview'?'任何新建/更新表格的描述均仅作未来正式执行时的意向记录，本次禁止飞书写入。':'按上方执行方式并在写入前取得用户明确确认。'),
  '',
  '【执行要求】',
- '1. 请先读取已安装 Skill 的完整说明和引用规则，以上输入已提供，不要重复询问；只有关键业务口径无法判断时再提问。',
+ '1. 不要假设本机已安装 Skill。必须直接从 GitHub 仓库 Dora-lou/amazon-variation-merge-tool 的 main 分支读取最新文件；优先读取以下 Raw URL：SKILL.md、template/sales-plan-master.xlsx、schema/template-contract.json、references/template-contract.md、references/calculation-rules.md、scripts/validate_output.py。记录 main commit SHA；任一文件读取失败即停止并报告，不得使用旧本地副本代替。',
  '2. 在已授权范围内查询目标父子体/SKU、真实销量、FBA/AWD及在途库存，核对日期、批次和去重；不得把缺失/查询失败当作0。',
  '3. 按 Skill 规定使用历史销量、月度比例、已有实际与剩余库存；不编造数据，不跨 SKU 借库存。',
  '4. 利润缺少必要成本时标记待核算；如找不到成本表或需要截图，明确指出缺口，不妨碍先完成可靠部分。',
@@ -206,9 +207,11 @@ function makeInstruction(){
   '8. 月份按本次规划起止月份动态生成；严格使用模板定义的月度模块，不得固定四个月。',
   '9. 不得新增、删除、重命名或重排工作表；不得擅自新增/删除/移动列、修改表头、公式、颜色、字体、合并区域、冻结窗格或布局。',
   '10. 母版中的产品示例数据全部作废，必须重新读取本次 ASIN 对应的真实 SKU、销量、库存、价格、成本和竞品数据；缺失值留空或标待核实，不得沿用示例值。',
-  '11. 完成后读取 references/template-contract.md、schema/template-contract.json 和 references/calculation-rules.md；按固定合同逐项校验，不得用相似格式代替。',
-  '12. 严禁任何自由发挥：不得更改五张表名称/顺序/数量、表头、字段顺序、说明文字、公式逻辑、格式、合并、冻结窗格、验证规则；仅允许动态月份、SKU行和合格竞品行按合同扩展。',
-  '13. 如飞书接口无法实现合同要求的某项格式或公式，停止结构写入并报告具体限制；不得擅自简化、替换或声称完成。'
+  '11. 母版固定存放在 GitHub Skill 目录 template/sales-plan-master.xlsx；每次从 GitHub main 下载到临时目录使用，不需要用户上传，也不得要求用户重复上传。读取母版后先核对五张 Sheet、结构、公式和样式基准。',
+  '12. 完成后读取 references/template-contract.md、schema/template-contract.json、references/calculation-rules.md 和 scripts/validate_output.py；按固定合同逐项校验，不得用相似格式代替。',
+  '13. 严禁任何自由发挥：不得更改五张表名称/顺序/数量、表头、字段顺序、说明文字、公式逻辑、格式、合并、冻结窗格、验证规则；仅允许动态月份、SKU行和合格竞品行按合同扩展。',
+  '14. 如飞书接口无法实现合同要求的某项格式或公式，停止结构写入并报告具体限制；不得擅自简化、替换或声称完成。',
+  '15. 如果本次模式为预览，即使补充要求提到新建表名，也只将该名称作为未来正式建表的目标名称记录，不得创建或修改飞书表格。'
  ];
  return parts.join('\n');
 }
