@@ -86,7 +86,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 <article class="skill" data-category="sales">
 <div class="top"><span class="icon" aria-hidden="true">▥</span><span class="type">CODEX SKILL · 已收录</span></div>
 <h3>销售计划与备货分析</h3>
-<p>使用固定五表版 feishu-amazon-sales-plan Skill。自动获取销售、库存、利润和竞品数据，按母版结构动态生成月份；禁止擅自增删工作表、字段、表头、公式或格式。</p>
+<p>每次直接从 GitHub main 读取最新 feishu-amazon-sales-plan Skill 与固定母版，无需本机预装 Skill 或重复上传 Excel。自动获取销售、库存、利润和竞品数据，按母版结构动态生成月份；禁止擅自增删工作表、字段、表头、公式或格式。</p>
 <div class="tags"><span class="tag">销售计划</span><span class="tag">库存分析</span><span class="tag">月度目标</span><span class="tag">飞书</span></div>
 <form id="salesForm" class="planner">
 <h4>填写销售计划</h4>
@@ -197,7 +197,7 @@ function makeInstruction(){
  '- 预览模式特别说明：'+(val('mode')==='preview'?'任何新建/更新表格的描述均仅作未来正式执行时的意向记录，本次禁止飞书写入。':'按上方执行方式并在写入前取得用户明确确认。'),
  '',
  '【执行要求】',
- '1. 不要假设本机已安装 Skill。必须直接从 GitHub 仓库 Dora-lou/amazon-variation-merge-tool 的 main 分支读取最新文件；优先读取以下 Raw URL：SKILL.md、template/sales-plan-master.xlsx、schema/template-contract.json、references/template-contract.md、references/calculation-rules.md、scripts/validate_output.py。记录 main commit SHA；任一文件读取失败即停止并报告，不得使用旧本地副本代替。',
+ '1. 不要假设本机已安装 Skill。必须直接从 GitHub main 读取以下 Raw URL 并记录 main commit SHA：SKILL.md=https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/SKILL.md；母版=https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/template/sales-plan-master.xlsx；JSON合同=https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/schema/template-contract.json；模板合同=https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/references/template-contract.md；计算规则=https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/references/calculation-rules.md；校验脚本=https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/scripts/validate_output.py。任一文件读取失败即停止并报告，不得使用旧本地副本代替。',
  '2. 在已授权范围内查询目标父子体/SKU、真实销量、FBA/AWD及在途库存，核对日期、批次和去重；不得把缺失/查询失败当作0。',
  '3. 按 Skill 规定使用历史销量、月度比例、已有实际与剩余库存；不编造数据，不跨 SKU 借库存。',
  '4. 利润缺少必要成本时标记待核算；如找不到成本表或需要截图，明确指出缺口，不妨碍先完成可靠部分。',
