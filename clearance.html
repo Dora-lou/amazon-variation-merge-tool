@@ -37,7 +37,7 @@ button.secondary{background:#eef4f8;border-color:#d9e5ed;color:#315d79}
 .status.success{background:#edf7f0;border-color:#d8ebdf;color:#34734f}.status.error{background:#fff1f1;border-color:#f1d2d2;color:#a33d45}
 .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0}
 .muted{font-size:11px;color:#8392a0;line-height:1.7;margin:7px 0 0}
-.kpi-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:14px}
+.kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:14px}
 .kpi{padding:14px;border:1px solid #e3eaf0;border-radius:12px;background:linear-gradient(145deg,#fff,#f8fafc);min-width:0}
 .kpi span{display:block;color:#7d8c99;font-size:11px;font-weight:650}
 .kpi strong{display:block;color:#24445f;font-size:20px;line-height:1.35;margin-top:5px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
@@ -63,8 +63,13 @@ td.asin{font-weight:750;color:#2e526e}
 .text-button:hover{background:#fff1f1}
 .empty{padding:30px 16px;text-align:center;color:#8a98a5;font-size:12px}
 .comparison-table{overflow:auto;border:1px solid #e1e8ee;border-radius:11px;margin-top:12px}
-.comparison-table table{min-width:780px}
+.comparison-table table{min-width:900px}
 .comparison-table th,.comparison-table td{white-space:normal}
+.stock-breakdown{overflow:auto;border:1px solid #e1e8ee;border-radius:10px;margin:12px 0 18px}
+.stock-breakdown table{min-width:720px}
+.stock-breakdown th,.stock-breakdown td{text-align:center}
+.result-label{font-size:10px;font-weight:600;color:#8292a0;margin-top:3px}
+.summary-guide{font-size:12px;color:#718292;line-height:1.8;margin:4px 0 13px}
 .rule-note{padding:12px 14px;border-radius:10px;background:#f6f8fa;color:#748594;font-size:11px;line-height:1.85;margin-top:13px}
 .rule-note strong{color:#4a6073}
 .rule-details{margin-top:14px;border:1px solid #e2e9ef;border-radius:11px;padding:13px 15px;background:#fbfcfd}
@@ -95,23 +100,23 @@ td.asin{font-weight:750;color:#2e526e}
 </section>
 
 <section class="panel">
- <div class="panel-heading"><div><h2>使用前必读｜商品资料表格式</h2><p class="subtitle">上传前请按下面的列顺序整理数据。库存数量不放在 Excel 中，导入后在本页面手动填写。</p></div></div>
+ <div class="panel-heading"><div><h2>使用前必读｜商品资料表格式</h2><p class="subtitle">上传前请按下面的 12 列顺序整理数据。五项库存均从表格读取，程序自动相加。</p></div></div>
  <div class="template-order">
-  <span>1 父ASIN</span><span>2 子ASIN</span><span>3 毛重</span><span>4 长</span><span>5 宽</span><span>6 高</span><span>7 ASP</span>
+  <span>1 父ASIN</span><span>2 子ASIN</span><span>3 毛重</span><span>4 长</span><span>5 宽</span><span>6 高</span><span>7 ASP</span><span>8 FBA可售</span><span>9 FBA待调仓</span><span>10 FBA实际在途</span><span>11 AWD可用</span><span>12 AWD标发在途</span>
  </div>
  <div class="notice-list">
   <div class="notice-item"><strong>毛重</strong>必须使用领星商品信息中的「毛重」字段，单位 lb（磅）；不要使用净重或其他重量字段。</div>
   <div class="notice-item"><strong>长、宽、高</strong>必须填写商品包装尺寸，单位 in（英寸），不是商品本身尺寸。</div>
   <div class="notice-item"><strong>ASP</strong>填写平均销售价格，单位 USD（美元）。每一行对应一个子 ASIN；父 ASIN 每行都要填写。</div>
-  <div class="notice-item"><strong>库存</strong>不放在 Excel 中。导入后手动填写「FBA 可售+待调仓」和「FBA 实际在途」，程序自动相加。</div>
+  <div class="notice-item"><strong>库存</strong>直接在 Excel 中填写 FBA 可售、FBA 待调仓、FBA 实际在途、AWD 可用、AWD 标发在途五项；没有库存的项目填写 0，程序自动汇总。</div>
  </div>
  <div class="rule-note"><strong>计费口径：</strong>第一版暂时直接使用领星毛重作为计费重量，不额外进位、不计算体积重。尺寸等级由包装尺寸和毛重自动推算。特殊处理商品属性无法仅凭尺寸识别，计算结果请结合实际商品属性核对。</div>
 </section>
 
 <section class="panel">
- <div class="panel-heading"><div><h2>第 1 步｜导入商品资料</h2><p class="subtitle">支持 Excel（.xlsx / .xls / .xlsm）和 CSV。相同父 ASIN + 子 ASIN 会更新商品资料，并保留已填写的库存。</p></div></div>
+ <div class="panel-heading"><div><h2>第 1 步｜导入商品资料</h2><p class="subtitle">支持 Excel（.xlsx / .xls / .xlsm）和 CSV。相同父 ASIN + 子 ASIN 会更新商品资料及五项库存；本次文件未包含的旧商品会保留。</p></div></div>
  <div class="upload-grid">
-  <div><label for="productFile">选择商品资料表</label><input id="productFile" type="file" accept=".xlsx,.xls,.xlsm,.csv"/><p class="muted">只读取第一张工作表；表头必须按上方 7 列顺序排列。</p></div>
+  <div><label for="productFile">选择商品资料表</label><input id="productFile" type="file" accept=".xlsx,.xls,.xlsm,.csv"/><p class="muted">只读取第一张工作表；表头必须按上方 12 列顺序排列，库存五项均需填写整数；无库存请填 0。</p></div>
   <button id="downloadTemplate" class="secondary" type="button">下载 Excel 模板</button>
   <button id="previewImport" type="button">识别并检查</button>
  </div>
@@ -122,18 +127,23 @@ td.asin{font-weight:750;color:#2e526e}
 
 <section id="resultSections" class="hidden">
  <section class="panel">
-  <div class="panel-heading"><div><h2>第 2 步｜填写库存并查看商品费用</h2><p class="subtitle">库存修改后自动保存。总库存 = FBA 可售+待调仓 + FBA 实际在途。</p></div><button id="downloadResults" class="primary" type="button" disabled>下载费用对比 Excel</button></div>
+  <div class="panel-heading"><div><h2>第 2 步｜商品费用明细</h2><p class="subtitle">五项库存分别展示；总库存自动计算，所有费用按五项库存合计估算。</p></div><button id="downloadResults" class="primary" type="button" disabled>下载费用对比 Excel</button></div>
   <div class="table-toolbar">
    <div class="search"><label for="productSearch">搜索父 ASIN / 子 ASIN</label><input id="productSearch" placeholder="输入完整或部分 ASIN"/></div>
    <span id="productCount" class="muted">共 0 个子 ASIN</span>
   </div>
   <div id="productTable" class="table-wrap"></div>
-  <div id="inventoryStatus" class="status">库存修改后会自动保存到当前浏览器。</div>
+  <div id="productStatus" class="status">商品资料保存在当前浏览器。库存数量以最近一次导入的表格为准。</div>
  </section>
 
  <section class="panel">
-  <div class="panel-heading"><div><h2>第 3 步｜费用方案汇总</h2><p class="subtitle">汇总所有已导入子 ASIN 的库存和处理费用。</p></div></div>
+  <div class="panel-heading"><div><h2>第 3 步｜方案汇总</h2><p class="subtitle">先看预计净回款或支出，再查看每种方案的回收金额和费用构成。</p></div></div>
   <div id="summaryCards" class="kpi-grid"></div>
+  <h3 style="margin-top:18px">库存构成</h3>
+  <p class="summary-guide">以下为全部子 ASIN 的库存合计，五项分别保留，不会混在一起。</p>
+  <div id="stockBreakdown" class="stock-breakdown"></div>
+  <h3 style="margin-top:18px">处理方案详细对比</h3>
+  <p class="summary-guide">「最终现金结果」是最重要的比较指标：清货显示预计净回款，移除和弃置显示预计支出。</p>
   <div id="comparisonTable" class="comparison-table"></div>
   <div id="comparisonNote" class="rule-note"></div>
 
@@ -172,7 +182,7 @@ td.asin{font-weight:750;color:#2e526e}
   <div class="rule-note"><strong>清货计算：</strong>回收价值 = 总库存 × ASP × 回收比例；销售佣金 = 回收价值 × 15%；清货处理费 = 总库存 × 单件处理费；清货净回款 = 回收价值 − 销售佣金 − 清货处理费。默认同时展示 5% 和 10% 两种回收比例。</div>
  </section>
 </section>
-<div id="emptyState" class="panel empty">请先导入商品资料。导入后即可在程序中填写库存并比较处理方案。</div>
+<div id="emptyState" class="panel empty">请先导入包含商品资料和五项库存的 12 列 Excel/CSV，程序会自动计算库存总量和各方案费用。</div>
 <p class="footer">所有商品资料和库存保存在当前浏览器的 IndexedDB 本地资料库中。更换浏览器或电脑不会自动同步；请定期通过商品库的完整 ZIP 备份功能保存资料。费用费率按本工具当前内置的费率表计算，后续如亚马逊调整费率，需要同步更新工具规则。</p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
