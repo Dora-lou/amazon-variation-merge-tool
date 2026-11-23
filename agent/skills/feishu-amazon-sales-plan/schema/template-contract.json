@@ -1,6 +1,6 @@
 {
-  "contract_version": "1.1",
-  "source": "用户上传的《加热垫2.0销售计划-最新.xlsx》；只固化结构与公式模式，不保留产品示例数据",
+  "contract_version": "1.2",
+  "source": "GitHub固定母版文件 + 用户认可的《加热垫2.0销售计划-最新.xlsx》结构合同；母版仅保存一次，任务运行时从GitHub main读取",
   "target": "飞书原生电子表格",
   "fixed_sheet_order": [
     "销售计划",
@@ -53,7 +53,11 @@
       "extra_columns",
       "charts",
       "dashboards"
-    ]
+    ],
+    "fetch_latest_github_main_each_run": true,
+    "no_local_skill_installation_required": true,
+    "no_user_master_upload_per_run": true,
+    "stop_if_github_skill_or_template_unavailable": true
   },
   "layout": {
     "font": "等线",
@@ -407,5 +411,12 @@
     "pending_quantity": "MAX(所选月计划销量 - 实际销量, 0)",
     "discounted_price": "售价 * (1 - 生效折扣率)"
   },
-  "template_authority": "This contract is the fixed source of truth. Codex must fill data only and must not redesign or approximate the workbook."
+  "template_authority": "This contract is the fixed source of truth. Codex must fill data only and must not redesign or approximate the workbook.",
+  "template_file": {
+    "path": "agent/skills/feishu-amazon-sales-plan/template/sales-plan-master.xlsx",
+    "raw_url": "https://raw.githubusercontent.com/Dora-lou/amazon-variation-merge-tool/main/agent/skills/feishu-amazon-sales-plan/template/sales-plan-master.xlsx",
+    "branch": "main",
+    "fetch_each_run": true,
+    "user_upload_each_run": false
+  }
 }
