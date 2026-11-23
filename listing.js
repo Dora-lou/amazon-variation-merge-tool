@@ -376,6 +376,7 @@ async function exportBackup(){
  const storedClearanceProducts=await getAll('clearanceProducts');
  const clearanceProducts=storedClearanceProducts.map(p=>({
   ...p,
+  legacyStockCombined:Boolean(p.legacyStockCombined)||(p.fbaAvailable==null&&p.fbaAvailableAndTransfer!=null),
   fbaAvailable:Number(p.fbaAvailable??p.fbaAvailableAndTransfer)||0,
   fbaTransfer:Number(p.fbaTransfer)||0,
   fbaActualInTransit:Number(p.fbaActualInTransit)||0,
