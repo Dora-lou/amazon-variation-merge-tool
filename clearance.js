@@ -170,13 +170,15 @@ function liquidationUnitFee(p){
  return 1.90+(w-10)*0.20;
 }
 function calculate(p){
- const qty=p.fbaAvailable+p.fbaTransfer+p.fbaActualInTransit+p.awdAvailable+p.awdShippedInTransit;
+ const fbaQty=p.fbaAvailable+p.fbaTransfer+p.fbaActualInTransit;
+ const awdQty=p.awdAvailable+p.awdShippedInTransit;
+ const qty=fbaQty+awdQty;
  const removeFee=removalUnitFee(p),liquidationFee=liquidationUnitFee(p);
- const recovery5=qty*p.asp*0.05,recovery10=qty*p.asp*0.10;
+ const recovery5=fbaQty*p.asp*0.05,recovery10=fbaQty*p.asp*0.10;
  const commission5=recovery5*0.15,commission10=recovery10*0.15;
- const processing=qty*liquidationFee;
+ const processing=fbaQty*liquidationFee;
  return {
-  qty,size:sizeInfo(p),removeUnit:removeFee,removeTotal:qty*removeFee,liquidationUnit:liquidationFee,processing,
+  qty,fbaQty,awdQty,size:sizeInfo(p),removeUnit:removeFee,removeTotal:fbaQty*removeFee,liquidationUnit:liquidationFee,processing,
   recovery5,commission5,net5:recovery5-commission5-processing,
   recovery10,commission10,net10:recovery10-commission10-processing
  };
@@ -184,34 +186,33 @@ function calculate(p){
 function getTotals(products){
  return products.reduce((a,p)=>{
   const c=calculate(p);
-  a.qty+=c.qty;a.removeTotal+=c.removeTotal;a.processing+=c.processing;
+  a.qty+=c.qty;a.fbaQty+=c.fbaQty;a.awdQty+=c.awdQty;a.removeTotal+=c.removeTotal;a.processing+=c.processing;
   a.fbaAvailable+=p.fbaAvailable;a.fbaTransfer+=p.fbaTransfer;a.fbaActualInTransit+=p.fbaActualInTransit;
   a.awdAvailable+=p.awdAvailable;a.awdShippedInTransit+=p.awdShippedInTransit;
   a.recovery5+=c.recovery5;a.commission5+=c.commission5;a.net5+=c.net5;
   a.recovery10+=c.recovery10;a.commission10+=c.commission10;a.net10+=c.net10;
   return a;
- },{qty:0,removeTotal:0,processing:0,fbaAvailable:0,fbaTransfer:0,fbaActualInTransit:0,awdAvailable:0,awdShippedInTransit:0,recovery5:0,commission5:0,net5:0,recovery10:0,commission10:0,net10:0});
+ },{qty:0,fbaQty:0,awdQty:0,removeTotal:0,processing:0,fbaAvailable:0,fbaTransfer:0,fbaActualInTransit:0,awdAvailable:0,awdShippedInTransit:0,recovery5:0,commission5:0,net5:0,recovery10:0,commission10:0,net10:0});
 }
 function renderSummary(products){
  const t=getTotals(products),cards=[
   ['总库存',num(t.qty)+' 件','FBA + AWD 五项库存合计'],
-  ['清货净回款 · 5%',money(t.net5),'扣除 15% 销售佣金及清货处理费'],
-  ['清货净回款 · 10%',money(t.net10),'扣除 15% 销售佣金及清货处理费'],
-  ['移除 / 弃置费用',money(t.removeTotal),'按五项库存总量估算'],
-  ['清货处理费',money(t.processing),'清货方案的单件处理费用合计']
+  ['清货净回款 · 5%',money(t.net5),'按 FBA 库存估算，已扣佣金及处理费'],
+  ['清货净回款 · 10%',money(t.net10),'按 FBA 库存估算，已扣佣金及处理费'],
+  ['移除 / 弃置费用',money(t.removeTotal),'仅按 FBA 三项库存估算']
  ];
  $('summaryCards').innerHTML=cards.map((x,i)=>'<div class="kpi"><span>'+esc(x[0])+'</span><strong class="'+(i>0&&Number(x[1].replace(/[^0-9.-]/g,''))<0?'negative':'')+'">'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></div>').join('');
- $('stockBreakdown').innerHTML='<table><thead><tr><th>FBA 可售</th><th>FBA 待调仓</th><th>FBA 实际在途</th><th>AWD 可用</th><th>AWD 标发在途</th><th>总库存</th></tr></thead><tbody><tr>'+[t.fbaAvailable,t.fbaTransfer,t.fbaActualInTransit,t.awdAvailable,t.awdShippedInTransit,t.qty].map((v,i)=>'<td class="numeric '+(i===5?'strong':'')+'">'+num(v)+'</td>').join('')+'</tr></tbody></table>';
+ $('stockBreakdown').innerHTML='<table><thead><tr><th>FBA 可售</th><th>FBA 待调仓</th><th>FBA 实际在途</th><th>FBA 小计</th><th>AWD 可用</th><th>AWD 标发在途</th><th>AWD 小计</th><th>总库存</th></tr></thead><tbody><tr>'+[t.fbaAvailable,t.fbaTransfer,t.fbaActualInTransit,t.fbaQty,t.awdAvailable,t.awdShippedInTransit,t.awdQty,t.qty].map((v,i)=>'<td class="numeric '+([3,6,7].includes(i)?'strong':'')+'">'+num(v)+'</td>').join('')+'</tr></tbody></table>';
 }
 function renderProducts(){
  const host=$('productTable'),query=state.search.trim().toUpperCase();
  const items=state.products.filter(p=>!query||p.parentAsin.includes(query)||p.childAsin.includes(query));
  if(!items.length){host.innerHTML='<div class="empty">'+(state.products.length?'没有匹配的 ASIN。':'尚未导入商品资料，请先上传 Excel/CSV。')+'</div>';return}
- let html='<table><thead><tr><th>父 ASIN</th><th>子 ASIN</th><th>毛重<br>lb</th><th>包装尺寸<br>长 × 宽 × 高（in）</th><th>自动尺寸等级</th><th>ASP<br>USD</th><th>FBA 可售</th><th>FBA 待调仓</th><th>FBA 实际在途</th><th>AWD 可用</th><th>AWD 标发在途</th><th>总库存</th><th>移除/弃置<br>单件费</th><th>移除/弃置<br>总费用</th><th>清货处理费<br>单件</th><th>清货处理费<br>总额</th><th>清货净回款<br>5%</th><th>清货净回款<br>10%</th><th>操作</th></tr></thead><tbody>';
+ let html='<table><thead><tr><th>父 ASIN</th><th>子 ASIN</th><th>毛重<br>lb</th><th>包装尺寸<br>长 × 宽 × 高（in）</th><th>自动尺寸等级</th><th>ASP<br>USD</th><th>FBA 可售</th><th>FBA 待调仓</th><th>FBA 实际在途</th><th>FBA 小计</th><th>AWD 可用</th><th>AWD 标发在途</th><th>AWD 小计</th><th>总库存</th><th>移除/弃置<br>单件费</th><th>移除/弃置<br>总费用</th><th>清货处理费<br>单件</th><th>清货处理费<br>总额</th><th>清货净回款<br>5%</th><th>清货净回款<br>10%</th><th>操作</th></tr></thead><tbody>';
  for(const p of items){
   const c=calculate(p),id=esc(p.id);
   html+='<tr><td>'+esc(p.parentAsin)+'</td><td class="asin">'+esc(p.childAsin)+'</td><td class="numeric">'+num(p.grossWeightLb)+'</td><td>'+num(p.lengthIn)+' × '+num(p.widthIn)+' × '+num(p.heightIn)+'</td><td><span class="size-tag '+(c.size.standard?'standard':'large')+'">'+c.size.label+'</span></td><td class="numeric">'+money(p.asp)+'</td>';
-  html+='<td class="numeric">'+num(p.fbaAvailable)+'</td><td class="numeric">'+num(p.fbaTransfer)+'</td><td class="numeric">'+num(p.fbaActualInTransit)+'</td><td class="numeric">'+num(p.awdAvailable)+'</td><td class="numeric">'+num(p.awdShippedInTransit)+'</td>';
+  html+='<td class="numeric">'+num(p.fbaAvailable)+'</td><td class="numeric">'+num(p.fbaTransfer)+'</td><td class="numeric">'+num(p.fbaActualInTransit)+'</td><td class="numeric strong">'+c.fbaQty+'</td><td class="numeric">'+num(p.awdAvailable)+'</td><td class="numeric">'+num(p.awdShippedInTransit)+'</td><td class="numeric strong">'+c.awdQty+'</td>';
   html+='<td class="numeric strong">'+c.qty+'</td><td class="numeric">'+money(c.removeUnit)+'</td><td class="numeric">'+money(c.removeTotal)+'</td><td class="numeric">'+money(c.liquidationUnit)+'</td><td class="numeric">'+money(c.processing)+'</td><td class="numeric '+(c.net5<0?'negative':'')+'">'+money(c.net5)+'</td><td class="numeric '+(c.net10<0?'negative':'')+'">'+money(c.net10)+'</td><td><button class="text-button delete-product" data-id="'+id+'" type="button">删除</button></td></tr>';
  }
  html+='</tbody></table>';
@@ -220,13 +221,13 @@ function renderProducts(){
 }
 function renderComparison(products){
  const t=getTotals(products),rows=[
-  ['批量清货 · 5% 回收',t.recovery5,t.commission5,t.processing,t.net5,'预计净回款；按 ASP × 总库存 × 5% 计算回收金额'],
-  ['批量清货 · 10% 回收',t.recovery10,t.commission10,t.processing,t.net10,'预计净回款；按 ASP × 总库存 × 10% 计算回收金额'],
+  ['批量清货 · 5% 回收',t.recovery5,t.commission5,t.processing,t.net5,'预计净回款；按 FBA 库存 × ASP × 5% 计算回收金额'],
+  ['批量清货 · 10% 回收',t.recovery10,t.commission10,t.processing,t.net10,'预计净回款；按 FBA 库存 × ASP × 10% 计算回收金额'],
   ['移除退回（Return）',null,null,t.removeTotal,-t.removeTotal,'预计支出；支付移除费用后，商品退回给你自行处理'],
   ['弃置（Disposal）',null,null,t.removeTotal,-t.removeTotal,'预计支出；支付弃置费用，商品不再保留']
  ];
  $('comparisonTable').innerHTML='<table><thead><tr><th>处理方案</th><th>预计回收金额</th><th>销售佣金</th><th>处理费用</th><th>最终现金结果</th><th>处理结果</th></tr></thead><tbody>'+rows.map((r,i)=>'<tr><td class="strong">'+esc(r[0])+'</td><td class="numeric">'+(r[1]==null?'—':money(r[1]))+'</td><td class="numeric">'+(r[2]==null?'—':money(r[2]))+'</td><td class="numeric">'+money(r[3])+'</td><td class="numeric strong '+(r[4]<0?'negative':'positive')+'">'+(r[4]>=0?'+':'')+money(r[4])+(i<2?'<div class="result-label">预计净回款</div>':'<div class="result-label">预计支出</div>')+'</td><td>'+esc(r[5])+'</td></tr>').join('')+'</tbody></table>';
- $('comparisonNote').textContent='看结果时，优先比较两种清货回收比例下的预计净回款；移除退回和弃置显示的是预计现金支出，不包含退回商品后续可能产生的残值或二次销售收入。5% / 10% 指清货回收比例。';
+ $('comparisonNote').textContent='看结果时，优先比较两种清货回收比例下的预计净回款；移除退回和弃置显示的是预计现金支出，不包含退回商品后续可能产生的残值或二次销售收入。总库存包含 FBA 与 AWD 五项；清货、移除和弃置费用仅按 FBA 可售、FBA 待调仓、FBA 实际在途三项计算，AWD 库存单独展示，不计入 FBA 处理费用。5% / 10% 指清货回收比例。';
 }
 function renderAll(){
  const filtered=state.products.filter(p=>!state.search||p.parentAsin.includes(state.search.toUpperCase())||p.childAsin.includes(state.search.toUpperCase()));
@@ -272,8 +273,8 @@ function exportResults(){
   ['弃置（Disposal）','','',totals.removeTotal,-totals.removeTotal,'预计支出；商品不再保留']
  ]);
  const inventory=XLSX.utils.aoa_to_sheet([
-  ['FBA可售','FBA待调仓','FBA实际在途','AWD可用','AWD标发在途','总库存'],
-  [totals.fbaAvailable,totals.fbaTransfer,totals.fbaActualInTransit,totals.awdAvailable,totals.awdShippedInTransit,totals.qty]
+  ['FBA可售','FBA待调仓','FBA实际在途','FBA小计','AWD可用','AWD标发在途','AWD小计','总库存'],
+  [totals.fbaAvailable,totals.fbaTransfer,totals.fbaActualInTransit,totals.fbaQty,totals.awdAvailable,totals.awdShippedInTransit,totals.awdQty,totals.qty]
  ]);
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'商品费用明细');XLSX.utils.book_append_sheet(wb,compare,'方案对比');XLSX.utils.book_append_sheet(wb,inventory,'库存构成');
  XLSX.writeFile(wb,'FBA清货与移除费用对比_'+new Date().toISOString().slice(0,10)+'.xlsx');
