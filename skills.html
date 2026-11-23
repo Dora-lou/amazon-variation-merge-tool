@@ -180,7 +180,7 @@ function makeInstruction(){
  const comparisons={auto:'按 Skill 规则判断是否需要竞品分析',yes:'需要竞品季节性分析，按照 Skill 的合格样本与稳健比例规则执行',no:'本次不要求竞品分析；如因数据缺失影响目标可信度，请明确说明'};
  const site=val('site')==='other'?'其他站点（见补充要求）':val('site');
  const parts=[
- '请调用我本机已安装的 feishu-amazon-sales-plan Skill，严格按 GitHub 中的固定五表模板合约执行本次亚马逊销售与备货计划任务。最终必须生成飞书原生电子表格。',
+ '请调用我本机已安装的 feishu-amazon-sales-plan Skill（V2.1），严格按 GitHub 中的固定五表模板合约执行本次任务。最终必须生成飞书原生电子表格。Skill 是唯一规则来源；你只负责数据采集、计算和填充，禁止重新设计或自由发挥。',
  '',
  '【我已提供的任务信息】',
  '- 目标 ASIN：'+asins.join('、'),
@@ -206,7 +206,9 @@ function makeInstruction(){
   '8. 月份按本次规划起止月份动态生成；严格使用模板定义的月度模块，不得固定四个月。',
   '9. 不得新增、删除、重命名或重排工作表；不得擅自新增/删除/移动列、修改表头、公式、颜色、字体、合并区域、冻结窗格或布局。',
   '10. 母版中的产品示例数据全部作废，必须重新读取本次 ASIN 对应的真实 SKU、销量、库存、价格、成本和竞品数据；缺失值留空或标待核实，不得沿用示例值。',
-  '11. 完成后读取 references/template-contract.md 和 schema/template-contract.json 做结构校验；不合格先修复，不得声称完成。'
+  '11. 完成后读取 references/template-contract.md、schema/template-contract.json 和 references/calculation-rules.md；按固定合同逐项校验，不得用相似格式代替。',
+  '12. 严禁任何自由发挥：不得更改五张表名称/顺序/数量、表头、字段顺序、说明文字、公式逻辑、格式、合并、冻结窗格、验证规则；仅允许动态月份、SKU行和合格竞品行按合同扩展。',
+  '13. 如飞书接口无法实现合同要求的某项格式或公式，停止结构写入并报告具体限制；不得擅自简化、替换或声称完成。'
  ];
  return parts.join('\n');
 }
