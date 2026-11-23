@@ -86,7 +86,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 <article class="skill" data-category="sales">
 <div class="top"><span class="icon" aria-hidden="true">▥</span><span class="type">CODEX SKILL · 已收录</span></div>
 <h3>销售计划与备货分析</h3>
-<p>使用已有 feishu-amazon-sales-plan Skill，结合已授权的数据来源分析销售、库存、利润和月度目标。遵循原 Skill 的去重、备货与规划规则。</p>
+<p>使用固定五表版 feishu-amazon-sales-plan Skill。自动获取销售、库存、利润和竞品数据，按母版结构动态生成月份；禁止擅自增删工作表、字段、表头、公式或格式。</p>
 <div class="tags"><span class="tag">销售计划</span><span class="tag">库存分析</span><span class="tag">月度目标</span><span class="tag">飞书</span></div>
 <form id="salesForm" class="planner">
 <h4>填写销售计划</h4>
@@ -180,7 +180,7 @@ function makeInstruction(){
  const comparisons={auto:'按 Skill 规则判断是否需要竞品分析',yes:'需要竞品季节性分析，按照 Skill 的合格样本与稳健比例规则执行',no:'本次不要求竞品分析；如因数据缺失影响目标可信度，请明确说明'};
  const site=val('site')==='other'?'其他站点（见补充要求）':val('site');
  const parts=[
- '请调用我本机已安装的 feishu-amazon-sales-plan Skill，按其最新规则执行本次亚马逊销售与备货计划任务。',
+ '请调用我本机已安装的 feishu-amazon-sales-plan Skill，严格按 GitHub 中的固定五表模板合约执行本次亚马逊销售与备货计划任务。最终必须生成飞书原生电子表格。',
  '',
  '【我已提供的任务信息】',
  '- 目标 ASIN：'+asins.join('、'),
