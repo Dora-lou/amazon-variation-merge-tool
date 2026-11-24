@@ -9,7 +9,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 SHEETS = ["销售计划", "库存统计", "利润测算", "竞对分析", "月度复盘与补量折扣"]
-INVENTORY_HEADERS = ["产品名称", "ASIN", "MSKU", "FNSKU", "FBA可售", "FBA待调仓", "FBA入库中", "FBA实际在途", "FBA计划入库", "AWD可用", "AWD标发在途", "规划总库存", "库存日期", "来源/口径", None, "后续计划量", "预计余量", "库存消化率", "库存检查"]
+INVENTORY_HEADERS = ["产品名称", "ASIN", "MSKU", "FNSKU", "FBA可售", "FBA待调仓", "FBA实际在途", "AWD可用", "AWD标发在途", "规划总库存", "库存日期", "来源/口径"]
 PROFIT_HEADERS = ["ASIN", "FNSKU", "产品名称", "产品成本 USD", "FBA配送费 USD", "其他固定成本 USD", "平台佣金率", "其他售价计提率", "售价 USD", "默认TACOS", "退货率", "仓储率", "固定成本 USD", "公式估算单件净利 USD", "公式估算单件利润率", "阶段广告费 USD", "成本状态", "数据来源/假设"]
 COMPETITOR_HEADERS = ["竞对ASIN", "品牌", "商品标题（原文）", None, None, None, None, "四月合计", None, None, None, None, "可比性/说明"]
 REVIEW_HEADERS = ["ASIN", "产品名称", "所选月计划销量", "所选月实际销量", "差值（实际−计划；负数=未达）", "待完成目标量", "售价 USD", "原价单件净利 USD", "折后售价 USD", "折后单件净利 USD", "折后预计总利润 USD", "前期未完成量", "本月补量参考（不叠加）", "库存余量（正式计划）", "成本状态", "计划/实际状态"]
@@ -70,11 +70,8 @@ def main():
             for rng in month_merges:
                 width = rng.max_col - rng.min_col + 1
                 headers = [ws.cell(13, c).value for c in range(rng.min_col, rng.max_col + 1)]
-                allowed = [
-                    ["销售比例", "日均", "原计划月销量", "实际销量", "差值（实际−计划）", "售价 USD"],
-                    ["销售比例", "日均", "月销量", "售价 USD"]
-                ]
-                if width not in (4, 6) or headers not in allowed:
+                allowed = ["销售比例", "日均", "月销量", "售价 USD"]
+                if width != 4 or headers != allowed:
                     errors.append(f"销售计划 month block {rng}: invalid width/header {headers!r}")
                 for row in range(1, 13):
                     expected_merge = f"{ws.cell(row,rng.min_col).coordinate}:{ws.cell(row,rng.max_col).coordinate}"
@@ -88,13 +85,9 @@ def main():
 
     if "库存统计" in wb.sheetnames:
         ws = wb["库存统计"]
-        if ws.max_column != 19:
-            errors.append(f"库存统计 must have exactly 19 columns, got {ws.max_column}")
-        check_header(ws, 3, INVENTORY_HEADERS, errors, dynamic_positions=(15, 16))
-        if not re.match(r"^\d+%规划目标$", str(ws["O3"].value or "")):
-            errors.append(f"库存统计!O3 must be '<目标百分比>规划目标', got {ws['O3'].value!r}")
-        if not str(ws["P3"].value or "").endswith("计划量"):
-            errors.append("库存统计!P3 must be a dynamic plan-quantity header")
+        if ws.max_column != 12:
+            errors.append(f"库存统计 must have exactly 12 columns, got {ws.max_column}")
+        check_header(ws, 3, INVENTORY_HEADERS, errors)
 
     if "利润测算" in wb.sheetnames:
         ws = wb["利润测算"]
