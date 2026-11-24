@@ -132,18 +132,14 @@ async function previewImport(){
 }
 async function saveImport(){
  if(!state.pendingImport)throw new Error('请先识别商品资料表');
- const importedFileName=state.pendingImport.fileName,now=new Date().toISOString(),map=new Map(state.products.map(p=>[p.id,p]));
- let added=0,updated=0;
- for(const incoming of state.pendingImport.products){
-  const old=map.get(incoming.id);
-  const record=normalizeProduct({...incoming,createdAt:old?old.createdAt:now,updatedAt:now});
-  map.set(record.id,record);
-  if(old)updated++;else added++;
- }
- const merged=[...map.values()].sort((a,b)=>a.parentAsin.localeCompare(b.parentAsin)||a.childAsin.localeCompare(b.childAsin));
- await replaceAll(merged);state.products=merged;state.pendingImport=null;$('confirmImport').disabled=true;$('productFile').value='';
- $('importPreview').textContent='已导入：'+importedFileName+'。商品基础资料及五项库存均已按本次表格更新。';
- status('importStatus','导入完成：新增 '+added+' 个子 ASIN，更新 '+updated+' 个子 ASIN。匹配商品的五项库存以本次导入表格为准；未出现在文件中的旧商品保留。','success');
+ const importedFileName=state.pendingImport.fileName,previousCount=state.products.length,now=new Date().toISOString();
+ const replacement=state.pendingImport.products
+  .map(incoming=>normalizeProduct({...incoming,createdAt:now,updatedAt:now}))
+  .sort((a,b)=>a.parentAsin.localeCompare(b.parentAsin)||a.childAsin.localeCompare(b.childAsin));
+ await replaceAll(replacement);
+ state.products=replacement;state.pendingImport=null;$('confirmImport').disabled=true;$('productFile').value='';
+ $('importPreview').textContent='已导入：'+importedFileName+'。当前清单已完整替换为本次文件中的 '+replacement.length+' 个子 ASIN。';
+ status('importStatus','导入完成：本次导入 '+replacement.length+' 个子 ASIN，已清除原清单中的 '+previousCount+' 个记录。当前费用只按本次文件计算；不会影响 Listing 商品库及其他工作台数据。','success');
  renderAll();
 }
 function sizeInfo(p){
@@ -251,7 +247,7 @@ function downloadTemplate(){
   ['ASP：平均销售价格，单位 USD（美元）。'],
   ['库存必须在表格中填写：FBA可售、FBA待调仓、FBA实际在途、AWD可用、AWD标发在途。没有库存的项目填写 0，不要留空；必须为大于或等于 0 的整数。'],
   ['总库存 = 上述五项库存相加。'],
-  ['再次导入相同父 ASIN + 子 ASIN 时，商品基础资料和五项库存均以本次表格为准；本次文件未包含的旧商品会保留。'],
+  ['每次确认导入都会完整替换清货计算器当前商品清单；本次文件未包含的旧商品将从本工具当前计算范围中移除。不会删除 Listing 商品库或其他工作台数据。'],
   ['计费重量暂时直接使用领星毛重，不额外进位，不计算体积重。']
  ]);
  note['!cols']=[{wch:135}];XLSX.utils.book_append_sheet(wb,note,'填写说明');
