@@ -114,13 +114,13 @@ td.asin{font-weight:750;color:#2e526e}
 </section>
 
 <section class="panel">
- <div class="panel-heading"><div><h2>第 1 步｜导入商品资料</h2><p class="subtitle">支持 Excel（.xlsx / .xls / .xlsm）和 CSV。相同父 ASIN + 子 ASIN 会更新商品资料及五项库存；本次文件未包含的旧商品会保留。</p></div></div>
+ <div class="panel-heading"><div><h2>第 1 步｜导入商品资料</h2><p class="subtitle">支持 Excel（.xlsx / .xls / .xlsm）和 CSV。每次导入都会完整替换当前清单，只分析本次文件中的商品；不会影响 Listing 商品库及其他工作台数据。</p></div></div>
  <div class="upload-grid">
   <div><label for="productFile">选择商品资料表</label><input id="productFile" type="file" accept=".xlsx,.xls,.xlsm,.csv"/><p class="muted">只读取第一张工作表；表头必须按上方 12 列顺序排列，库存五项均需填写整数；无库存请填 0。</p></div>
   <button id="downloadTemplate" class="secondary" type="button">下载 Excel 模板</button>
   <button id="previewImport" type="button">识别并检查</button>
  </div>
- <div class="toolbar"><button id="confirmImport" class="primary" type="button" disabled>确认导入并保存</button></div>
+ <div class="toolbar"><button id="confirmImport" class="primary" type="button" disabled>确认导入并替换当前清单</button></div>
  <div id="importPreview" class="status">等待选择商品资料表。</div>
  <div id="importStatus" class="status">商品资料保存在当前浏览器的本地商品库中，不会上传到服务器，也不调用 API。</div>
 </section>
@@ -186,6 +186,6 @@ td.asin{font-weight:750;color:#2e526e}
 <p class="footer">所有商品资料和库存保存在当前浏览器的 IndexedDB 本地资料库中。更换浏览器或电脑不会自动同步；请定期通过商品库的完整 ZIP 备份功能保存资料。费用费率按本工具当前内置的费率表计算，后续如亚马逊调整费率，需要同步更新工具规则。</p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="./clearance.js?v=clearance-v1-20261123-6"></script>
+<script src="./clearance.js?v=clearance-v1-20261124-replace-import"></script>
 </body>
 </html>
