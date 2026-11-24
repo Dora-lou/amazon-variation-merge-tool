@@ -7,6 +7,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -27,10 +28,25 @@ jobs:
           node --check ads-relaunch-ui.js
           node --check niche-engine.js
           node --check niche-ui.js
+          node --check clearance.js
           node niche-engine.test.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
+      - name: Wait for GitHub Pages artifact to be visible
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in {1..15}; do
+            if gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" --jq '.artifacts[]? | select(.name == "github-pages") | .id' | grep -q .; then
+              echo "GitHub Pages artifact is visible."
+              exit 0
+            fi
+            echo "Waiting for GitHub Pages artifact visibility (${attempt}/15)..."
+            sleep 4
+          done
+          echo "::error::GitHub Pages artifact did not become visible in time."
+          exit 1
       - id: deployment
         uses: actions/deploy-pages@v4
