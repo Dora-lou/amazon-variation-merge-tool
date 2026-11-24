@@ -1,7 +1,7 @@
 # 销售计划五表模板合约
 
 版本：1.3  
-来源：用户上传并认可的《加热垫2.0销售计划-最新.xlsx》  
+来源：用户最终确认并修订的 `sales-plan-master.xlsx`  
 目标：飞书原生电子表格  
 本文件与 `schema/template-contract.json` 是销售计划 Skill 的唯一结构标准。
 
