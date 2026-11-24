@@ -4,7 +4,7 @@
 const DB_NAME='amazonOpsToolkit', DB_VERSION=3, STORE='clearanceProducts';
 const HEADERS=['父ASIN','子ASIN','毛重','长','宽','高','ASP','FBA可售','FBA待调仓','FBA实际在途','AWD可用','AWD标发在途'];
 const $=id=>document.getElementById(id);
-const state={db:null,products:[],pendingImport:null,search:''};
+const state={db:null,products:[],pendingImport:null,search:'',recoveryRate:7.5};
 const moneyFmt=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2});
 const numberFmt=new Intl.NumberFormat('en-US',{maximumFractionDigits:3});
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
@@ -165,18 +165,20 @@ function liquidationUnitFee(p){
  if(w<=1)return 0.60;if(w<=2)return 0.70;if(w<=4)return 0.90;if(w<=10)return 1.45;
  return 1.90+(w-10)*0.20;
 }
-function calculate(p){
+function calculate(p,rate=state.recoveryRate){
  const fbaQty=p.fbaAvailable+p.fbaTransfer+p.fbaActualInTransit;
  const awdQty=p.awdAvailable+p.awdShippedInTransit;
  const qty=fbaQty+awdQty;
  const removeFee=removalUnitFee(p),liquidationFee=liquidationUnitFee(p);
  const recovery5=fbaQty*p.asp*0.05,recovery10=fbaQty*p.asp*0.10;
  const commission5=recovery5*0.15,commission10=recovery10*0.15;
+ const recoverySelected=fbaQty*p.asp*(rate/100),commissionSelected=recoverySelected*0.15;
  const processing=fbaQty*liquidationFee;
  return {
   qty,fbaQty,awdQty,size:sizeInfo(p),removeUnit:removeFee,removeTotal:fbaQty*removeFee,liquidationUnit:liquidationFee,processing,
   recovery5,commission5,net5:recovery5-commission5-processing,
-  recovery10,commission10,net10:recovery10-commission10-processing
+  recovery10,commission10,net10:recovery10-commission10-processing,
+  recoverySelected,commissionSelected,netSelected:recoverySelected-commissionSelected-processing
  };
 }
 function getTotals(products){
@@ -187,43 +189,61 @@ function getTotals(products){
   a.awdAvailable+=p.awdAvailable;a.awdShippedInTransit+=p.awdShippedInTransit;
   a.recovery5+=c.recovery5;a.commission5+=c.commission5;a.net5+=c.net5;
   a.recovery10+=c.recovery10;a.commission10+=c.commission10;a.net10+=c.net10;
+  a.recoverySelected+=c.recoverySelected;a.commissionSelected+=c.commissionSelected;a.netSelected+=c.netSelected;
   return a;
- },{qty:0,fbaQty:0,awdQty:0,removeTotal:0,processing:0,fbaAvailable:0,fbaTransfer:0,fbaActualInTransit:0,awdAvailable:0,awdShippedInTransit:0,recovery5:0,commission5:0,net5:0,recovery10:0,commission10:0,net10:0});
+ },{qty:0,fbaQty:0,awdQty:0,removeTotal:0,processing:0,fbaAvailable:0,fbaTransfer:0,fbaActualInTransit:0,awdAvailable:0,awdShippedInTransit:0,recovery5:0,commission5:0,net5:0,recovery10:0,commission10:0,net10:0,recoverySelected:0,commissionSelected:0,netSelected:0});
+}
+function calculateTotalsAtRate(products,rate){
+ return products.reduce((total,p)=>{
+  const c=calculate(p,rate);
+  total.recovery+=c.recoverySelected;total.commission+=c.commissionSelected;total.processing+=c.processing;total.net+=c.netSelected;
+  return total;
+ },{recovery:0,commission:0,processing:0,net:0});
 }
 function renderSummary(products){
  const t=getTotals(products),cards=[
   ['总库存',num(t.qty)+' 件','FBA + AWD 五项库存合计'],
-  ['清货净回款 · 5%',money(t.net5),'按 FBA 库存估算，已扣佣金及处理费'],
-  ['清货净回款 · 10%',money(t.net10),'按 FBA 库存估算，已扣佣金及处理费'],
-  ['移除 / 弃置费用',money(t.removeTotal),'仅按 FBA 三项库存估算']
+  ['FBA 库存',num(t.fbaQty)+' 件','清货、移除和弃置费用计算基础'],
+  ['AWD 库存',num(t.awdQty)+' 件','计入总库存，单独展示'],
+  ['移除 / 弃置预计支出',money(t.removeTotal),'仅按 FBA 三项库存估算']
  ];
- $('summaryCards').innerHTML=cards.map((x,i)=>'<div class="kpi"><span>'+esc(x[0])+'</span><strong class="'+(i>0&&Number(x[1].replace(/[^0-9.-]/g,''))<0?'negative':'')+'">'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></div>').join('');
+ $('summaryCards').innerHTML=cards.map(x=>'<div class="kpi"><span>'+esc(x[0])+'</span><strong>'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></div>').join('');
  $('stockBreakdown').innerHTML='<table><thead><tr><th>FBA 可售</th><th>FBA 待调仓</th><th>FBA 实际在途</th><th>FBA 小计</th><th>AWD 可用</th><th>AWD 标发在途</th><th>AWD 小计</th><th>总库存</th></tr></thead><tbody><tr>'+[t.fbaAvailable,t.fbaTransfer,t.fbaActualInTransit,t.fbaQty,t.awdAvailable,t.awdShippedInTransit,t.awdQty,t.qty].map((v,i)=>'<td class="numeric '+([3,6,7].includes(i)?'strong':'')+'">'+num(v)+'</td>').join('')+'</tr></tbody></table>';
+ const rate=state.recoveryRate,selected=calculateTotalsAtRate(products,rate);
+ $('recoveryRate').value=String(rate);
+ $('recoveryRateValue').textContent=rate.toFixed(1)+'%';
+ $('recoveryGross').textContent=money(selected.recovery);
+ $('recoveryCommission').textContent='−'+money(selected.commission);
+ $('recoveryProcessing').textContent='−'+money(selected.processing);
+ $('recoveryNet').textContent=money(selected.net);
+ $('recoveryNet').classList.toggle('negative',selected.net<0);
+ $('recoveryNet').classList.toggle('positive',selected.net>=0);
 }
 function renderProducts(){
  const host=$('productTable'),query=state.search.trim().toUpperCase();
  const items=state.products.filter(p=>!query||p.parentAsin.includes(query)||p.childAsin.includes(query));
  if(!items.length){host.innerHTML='<div class="empty">'+(state.products.length?'没有匹配的 ASIN。':'尚未导入商品资料，请先上传 Excel/CSV。')+'</div>';return}
- let html='<table><thead><tr><th>父 ASIN</th><th>子 ASIN</th><th>毛重<br>lb</th><th>包装尺寸<br>长 × 宽 × 高（in）</th><th>自动尺寸等级</th><th>ASP<br>USD</th><th>FBA 可售</th><th>FBA 待调仓</th><th>FBA 实际在途</th><th>FBA 小计</th><th>AWD 可用</th><th>AWD 标发在途</th><th>AWD 小计</th><th>总库存</th><th>移除/弃置<br>单件费</th><th>移除/弃置<br>总费用</th><th>清货处理费<br>单件</th><th>清货处理费<br>总额</th><th>清货净回款<br>5%</th><th>清货净回款<br>10%</th><th>操作</th></tr></thead><tbody>';
+ let html='<table><thead><tr><th>父 ASIN</th><th>子 ASIN</th><th>毛重<br>lb</th><th>包装尺寸<br>长 × 宽 × 高（in）</th><th>自动尺寸等级</th><th>ASP<br>USD</th><th>FBA 可售</th><th>FBA 待调仓</th><th>FBA 实际在途</th><th>FBA 小计</th><th>AWD 可用</th><th>AWD 标发在途</th><th>AWD 小计</th><th>总库存</th><th>移除/弃置<br>单件费</th><th>移除/弃置<br>总费用</th><th>清货处理费<br>单件</th><th>清货处理费<br>总额</th><th>当前比例净回款<br>'+state.recoveryRate.toFixed(1)+'%</th><th>清货净回款<br>5%</th><th>清货净回款<br>10%</th><th>操作</th></tr></thead><tbody>';
  for(const p of items){
   const c=calculate(p),id=esc(p.id);
   html+='<tr><td>'+esc(p.parentAsin)+'</td><td class="asin">'+esc(p.childAsin)+'</td><td class="numeric">'+num(p.grossWeightLb)+'</td><td>'+num(p.lengthIn)+' × '+num(p.widthIn)+' × '+num(p.heightIn)+'</td><td><span class="size-tag '+(c.size.standard?'standard':'large')+'">'+c.size.label+'</span></td><td class="numeric">'+money(p.asp)+'</td>';
   html+='<td class="numeric">'+num(p.fbaAvailable)+'</td><td class="numeric">'+num(p.fbaTransfer)+'</td><td class="numeric">'+num(p.fbaActualInTransit)+'</td><td class="numeric strong">'+c.fbaQty+'</td><td class="numeric">'+num(p.awdAvailable)+'</td><td class="numeric">'+num(p.awdShippedInTransit)+'</td><td class="numeric strong">'+c.awdQty+'</td>';
-  html+='<td class="numeric strong">'+c.qty+'</td><td class="numeric">'+money(c.removeUnit)+'</td><td class="numeric">'+money(c.removeTotal)+'</td><td class="numeric">'+money(c.liquidationUnit)+'</td><td class="numeric">'+money(c.processing)+'</td><td class="numeric '+(c.net5<0?'negative':'')+'">'+money(c.net5)+'</td><td class="numeric '+(c.net10<0?'negative':'')+'">'+money(c.net10)+'</td><td><button class="text-button delete-product" data-id="'+id+'" type="button">删除</button></td></tr>';
+  html+='<td class="numeric strong">'+c.qty+'</td><td class="numeric">'+money(c.removeUnit)+'</td><td class="numeric">'+money(c.removeTotal)+'</td><td class="numeric">'+money(c.liquidationUnit)+'</td><td class="numeric">'+money(c.processing)+'</td><td class="numeric '+(c.netSelected<0?'negative':'positive')+'">'+money(c.netSelected)+'</td><td class="numeric '+(c.net5<0?'negative':'')+'">'+money(c.net5)+'</td><td class="numeric '+(c.net10<0?'negative':'')+'">'+money(c.net10)+'</td><td><button class="text-button delete-product" data-id="'+id+'" type="button">删除</button></td></tr>';
  }
  html+='</tbody></table>';
  host.innerHTML=html;
  $('productCount').textContent='显示 '+items.length+' / '+state.products.length+' 个子 ASIN';
 }
 function renderComparison(products){
- const t=getTotals(products),rows=[
-  ['批量清货 · 5% 回收',t.recovery5,t.commission5,t.processing,t.net5,'预计净回款；按 FBA 库存 × ASP × 5% 计算回收金额'],
-  ['批量清货 · 10% 回收',t.recovery10,t.commission10,t.processing,t.net10,'预计净回款；按 FBA 库存 × ASP × 10% 计算回收金额'],
-  ['移除退回（Return）',null,null,t.removeTotal,-t.removeTotal,'预计支出；支付移除费用后，商品退回给你自行处理'],
-  ['弃置（Disposal）',null,null,t.removeTotal,-t.removeTotal,'预计支出；支付弃置费用，商品不再保留']
+ const t=getTotals(products),rate=state.recoveryRate,selected=calculateTotalsAtRate(products,rate),rows=[
+  ['批量清货 · 当前 '+rate.toFixed(1)+'%',selected.recovery,selected.commission,selected.processing,selected.net,'当前滑块比例；已扣 15% 销售佣金及清货处理费'],
+  ['批量清货 · 5% 参考',t.recovery5,t.commission5,t.processing,t.net5,'低位参考：FBA 库存 × ASP × 5%'],
+  ['批量清货 · 10% 参考',t.recovery10,t.commission10,t.processing,t.net10,'高位参考：FBA 库存 × ASP × 10%'],
+  ['移除退回（Return）',null,null,t.removeTotal,-t.removeTotal,'预计支出；商品退回后由你自行处理'],
+  ['弃置（Disposal）',null,null,t.removeTotal,-t.removeTotal,'预计支出；商品不再保留']
  ];
- $('comparisonTable').innerHTML='<table><thead><tr><th>处理方案</th><th>预计回收金额</th><th>销售佣金</th><th>处理费用</th><th>最终现金结果</th><th>处理结果</th></tr></thead><tbody>'+rows.map((r,i)=>'<tr><td class="strong">'+esc(r[0])+'</td><td class="numeric">'+(r[1]==null?'—':money(r[1]))+'</td><td class="numeric">'+(r[2]==null?'—':money(r[2]))+'</td><td class="numeric">'+money(r[3])+'</td><td class="numeric strong '+(r[4]<0?'negative':'positive')+'">'+(r[4]>=0?'+':'')+money(r[4])+(i<2?'<div class="result-label">预计净回款</div>':'<div class="result-label">预计支出</div>')+'</td><td>'+esc(r[5])+'</td></tr>').join('')+'</tbody></table>';
- $('comparisonNote').textContent='看结果时，优先比较两种清货回收比例下的预计净回款；移除退回和弃置显示的是预计现金支出，不包含退回商品后续可能产生的残值或二次销售收入。总库存包含 FBA 与 AWD 五项；清货、移除和弃置费用仅按 FBA 可售、FBA 待调仓、FBA 实际在途三项计算，AWD 库存单独展示，不计入 FBA 处理费用。5% / 10% 指清货回收比例。';
+ $('comparisonTable').innerHTML='<table><thead><tr><th>处理方案</th><th>预计回收金额</th><th>销售佣金</th><th>处理费用</th><th>最终现金结果</th><th>说明</th></tr></thead><tbody>'+rows.map((r,i)=>'<tr class="'+(i===0?'selected-plan':'')+'"><td class="strong">'+esc(r[0])+'</td><td class="numeric">'+(r[1]==null?'—':money(r[1]))+'</td><td class="numeric">'+(r[2]==null?'—':money(r[2]))+'</td><td class="numeric">'+money(r[3])+'</td><td class="numeric strong '+(r[4]<0?'negative':'positive')+'">'+(r[4]>=0?'+':'')+money(r[4])+(i<3?'<div class="result-label">预计净回款</div>':'<div class="result-label">预计支出</div>')+'</td><td>'+esc(r[5])+'</td></tr>').join('')+'</tbody></table>';
+ $('comparisonNote').textContent='清货净回款 = 回收金额 − 15% 销售佣金 − 清货处理费。移除退回和弃置显示预计现金支出，不包含退回商品后续可能产生的残值或二次销售收入。总库存包含 FBA 与 AWD 五项；当前费用仅按 FBA 可售、FBA 待调仓、FBA 实际在途三项计算。';
 }
 function renderAll(){
  const filtered=state.products.filter(p=>!state.search||p.parentAsin.includes(state.search.toUpperCase())||p.childAsin.includes(state.search.toUpperCase()));
@@ -254,17 +274,19 @@ function downloadTemplate(){
  XLSX.writeFile(wb,'清货与移除费用计算器_商品资料模板.xlsx');
 }
 function exportResults(){
- const rows=[['父ASIN','子ASIN','毛重(lb)','长(in)','宽(in)','高(in)','自动尺寸等级','ASP(USD)','FBA可售','FBA待调仓','FBA实际在途','FBA小计','AWD可用','AWD标发在途','AWD小计','总库存(FBA+AWD)','移除/弃置单件费(FBA)','移除/弃置总费用(FBA)','清货处理费单件','清货处理费总额(FBA)','5%清货回收金额(FBA)','5%销售佣金','5%清货净回款','10%清货回收金额(FBA)','10%销售佣金','10%清货净回款']];
+ const rows=[['父ASIN','子ASIN','毛重(lb)','长(in)','宽(in)','高(in)','自动尺寸等级','ASP(USD)','FBA可售','FBA待调仓','FBA实际在途','FBA小计','AWD可用','AWD标发在途','AWD小计','总库存(FBA+AWD)','移除/弃置单件费(FBA)','移除/弃置总费用(FBA)','清货处理费单件','清货处理费总额(FBA)','当前回收比例','当前比例回收金额','当前比例销售佣金','当前比例净回款','5%清货回收金额(FBA)','5%销售佣金','5%清货净回款','10%清货回收金额(FBA)','10%销售佣金','10%清货净回款']];
  for(const p of state.products){
   const c=calculate(p);
-  rows.push([p.parentAsin,p.childAsin,p.grossWeightLb,p.lengthIn,p.widthIn,p.heightIn,c.size.label,p.asp,p.fbaAvailable,p.fbaTransfer,p.fbaActualInTransit,c.fbaQty,p.awdAvailable,p.awdShippedInTransit,c.awdQty,c.qty,c.removeUnit,c.removeTotal,c.liquidationUnit,c.processing,c.recovery5,c.commission5,c.net5,c.recovery10,c.commission10,c.net10]);
+  rows.push([p.parentAsin,p.childAsin,p.grossWeightLb,p.lengthIn,p.widthIn,p.heightIn,c.size.label,p.asp,p.fbaAvailable,p.fbaTransfer,p.fbaActualInTransit,c.fbaQty,p.awdAvailable,p.awdShippedInTransit,c.awdQty,c.qty,c.removeUnit,c.removeTotal,c.liquidationUnit,c.processing,state.recoveryRate,c.recoverySelected,c.commissionSelected,c.netSelected,c.recovery5,c.commission5,c.net5,c.recovery10,c.commission10,c.net10]);
  }
  const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=rows[0].map((_,i)=>({wch:i<2?18:i===6?15:i>=8&&i<=13?15:17}));
  const totals=getTotals(state.products);
+ const selected=calculateTotalsAtRate(state.products,state.recoveryRate);
  const compare=XLSX.utils.aoa_to_sheet([
   ['处理方案','预计回收金额（USD）','销售佣金（USD）','处理费用（USD）','最终现金结果（USD）','处理结果'],
-  ['批量清货（5%）',totals.recovery5,totals.commission5,totals.processing,totals.net5,'预计净回款；仅按 FBA 三项库存，回收比例 5%'],
-  ['批量清货（10%）',totals.recovery10,totals.commission10,totals.processing,totals.net10,'预计净回款；仅按 FBA 三项库存，回收比例 10%'],
+  ['批量清货（当前 '+state.recoveryRate.toFixed(1)+'%）',selected.recovery,selected.commission,selected.processing,selected.net,'当前滑块比例；已扣 15% 销售佣金及清货处理费'],
+  ['批量清货（5%）',totals.recovery5,totals.commission5,totals.processing,totals.net5,'低位参考'],
+  ['批量清货（10%）',totals.recovery10,totals.commission10,totals.processing,totals.net10,'高位参考'],
   ['移除退回（Return）','','',totals.removeTotal,-totals.removeTotal,'预计支出；按 FBA 三项库存，商品退回后由你自行处理'],
   ['弃置（Disposal）','','',totals.removeTotal,-totals.removeTotal,'预计支出；按 FBA 三项库存，商品不再保留']
  ]);
@@ -301,6 +323,7 @@ function initEvents(){
  $('downloadTemplate').addEventListener('click',()=>{try{downloadTemplate()}catch(err){status('importStatus',err.message,'error')}});
  $('downloadResults').addEventListener('click',()=>{try{exportResults()}catch(err){status('productStatus',err.message,'error')}});
  $('productSearch').addEventListener('input',()=>{state.search=$('productSearch').value.trim();renderProducts()});
+ $('recoveryRate').addEventListener('input',()=>{state.recoveryRate=Number($('recoveryRate').value);renderSummary(state.products);renderComparison(state.products);renderProducts()});
  $('productTable').addEventListener('click',onTableClick);
 }
 async function start(){
