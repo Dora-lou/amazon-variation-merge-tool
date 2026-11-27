@@ -471,7 +471,7 @@ async function importBackup(file){
 }
 function onProductChange(){
  const previous=state.product?.id||'';
- state.childBullets={};const id=$('listingProductSelect').value;state.product=state.products.find(p=>p.id===id)||null;
+ state.childBullets={};$('listingBulletFields').innerHTML='';const id=$('listingProductSelect').value;state.product=state.products.find(p=>p.id===id)||null;
  renderChildChoices(state.product);if($('editBullets').checked)renderBulletInputs();
  if(state.product)setStatus('listingProductStatus','已匹配 '+state.product.children.length+' 个子 ASIN。只有一个 MSKU 的会自动选中；多个 MSKU 的请逐个确认。');
  else setStatus('listingProductStatus','搜索并选择父 ASIN 后，程序会列出对应 SKU。');
