@@ -3,7 +3,7 @@
 'use strict';
 const DB_NAME='amazonOpsToolkit', DB_VERSION=3;
 const $=id=>document.getElementById(id);
-const state={db:null,products:[],templates:[],template:null,templateRecord:null,product:null,editingProductId:null,bulletCount:5,pendingProductImport:null,productPage:1,pendingBackupFile:null};
+const state={db:null,products:[],templates:[],template:null,templateRecord:null,product:null,editingProductId:null,bulletCount:5,childBullets:{},pendingProductImport:null,productPage:1,pendingBackupFile:null};
 const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 const XNS='http://www.w3.org/XML/1998/namespace';
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
@@ -278,7 +278,7 @@ function renderChildChoices(product,onlyAsin){
    const hint=document.createElement('div');hint.className='msku-required';hint.textContent='该子 ASIN 有 '+c.mskus.length+' 个 MSKU，必须选择一个';
    select.addEventListener('change',()=>{hint.textContent=select.value?'已选择：'+select.value:'请先选择一个 MSKU'});
    content.append(select,hint);
-   box.addEventListener('change',()=>{select.disabled=!box.checked});
+   box.addEventListener('change',()=>{select.disabled=!box.checked;if($('editBullets').checked)renderBulletInputs()});
   }
   item.append(box,content);host.appendChild(item);
  }
@@ -291,7 +291,7 @@ function searchParentAsin(){
  $('listingProductSelect').value='';state.product=null;renderChildChoices(null);
  setStatus('listingProductStatus',query?'请选择下拉列表中匹配的父 ASIN；输入完整父 ASIN 时会自动选中。':'搜索并选择父 ASIN 后，程序会匹配全部子 ASIN。');
 }
-function setChildChecks(checked){$('listingChildChecklist').querySelectorAll('input[type="checkbox"]').forEach(box=>{box.checked=checked})}
+function setChildChecks(checked){$('listingChildChecklist').querySelectorAll('input[type="checkbox"]').forEach(box=>{box.checked=checked});if($('editBullets').checked)renderBulletInputs()}
 function findTemplateForCategory(category){return state.templates.find(t=>t.category.toLowerCase()===String(category||'').toLowerCase())}
 async function loadTemplate(id){
  const rec=state.templates.find(t=>t.id===id);
@@ -322,8 +322,25 @@ async function uploadTemplate(){
 }
 function bulletColumns(t){return Object.entries(t.headers).map(([col,id])=>{const m=/^bullet_point\[/.test(id)?/#(\d+)\.value$/.exec(id):null;return m?{col:Number(col),order:Number(m[1]),id}:null}).filter(Boolean).sort((a,b)=>a.order-b.order)}
 function highlightColumns(t){return Object.entries(t.headers).map(([col,id])=>({col:Number(col),id:String(id||''),label:String(t.labels?.[col]||'')})).filter(x=>/^(title_differentiation|product_highlights?|key_product_features)(\[|#|$)/i.test(x.id)||/(item\s*highlight|product\s*highlights?|key\s*product\s*features|亮点)/i.test(x.label)).sort((a,b)=>{const ma=/#(\d+)\.value$/i.exec(a.id),mb=/#(\d+)\.value$/i.exec(b.id);return (ma?Number(ma[1]):a.col)-(mb?Number(mb[1]):b.col)})}
-function renderBulletInputs(values){const host=$('listingBulletFields');host.innerHTML='';const count=Math.max(5,values?values.length:0);state.bulletCount=count;for(let i=0;i<count;i++){const wrap=document.createElement('div'),label=document.createElement('label'),area=document.createElement('textarea');label.textContent='Bullet Point '+(i+1);area.dataset.bulletIndex=String(i+1);area.placeholder='填写要更新的第 '+(i+1)+' 条卖点；留空则不写入该字段';area.value=values&&values[i]||'';wrap.append(label,area);if(i>=5){const del=document.createElement('button');del.type='button';del.className='quiet danger';del.textContent='移除此条';del.addEventListener('click',()=>{const vals=readBulletValues();vals.splice(i,1);renderBulletInputs(vals)});wrap.appendChild(del)}host.appendChild(wrap)}}
-function readBulletValues(){return [...$('listingBulletFields').querySelectorAll('textarea[data-bullet-index]')].map(el=>el.value.trim())}
+function captureBulletInputs(){
+ for(const el of $('listingBulletFields').querySelectorAll('textarea[data-child-asin][data-bullet-index]')){
+  const asin=el.dataset.childAsin,index=Number(el.dataset.bulletIndex)-1;if(!state.childBullets[asin])state.childBullets[asin]=[];state.childBullets[asin][index]=el.value;
+ }
+}
+function renderBulletInputs(){
+ const host=$('listingBulletFields');captureBulletInputs();host.innerHTML='';
+ const selected=[...$('listingChildChecklist').querySelectorAll('[data-child-asin]')].filter(item=>item.querySelector('input[type="checkbox"]')?.checked);
+ if(!selected.length){host.textContent='请先勾选需要修改的子体，程序会为每个子体单独显示五点输入框。';return}
+ for(const item of selected){
+  const asin=item.dataset.childAsin,record=state.product?.children.find(c=>c.asin===asin),mskus=record?normalizeChildRecord(record).mskus:[];
+  const card=document.createElement('div');card.className='bullet-child-editor';card.style.cssText='grid-column:1/-1;border:1px solid #dce6e1;border-radius:10px;padding:14px;background:#fbfdfc';
+  const heading=document.createElement('h3');heading.textContent=(mskus.length===1?mskus[0]:'子体')+'｜'+asin;heading.style.marginBottom='12px';card.appendChild(heading);
+  const grid=document.createElement('div');grid.className='bullet-grid';
+  for(let i=0;i<state.bulletCount;i++){const wrap=document.createElement('div'),label=document.createElement('label'),area=document.createElement('textarea');label.textContent='Bullet Point '+(i+1);area.dataset.childAsin=asin;area.dataset.bulletIndex=String(i+1);area.placeholder='填写 '+asin+' 的第 '+(i+1)+' 条卖点；留空则不写入该字段';area.value=state.childBullets[asin]?.[i]||'';wrap.append(label,area);grid.appendChild(wrap)}
+  card.appendChild(grid);host.appendChild(card);
+ }
+}
+function readBulletValues(asin){captureBulletInputs();return (state.childBullets[asin]||[]).slice(0,state.bulletCount).map(v=>String(v||'').trim())}
 function renderAdvancedOptions(){const sel=$('advancedFieldSelect');sel.innerHTML='';addOption(sel,'','选择一个额外字段');if(!state.template)return;const reserved=['contribution_sku','::record_action','product_id','parentage_level','child_parent_sku_relationship','variation_theme','item_name[','product_description[','bullet_point[','title_differentiation[','product_highlight[','product_highlights[','key_product_features['];for(const f of state.template.meta.field_options){if(reserved.some(x=>f.id.toLowerCase().includes(x)))continue;addOption(sel,f.id,(f.label||f.id)+' ['+f.id+']')}}
 function addAdvancedField(){const sel=$('advancedFieldSelect'),fieldId=sel.value;if(!fieldId)return;const existing=[...$('advancedFieldRows').querySelectorAll('[data-field-id]')].some(el=>el.dataset.fieldId===fieldId);if(existing){setStatus('listingResult','这个字段已经添加过了。','warn');return}const opt=sel.options[sel.selectedIndex],wrap=document.createElement('div');wrap.className='advanced-row';wrap.dataset.fieldId=fieldId;const label=document.createElement('label');label.textContent=opt.textContent;const input=document.createElement('textarea');input.rows=2;input.placeholder='填写需要更新的字段值';const del=document.createElement('button');del.type='button';del.className='quiet danger';del.textContent='移除';del.addEventListener('click',()=>wrap.remove());wrap.append(label,input,del);$('advancedFieldRows').appendChild(wrap)}
 function selectedChildren(){
