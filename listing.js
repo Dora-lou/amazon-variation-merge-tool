@@ -471,8 +471,8 @@ async function importBackup(file){
 }
 function onProductChange(){
  const previous=state.product?.id||'';
- const id=$('listingProductSelect').value;state.product=state.products.find(p=>p.id===id)||null;
- renderChildChoices(state.product);
+ state.childBullets={};const id=$('listingProductSelect').value;state.product=state.products.find(p=>p.id===id)||null;
+ renderChildChoices(state.product);if($('editBullets').checked)renderBulletInputs();
  if(state.product)setStatus('listingProductStatus','已匹配 '+state.product.children.length+' 个子 ASIN。只有一个 MSKU 的会自动选中；多个 MSKU 的请逐个确认。');
  else setStatus('listingProductStatus','搜索并选择父 ASIN 后，程序会列出对应 SKU。');
 }
@@ -488,7 +488,7 @@ function initEvents(){
  $('listingTemplateSelect').addEventListener('change',()=>loadTemplate($('listingTemplateSelect').value));
  $('listingProductSelect').addEventListener('change',onProductChange);
  $('listingParentAsinSearch').addEventListener('input',searchParentAsin);
- $('listingChildSelect').addEventListener('change',()=>{const v=$('listingChildSelect').value;renderChildChoices(state.product,v==='__all__'?'':v)});
+ $('listingChildSelect').addEventListener('change',()=>{const v=$('listingChildSelect').value;renderChildChoices(state.product,v==='__all__'?'':v);if($('editBullets').checked)renderBulletInputs()});
  $('selectAllChildren').addEventListener('click',()=>setChildChecks(true));
  $('clearAllChildren').addEventListener('click',()=>setChildChecks(false));
  $('saveProductGroup').addEventListener('click',async()=>{try{await saveProductGroup()}catch(err){setStatus('productFormStatus',err.message,'error')}});
