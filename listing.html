@@ -90,7 +90,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
 
     <section>
       <h2>第 3 步｜选择要修改的字段</h2>
-      <p class="muted">只勾选本次要更新的字段；未勾选的字段不会写入上传表。批量选择多个子体时，填写的内容会应用到所有已勾选子体。</p>
+      <p class="muted">只勾选本次要更新的字段；未勾选的字段不会写入上传表。标题、描述、亮点等字段会应用到所有已勾选子体；五点描述可针对每个子体分别填写。</p>
       <div class="field-grid" style="margin-top:17px">
         <div class="edit-option">
           <label class="check"><input id="editTitle" type="checkbox"/> 标题（Item Name）</label>
@@ -108,7 +108,7 @@ nav[aria-label="工具模块"] a:focus-visible,nav[aria-label="工具导航"] a:
       <div style="margin-top:18px" class="edit-option">
         <label class="check"><input id="editBullets" type="checkbox"/> 五点描述（Bullet Point）</label>
         <div id="bulletFieldsPanel" class="edit-fields hidden">
-          <p class="muted">默认提供 5 条。需要第 6 条、第 7 条时点击添加，程序会在模板中插入新列，并将技术字段编号依次设为 #6、#7……</p>
+          <p class="muted">每个已勾选子体都会显示独立的五点输入区，互不影响。默认提供 5 条；需要第 6 条、第 7 条时点击添加，所有子体会同步增加输入项，程序会在模板中插入对应新列。</p>
           <div id="listingBulletFields" class="bullet-grid"></div>
           <button id="addListingBullet" type="button" style="margin-top:12px">＋ 添加下一条 Bullet Point</button>
         </div>
@@ -226,7 +226,7 @@ if(new URLSearchParams(window.location.search).get('view')==='library'){
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="./engine.js"></script>
-<script src="./listing.js?v=clearance-db-v3-20261123-4"></script>
+<script src="./listing.js?v=per-child-bullets-20261127-1"></script>
 </body>
 </html>
 
